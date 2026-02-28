@@ -130,7 +130,32 @@ python manage.py runserver
 5. Initialiser `backend-node` simplifie pour la comparaison Lab 8.
 6. Rediger la comparaison Django vs Node dans `docs/`.
 
-## 10. Notes importantes
+## 10. Repartition des taches par etudiant (A/B/C)
+
+Section alignee sur la consigne officielle du PDF.
+
+**Thomas - Backend Django**
+- modeles de donnees
+- implementation DRF
+- logique metier
+- permissions
+- tests backend
+
+**Noureddine - Frontend React**
+- architecture des composants
+- formulaires
+- interface d'authentification
+- integration API
+
+**Azouaou - Backend Node + Deploiement**
+- API Express
+- analyse comparative
+- configuration de deploiement
+- coordination du rapport et de la presentation
+
+Tous les membres doivent comprendre l'ensemble du projet.
+
+## 11. Notes importantes
 
 - Le dossier `.venv/` est local a chaque membre (non versionne).
 - Le fichier `db.sqlite3` local n'est pas versionne.
