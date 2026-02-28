@@ -1,0 +1,81 @@
+# -----------------------------
+# OS / Editor
+# -----------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# -----------------------------
+# Logs
+# -----------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------
+# Python / Django
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.sqlite3
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.venv/
+venv/
+env/
+ENV/
+
+# Django generated/static/media (local)
+backend-django/staticfiles/
+backend-django/media/
+
+# -----------------------------
+# Node.js / React
+# -----------------------------
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+coverage/
+*.tsbuildinfo
+
+# -----------------------------
+# Tooling / Package managers
+# -----------------------------
+.npm/
+.pnpm-store/
+.yarn/
+.cache/
+
+# -----------------------------
+# Local runtime files
+# -----------------------------
+tmp/
+temp/
+*.pid
+*.seed
+*.pid.lock
