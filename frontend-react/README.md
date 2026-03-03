@@ -20,7 +20,8 @@
 - **React** (Create React App)
 - **React Router DOM v6** — navigation SPA
 - **JWT** — authentification par token
-- **Django REST API** — backend principal
+- **lucide-react** — icônes
+- **Django REST API** — backend principal (Student A — Thomas)
 
 ---
 
@@ -41,7 +42,7 @@ npm --version
 # 1. Aller dans le dossier frontend
 cd frontend-react
 
-# 2. Installer toutes les dépendances (react-router-dom inclus dans package.json)
+# 2. Installer toutes les dépendances
 npm install
 
 # 3. Vérifier que react-router-dom est bien installé
@@ -62,24 +63,25 @@ npm start
 
 ### En cas de problème
 
-| Erreur                               | Solution                                    |
-|--------------------------------------|---------------------------------------------|
-| `npm not found`                      | Installer Node.js depuis nodejs.org         |
-| `Module not found: lucide-react`     | `npm install lucide-react`                  |
-| `Module not found: react-icons`      | `npm install react-icons`                   |
-| `Module not found: react-router-dom` | `npm install react-router-dom`              |
-| Port 3000 occupé                     | `PORT=3001 npm start`                       |
-| Page blanche                         | Vérifier la console F12 pour l'erreur       |
-| Erreur CORS                          | Vérifier que Django tourne sur le port 8000 |
+| Erreur | Solution |
+|--------|----------|
+| `npm not found` | Installer Node.js depuis nodejs.org |
+| `Module not found: lucide-react` | `npm install lucide-react` |
+| `Module not found: react-icons` | `npm install react-icons` |
+| `Module not found: react-router-dom` | `npm install react-router-dom` |
+| Port 3000 occupé | `PORT=3001 npm start` |
+| Page blanche | Vérifier la console F12 pour l'erreur |
+| Erreur CORS | Vérifier que Django tourne sur le port 8000 |
 
 ### Dépendances installées
 
-| Package            | Version | Usage                                            |
-|--------------------|---------|--------------------------------------------------|
-| `react`            | 18+     | Framework UI                                     |
-| `react-router-dom` | v6      | Navigation SPA — routing + protection des routes |
-| `lucide-react`     | latest  | Icônes (sidebar, boutons...)                     |
-| `react-icons`      | latest  | Icônes supplémentaires                           |
+| Package | Version | Usage |
+|---------|---------|-------|
+| `react` | 18+ | Framework UI |
+| `react-router-dom` | v6 | Navigation SPA — routing + protection des routes |
+| `lucide-react` | latest | Icônes (sidebar, boutons, pages...) |
+| `react-icons` | latest | Icônes supplémentaires |
+
 ---
 
 ## Structure du projet
@@ -87,25 +89,29 @@ npm start
 frontend-react/
 ├── public/
 └── src/
-    ├── api/              → couche communication avec le backend
-    │   ├── client.js     → fonction apiFetch() centrale
-    │   ├── auth.js       → login / logout
-    │   ├── events.js     → CRUD événements
-    │   └── participants.js → CRUD participants + inscriptions
-    ├── components/       → composants réutilisables
-    │   ├── ProtectedRoute.jsx  → protection par token
-    │   └── AdminRoute.jsx      → protection par rôle admin
-    ├── pages/            → écrans principaux
-    │   ├── Login.jsx
-    │   ├── Dashboard.jsx
-    │   ├── Events.jsx
-    │   ├── EventDetail.jsx
-    │   └── Participants.jsx
+    ├── api/
+    │   ├── client.js          → fonction apiFetch() centrale (token + erreurs)
+    │   ├── auth.js            → login / logout (mock + real)
+    │   ├── events.js          → CRUD événements (mock + real)
+    │   └── participants.js    → CRUD participants + inscriptions (mock + real)
+    ├── components/
+    │   ├── Layout.jsx         → sidebar + header + Outlet
+    │   ├── ProtectedRoute.jsx → protection par token JWT
+    │   └── AdminRoute.jsx     → protection par rôle admin
+    ├── pages/
+    │   ├── Login.jsx          → page de connexion
+    │   ├── Dashboard.jsx      → tableau de bord
+    │   ├── Events.jsx         → liste + filtres + CRUD
+    │   ├── EventDetail.jsx    → détail + participants inscrits
+    │   └── Participants.jsx   → liste + CRUD participants
     ├── store/
-    │   └── authStore.js  → gestion token JWT + rôles
-    ├── styles/           → CSS
-    ├── App.js            → définition des routes
-    └── index.js          → point d'entrée
+    │   └── authStore.js       → gestion token JWT + rôles (localStorage)
+    ├── styles/
+    │   ├── global.css         → classes CSS réutilisables
+    │   ├── Login.css          → styles page login
+    │   └── Layout.css         → styles sidebar + header
+    ├── App.js                 → définition des routes
+    └── index.js               → point d'entrée
 ```
 
 ---
@@ -116,7 +122,7 @@ Le token JWT est stocké dans le `localStorage` après connexion.
 
 | Clé localStorage | Valeur |
 |-----------------|--------|
-| `access_token` | Token JWT court (envoyé à chaque requête) |
+| `access_token` | Token JWT court (envoyé à chaque requête API) |
 | `refresh_token` | Token JWT long (renouvellement automatique) |
 | `role` | `admin` ou `viewer` |
 
@@ -140,21 +146,23 @@ Le token JWT est stocké dans le `localStorage` après connexion.
 
 ### Routes disponibles
 
-| URL | Accès | Composant |
-|-----|-------|-----------|
-| `/login` | Public | Login.jsx |
-| `/dashboard` | Connecté | Dashboard.jsx |
-| `/events` | Connecté | Events.jsx |
-| `/events/:id` | Connecté | EventDetail.jsx |
-| `/participants` | Connecté | Participants.jsx |
+| URL | Accès | Composant | Description |
+|-----|-------|-----------|-------------|
+| `/login` | Public | Login.jsx | Page de connexion |
+| `/dashboard` | Connecté | Dashboard.jsx | Vue résumée |
+| `/events` | Connecté | Events.jsx | Liste + filtres |
+| `/events/:id` | Connecté | EventDetail.jsx | Détail + participants |
+| `/participants` | Connecté | Participants.jsx | Gestion participants |
 
 ### Comment ça marche ?
 
-- **ProtectedRoute** : vérifie si un token existe
+- **ProtectedRoute** : vérifie si un token existe dans le localStorage
   - Token présent → page affichée
-  - Token absent → redirection vers `/login`
+  - Token absent → redirection automatique vers `/login`
 - **AdminRoute** : vérifie token ET rôle admin
   - Rôle `viewer` → redirigé vers `/dashboard`
+- **Layout** : composant parent qui contient la sidebar + header
+  - Toutes les pages protégées s'affichent dans son `<Outlet />`
 
 ### Tester manuellement (console F12)
 ```javascript
@@ -183,13 +191,13 @@ export const USE_MOCK = true;  // true = mock | false = vrai backend Django
 
 | Username | Password | Rôle |
 |----------|----------|------|
-| `admin` | `admin123` | admin (accès complet) |
+| `admin` | `admin123` | admin (accès complet — CRUD) |
 | `viewer` | `viewer123` | viewer (lecture seule) |
 
 ### Données mock disponibles
-- **3 événements** : Workshop ML, Conférence Federated Learning, Séminaire Multi-Agent
+- **3 événements** : Workshop ML, Conférence Federated Learning, Séminaire Multi-Agent Systems
 - **3 participants** : Alice Martin, Bob Dupont, Clara Bernard
-- **2 inscriptions** pré-existantes
+- **2 inscriptions** pré-existantes (Alice → ML, Bob → ML)
 
 ### Passer au vrai backend (quand Thomas est prêt)
 1. Mettre `USE_MOCK = false` dans `src/api/auth.js`, `events.js`, `participants.js`
@@ -207,7 +215,7 @@ Créer un fichier `.env` à la racine de `frontend-react/` :
 REACT_APP_API_BASE=http://localhost:8000
 ```
 
-### Configuration requise côté Django
+### Configuration requise côté Django (Thomas)
 
 #### 1. Port
 ```bash
