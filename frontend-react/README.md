@@ -30,5 +30,102 @@ Créer un fichier `.env` à la racine :
 REACT_APP_API_BASE=http://localhost:8000
 ```
 
-## API Backend attendue
-*(sera complété au fur et à mesure)*
+## Authentification
+Le token JWT est stocké dans le `localStorage` sous la clé `token`.
+Le rôle utilisateur (`admin` ou `viewer`) est stocké sous la clé `role`.
+
+Fonctions disponibles depuis `src/store/authStore.js` :
+- `getToken()` → récupère le token
+- `setToken(token)` → sauvegarde le token après login
+- `clearToken()` → supprime le token au logout
+- `isAuthed()` → retourne true si connecté
+- `isAdmin()` → retourne true si rôle admin
+
+
+
+
+
+
+
+
+## 🔗 Integration Backend → Frontend
+
+### Configuration requise pour le Backend Django
+
+Pour que le frontend puisse communiquer avec le backend, les points suivants 
+sont obligatoires :
+
+### 1. Port
+Le backend Django doit tourner sur le port **8000** :
+```bash
+python manage.py runserver 8000
+```
+
+### 2. CORS
+Installer et configurer `django-cors-headers` :
+```bash
+pip install django-cors-headers
+```
+
+Dans `settings.py` :
+```python
+INSTALLED_APPS = [
+    ...
+    'corsheaders',
+]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # doit être en premier
+    ...
+]
+
+# Autoriser le frontend React
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+```
+
+### 3. Authentication JWT
+Le backend doit retourner un token JWT à la connexion :
+```json
+POST /api/auth/login/
+→ { "token": "eyJ...", "role": "admin" }
+```
+
+### 4. Endpoints attendus par le Frontend
+| Méthode | URL | Description |
+|---------|-----|-------------|
+| POST | `/api/auth/login/` | Connexion |
+| POST | `/api/auth/register/` | Inscription |
+| GET | `/api/events/` | Liste des événements |
+| POST | `/api/events/` | Créer un événement |
+| GET | `/api/events/:id/` | Détail événement |
+| PUT | `/api/events/:id/` | Modifier événement |
+| DELETE | `/api/events/:id/` | Supprimer événement |
+| GET | `/api/participants/` | Liste des participants |
+| POST | `/api/participants/` | Créer un participant |
+| PUT | `/api/participants/:id/` | Modifier participant |
+| DELETE | `/api/participants/:id/` | Supprimer participant |
+| GET | `/api/registrations/` | Liste des inscriptions |
+| POST | `/api/registrations/` | Inscrire un participant |
+| DELETE | `/api/registrations/:id/` | Supprimer inscription |
+
+### 5. Format des réponses attendu
+Toutes les réponses doivent être en **JSON**.
+En cas d'erreur, le backend doit retourner :
+```json
+{ "detail": "message d'erreur ici" }
+```
+ou
+```json
+{ "error": "message d'erreur ici" }
+```
+
+### 6. Headers envoyés par le Frontend
+Chaque requête authentifiée envoie automatiquement :
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+
