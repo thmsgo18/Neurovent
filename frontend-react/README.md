@@ -24,23 +24,62 @@
 
 ---
 
-## Lancer le projet
+## 🚀 Lancer le projet
+
+### Prérequis
+- **Node.js** v18+ → [télécharger](https://nodejs.org)
+- **npm** v9+
+
+Vérification rapide :
 ```bash
-# Cloner le repo et aller dans le bon dossier
+node --version
+npm --version
+```
+
+### Installation
+```bash
+# 1. Aller dans le dossier frontend
 cd frontend-react
 
-# Installer les dépendances
+# 2. Installer toutes les dépendances (react-router-dom inclus dans package.json)
 npm install
 
-# Créer le fichier d'environnement (voir section dédiée)
-cp .env.example .env
+# 3. Vérifier que react-router-dom est bien installé
+npm install react-router-dom
 
-# Lancer en développement
+# 4. Installer les librairies d'icônes
+npm install lucide-react
+npm install react-icons
+
+# 5. Créer le fichier d'environnement
+echo "REACT_APP_API_BASE=http://localhost:8000" > .env
+
+# 6. Lancer en développement
 npm start
 ```
 
 > App disponible sur **http://localhost:3000**
 
+### En cas de problème
+
+| Erreur                               | Solution                                    |
+|--------------------------------------|---------------------------------------------|
+| `npm not found`                      | Installer Node.js depuis nodejs.org         |
+| `Module not found: lucide-react`     | `npm install lucide-react`                  |
+| `Module not found: react-icons`      | `npm install react-icons`                   |
+| `Module not found: react-router-dom` | `npm install react-router-dom`              |
+| Port 3000 occupé                     | `PORT=3001 npm start`                       |
+| Page blanche                         | Vérifier la console F12 pour l'erreur       |
+| Erreur CORS                          | Vérifier que Django tourne sur le port 8000 |
+
+### Dépendances installées
+
+| Package            | Version | Usage                                            |
+|--------------------|---------|--------------------------------------------------|
+| `react`            | 18+     | Framework UI                                     |
+| `react-router-dom` | v6      | Navigation SPA — routing + protection des routes |
+| `lucide-react`     | latest  | Icônes (sidebar, boutons...)                     |
+| `react-icons`      | latest  | Icônes supplémentaires                           |
 ---
 
 ## Structure du projet

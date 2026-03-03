@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
-
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
@@ -10,25 +10,22 @@ import Participants from "./pages/Participants";
 export default function App() {
   return (
     <Routes>
-      {/* Redirect racine vers dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" />} />
-      
-      {/* Page publique */}
       <Route path="/login" element={<Login />} />
-      
-      {/* Pages protégées */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute><Dashboard /></ProtectedRoute>
-      } />
-      <Route path="/events" element={
-        <ProtectedRoute><Events /></ProtectedRoute>
-      } />
-      <Route path="/events/:id" element={
-        <ProtectedRoute><EventDetail /></ProtectedRoute>
-      } />
-      <Route path="/participants" element={
-        <ProtectedRoute><Participants /></ProtectedRoute>
-      } />
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+
+      {/* Toutes les pages protégées partagent le Layout */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/events/:id" element={<EventDetail />} />
+        <Route path="/participants" element={<Participants />} />
+      </Route>
     </Routes>
   );
 }

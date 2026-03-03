@@ -1,23 +1,22 @@
-// Clé utilisée pour stocker le token dans le navigateur
-const KEY = "token";
+const TOKEN_KEY = "access_token";
+const REFRESH_KEY = "refresh_token";
+const ROLE_KEY = "role";
 
-// Récupérer le token
-export const getToken = () => localStorage.getItem(KEY);
+export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
+export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
-// Sauvegarder le token après login
-export const setToken = (token) => localStorage.setItem(KEY, token);
+export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY);
+export const setRefreshToken = (token) => localStorage.setItem(REFRESH_KEY, token);
 
-// Supprimer le token lors du logout
-export const clearToken = () => localStorage.removeItem(KEY);
+export const getRole = () => localStorage.getItem(ROLE_KEY);
+export const setRole = (role) => localStorage.setItem(ROLE_KEY, role);
 
-// Vérifier si l'utilisateur est connecté
 export const isAuthed = () => Boolean(getToken());
-
-// Récupérer le rôle de l'utilisateur (admin ou viewer)
-export const getRole = () => localStorage.getItem("role");
-
-// Sauvegarder le rôle après login
-export const setRole = (role) => localStorage.setItem("role", role);
-
-// Vérifier si l'utilisateur est admin
 export const isAdmin = () => getRole() === "admin";
+
+export const logout = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(ROLE_KEY);
+};
