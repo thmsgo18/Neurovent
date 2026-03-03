@@ -1,156 +1,244 @@
-# EventHub — Frontend React
+# 🧠 Neurovent-Web — Frontend React
 
-## Stack
-- React (Create React App)
-- React Router DOM v6
-- JWT Authentication
-- Django REST API
+> Plateforme de gestion d'événements scientifiques (conférences, workshops)
+> M1 IAD-VMI — Web Programming 2026 — Student B : Noureddine
+
+---
+
+## 📋 Table des matières
+1. [Stack technique](#stack-technique)
+2. [Lancer le projet](#lancer-le-projet)
+3. [Structure du projet](#structure-du-projet)
+4. [Authentification & Rôles](#authentification--rôles)
+5. [Routing & Protection des routes](#routing--protection-des-routes)
+6. [Mode Mock](#mode-mock-développement-sans-backend)
+7. [Intégration Backend Django](#intégration-backend-django)
+
+---
+
+## Stack technique
+- **React** (Create React App)
+- **React Router DOM v6** — navigation SPA
+- **JWT** — authentification par token
+- **Django REST API** — backend principal
+
+---
 
 ## Lancer le projet
 ```bash
+# Cloner le repo et aller dans le bon dossier
 cd frontend-react
+
+# Installer les dépendances
 npm install
+
+# Créer le fichier d'environnement (voir section dédiée)
+cp .env.example .env
+
+# Lancer en développement
 npm start
 ```
-App disponible sur http://localhost:3000
 
-## Structure
+> App disponible sur **http://localhost:3000**
+
+---
+
+## Structure du projet
 ```
-src/
-  api/         → couche communication avec le backend
-  components/  → composants réutilisables (Navbar, ProtectedRoute...)
-  pages/       → écrans principaux (Login, Events, Participants...)
-  store/       → logique d'authentification (token)
-  styles/      → CSS
+frontend-react/
+├── public/
+└── src/
+    ├── api/              → couche communication avec le backend
+    │   ├── client.js     → fonction apiFetch() centrale
+    │   ├── auth.js       → login / logout
+    │   ├── events.js     → CRUD événements
+    │   └── participants.js → CRUD participants + inscriptions
+    ├── components/       → composants réutilisables
+    │   ├── ProtectedRoute.jsx  → protection par token
+    │   └── AdminRoute.jsx      → protection par rôle admin
+    ├── pages/            → écrans principaux
+    │   ├── Login.jsx
+    │   ├── Dashboard.jsx
+    │   ├── Events.jsx
+    │   ├── EventDetail.jsx
+    │   └── Participants.jsx
+    ├── store/
+    │   └── authStore.js  → gestion token JWT + rôles
+    ├── styles/           → CSS
+    ├── App.js            → définition des routes
+    └── index.js          → point d'entrée
 ```
 
-## Variables d'environnement
-Créer un fichier `.env` à la racine :
+---
+
+## Authentification & Rôles
+
+Le token JWT est stocké dans le `localStorage` après connexion.
+
+| Clé localStorage | Valeur |
+|-----------------|--------|
+| `access_token` | Token JWT court (envoyé à chaque requête) |
+| `refresh_token` | Token JWT long (renouvellement automatique) |
+| `role` | `admin` ou `viewer` |
+
+### Fonctions disponibles — `src/store/authStore.js`
+
+| Fonction | Description |
+|----------|-------------|
+| `getToken()` | Récupère le access token |
+| `setToken(token)` | Sauvegarde le access token |
+| `getRefreshToken()` | Récupère le refresh token |
+| `setRefreshToken(token)` | Sauvegarde le refresh token |
+| `getRole()` | Récupère le rôle |
+| `setRole(role)` | Sauvegarde le rôle |
+| `isAuthed()` | `true` si connecté |
+| `isAdmin()` | `true` si rôle admin |
+| `logout()` | Efface tout (token + rôle) |
+
+---
+
+## Routing & Protection des routes
+
+### Routes disponibles
+
+| URL | Accès | Composant |
+|-----|-------|-----------|
+| `/login` | Public | Login.jsx |
+| `/dashboard` | Connecté | Dashboard.jsx |
+| `/events` | Connecté | Events.jsx |
+| `/events/:id` | Connecté | EventDetail.jsx |
+| `/participants` | Connecté | Participants.jsx |
+
+### Comment ça marche ?
+
+- **ProtectedRoute** : vérifie si un token existe
+  - Token présent → page affichée
+  - Token absent → redirection vers `/login`
+- **AdminRoute** : vérifie token ET rôle admin
+  - Rôle `viewer` → redirigé vers `/dashboard`
+
+### Tester manuellement (console F12)
+```javascript
+// Simuler une connexion admin
+localStorage.setItem("access_token", "test123")
+localStorage.setItem("role", "admin")
+
+// Simuler une déconnexion
+localStorage.clear()
+```
+
+---
+
+## Mode Mock (développement sans backend)
+
+Le frontend fonctionne **sans backend** grâce aux données mock.
+
+### Activer / Désactiver le mock
+
+Dans chaque fichier `src/api/` :
+```javascript
+export const USE_MOCK = true;  // true = mock | false = vrai backend Django
+```
+
+### Credentials de test
+
+| Username | Password | Rôle |
+|----------|----------|------|
+| `admin` | `admin123` | admin (accès complet) |
+| `viewer` | `viewer123` | viewer (lecture seule) |
+
+### Données mock disponibles
+- **3 événements** : Workshop ML, Conférence Federated Learning, Séminaire Multi-Agent
+- **3 participants** : Alice Martin, Bob Dupont, Clara Bernard
+- **2 inscriptions** pré-existantes
+
+### Passer au vrai backend (quand Thomas est prêt)
+1. Mettre `USE_MOCK = false` dans `src/api/auth.js`, `events.js`, `participants.js`
+2. Vérifier que `.env` pointe vers `http://localhost:8000`
+3. Tester chaque endpoint via l'app
+
+---
+
+## Intégration Backend Django
+
+### Variables d'environnement
+
+Créer un fichier `.env` à la racine de `frontend-react/` :
 ```
 REACT_APP_API_BASE=http://localhost:8000
 ```
 
-## Authentification
-Le token JWT est stocké dans le `localStorage` sous la clé `token`.
-Le rôle utilisateur (`admin` ou `viewer`) est stocké sous la clé `role`.
+### Configuration requise côté Django
 
-Fonctions disponibles depuis `src/store/authStore.js` :
-- `getToken()` → récupère le token
-- `setToken(token)` → sauvegarde le token après login
-- `clearToken()` → supprime le token au logout
-- `isAuthed()` → retourne true si connecté
-- `isAdmin()` → retourne true si rôle admin
-
-
-## 🛡️ Système de Routing & Protection des Routes
-
-### Routes disponibles
-| URL | Accès | Page |
-|-----|-------|------|
-| `/login` | Public | Page de connexion |
-| `/dashboard` | Connecté | Tableau de bord |
-| `/events` | Connecté | Liste des événements |
-| `/events/:id` | Connecté | Détail d'un événement |
-| `/participants` | Connecté | Liste des participants |
-
-### Comment ça marche ?
-- **ProtectedRoute** : vérifie si un token existe dans le localStorage
-  - Token présent → accès autorisé
-  - Token absent → redirection automatique vers `/login`
-- **AdminRoute** : en plus de vérifier le token, vérifie si le rôle est `admin`
-  - Rôle `viewer` → redirigé vers `/dashboard`
-
-### Tester la protection des routes
-Sans être connecté, aller sur `/events` redirige automatiquement vers `/login`.
-Pour simuler une connexion en dev :
-```javascript
-// Dans la console du navigateur (F12)
-localStorage.setItem("token", "test123")
-localStorage.setItem("role", "admin")
-```
-
-
-
-
-
-## 🔗 Integration Backend → Frontend
-
-### Configuration requise pour le Backend Django
-
-Pour que le frontend puisse communiquer avec le backend, les points suivants 
-sont obligatoires :
-
-### 1. Port
-Le backend Django doit tourner sur le port **8000** :
+#### 1. Port
 ```bash
 python manage.py runserver 8000
 ```
 
-### 2. CORS
-Installer et configurer `django-cors-headers` :
-```bash
-pip install django-cors-headers
-```
-
-Dans `settings.py` :
+#### 2. CORS — déjà installé par Thomas
+Vérifier dans `settings.py` :
 ```python
-INSTALLED_APPS = [
-    ...
-    'corsheaders',
-]
-
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # doit être en premier
+    'corsheaders.middleware.CorsMiddleware',  # doit être EN PREMIER
     ...
 ]
 
-# Autoriser le frontend React
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 ```
 
-### 3. Authentication JWT
-Le backend doit retourner un token JWT à la connexion :
+#### 3. Format de réponse du login
 ```json
-POST /api/auth/login/
-→ { "token": "eyJ...", "role": "admin" }
+POST /api/token/
+→ {
+    "access": "eyJ...",
+    "refresh": "eyJ...",
+    "role": "admin"
+  }
 ```
 
-### 4. Endpoints attendus par le Frontend
+> ⚠️ Le champ `role` doit être ajouté manuellement au serializer JWT de Thomas.
+
+### Endpoints attendus par le Frontend
+
+#### Authentification
 | Méthode | URL | Description |
 |---------|-----|-------------|
-| POST | `/api/auth/login/` | Connexion |
-| POST | `/api/auth/register/` | Inscription |
-| GET | `/api/events/` | Liste des événements |
-| POST | `/api/events/` | Créer un événement |
-| GET | `/api/events/:id/` | Détail événement |
-| PUT | `/api/events/:id/` | Modifier événement |
-| DELETE | `/api/events/:id/` | Supprimer événement |
-| GET | `/api/participants/` | Liste des participants |
-| POST | `/api/participants/` | Créer un participant |
-| PUT | `/api/participants/:id/` | Modifier participant |
-| DELETE | `/api/participants/:id/` | Supprimer participant |
-| GET | `/api/registrations/` | Liste des inscriptions |
+| POST | `/api/token/` | Login → access + refresh + role |
+| POST | `/api/token/refresh/` | Renouveler le access token |
+
+#### Événements
+| Méthode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/events/` | Liste (supporte `?status=` et `?date=`) |
+| POST | `/api/events/` | Créer (admin) |
+| GET | `/api/events/:id/` | Détail |
+| PUT | `/api/events/:id/` | Modifier (admin) |
+| DELETE | `/api/events/:id/` | Supprimer (admin) |
+
+#### Participants
+| Méthode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/participants/` | Liste |
+| POST | `/api/participants/` | Créer (admin) |
+| PUT | `/api/participants/:id/` | Modifier (admin) |
+| DELETE | `/api/participants/:id/` | Supprimer (admin) |
+
+#### Inscriptions
+| Méthode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/registrations/?event=:id` | Participants d'un événement |
 | POST | `/api/registrations/` | Inscrire un participant |
-| DELETE | `/api/registrations/:id/` | Supprimer inscription |
+| DELETE | `/api/registrations/:id/` | Désinscrire |
 
-### 5. Format des réponses attendu
-Toutes les réponses doivent être en **JSON**.
-En cas d'erreur, le backend doit retourner :
-```json
-{ "detail": "message d'erreur ici" }
-```
-ou
-```json
-{ "error": "message d'erreur ici" }
-```
-
-### 6. Headers envoyés par le Frontend
-Chaque requête authentifiée envoie automatiquement :
+### Headers envoyés automatiquement par le Frontend
 ```
 Content-Type: application/json
-Authorization: Bearer <token>
+Authorization: Bearer <access_token>
 ```
 
-
+### Format des erreurs attendu
+```json
+{ "detail": "message d'erreur" }
+```
