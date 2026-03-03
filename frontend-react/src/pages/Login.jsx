@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Zap, Eye, EyeOff, Lock, User, AlertCircle } from "lucide-react";
 import { loginApi } from "../api/auth";
 import { setToken, setRefreshToken, setRole } from "../store/authStore";
@@ -118,11 +118,15 @@ export default function Login() {
 
           {/* Footer links */}
           <div className="login-links">
-            <button className="login-link-btn">Mot de passe oublié ?</button>
-            <button className="login-link-btn">Créer un compte</button>
+            <Link to="/forgot-password" className="login-link-btn">
+              Mot de passe oublié ?
+            </Link>
+            <Link to="/register" className="login-link-btn login-link-btn-register">
+              Créer un compte →
+            </Link>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

@@ -82,10 +82,8 @@
   margin-top: 4px;
 }
 
-/* Form field */
-.form-field {
-  margin-bottom: 16px;
-}
+/* Form */
+.form-field { margin-bottom: 16px; }
 
 .login-label {
   display: block;
@@ -118,20 +116,17 @@
   font-size: 0.875rem;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
 }
 
-.login-input::placeholder {
-  color: rgba(255,255,255,0.3);
-}
+.login-input::placeholder { color: rgba(255,255,255,0.3); }
 
 .login-input:focus {
   border-color: #6366f1;
   box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
 }
 
-.login-input-password {
-  padding-right: 44px;
-}
+.login-input-password { padding-right: 44px; }
 
 .login-eye-btn {
   position: absolute;
@@ -146,11 +141,9 @@
   transition: color 0.15s;
 }
 
-.login-eye-btn:hover {
-  color: rgba(255,255,255,0.6);
-}
+.login-eye-btn:hover { color: rgba(255,255,255,0.6); }
 
-/* Submit button */
+/* Submit */
 .login-submit-btn {
   width: 100%;
   padding: 13px;
@@ -168,23 +161,21 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  font-family: inherit;
 }
 
-.login-submit-btn:hover:not(:disabled) {
-  background: #5558e8;
-}
+.login-submit-btn:hover:not(:disabled) { background: #5558e8; }
+.login-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.login-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+/* Footer links */
 .login-links {
   margin-top: 20px;
   border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 20px;
+  padding-top: 16px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .login-link-btn {
@@ -195,19 +186,19 @@
   cursor: pointer;
   transition: color 0.15s;
   padding: 0;
+  text-decoration: none;
 }
 
-.login-link-btn:hover {
-  color: rgba(255,255,255,0.7);
+.login-link-btn:hover { color: rgba(255,255,255,0.7); }
+
+.login-link-btn-register {
+  color: #a5b4fc;
+  font-weight: 600;
 }
 
-/* Footer */
-.login-footer {
-  text-align: center;
-  color: rgba(255,255,255,0.2);
-  font-size: 0.75rem;
-  margin-top: 24px;
-}
+.login-link-btn-register:hover { color: #c7d2fe; }
+
+
 
 /* Spinner */
 .spinner {
@@ -217,9 +208,7 @@
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Alert */
 .alert-error {

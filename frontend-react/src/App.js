@@ -6,10 +6,14 @@ import Dashboard from "./pages/Dashboard";
 import Events from "./pages/Events";
 import EventDetail from "./pages/EventDetail";
 import Participants from "./pages/Participants";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
 
 export default function App() {
   return (
     <Routes>
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/dashboard" />} />
 

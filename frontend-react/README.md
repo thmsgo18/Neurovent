@@ -63,24 +63,24 @@ npm start
 
 ### En cas de problème
 
-| Erreur | Solution |
-|--------|----------|
-| `npm not found` | Installer Node.js depuis nodejs.org |
-| `Module not found: lucide-react` | `npm install lucide-react` |
-| `Module not found: react-icons` | `npm install react-icons` |
-| `Module not found: react-router-dom` | `npm install react-router-dom` |
-| Port 3000 occupé | `PORT=3001 npm start` |
-| Page blanche | Vérifier la console F12 pour l'erreur |
-| Erreur CORS | Vérifier que Django tourne sur le port 8000 |
+| Erreur                              | Solution                              |
+|-------------------------------------|---------------------------------------|
+| `npm not found`                     | Installer Node.js depuis nodejs.org   |
+| `Module not found: lucide-react`    | `npm install lucide-react`            |
+| `Module not found: react-icons`     | `npm install react-icons`             |
+| `Module not found: react-router-dom`| `npm install react-router-dom`        |
+| Port 3000 occupé                    | `PORT=3001 npm start`                 |
+| Page blanche                        | Vérifier la console F12 pour l'erreur |
+| Erreur CORS                         | Vérifier que Django tourne sur 8000   |
 
 ### Dépendances installées
 
-| Package | Version | Usage |
-|---------|---------|-------|
-| `react` | 18+ | Framework UI |
-| `react-router-dom` | v6 | Navigation SPA — routing + protection des routes |
-| `lucide-react` | latest | Icônes (sidebar, boutons, pages...) |
-| `react-icons` | latest | Icônes supplémentaires |
+| Package            | Version | Usage                                              |
+|--------------------|---------|--------------------------------------------------- |
+| `react`            | 18+     | Framework UI                                       |
+| `react-router-dom` | v6      | Navigation SPA — routing + protection des routes   |
+| `lucide-react`     | latest  | Icônes (sidebar, boutons, pages...)                |
+| `react-icons`      | latest  | Icônes supplémentaires                             |
 
 ---
 
@@ -91,7 +91,7 @@ frontend-react/
 └── src/
     ├── api/
     │   ├── client.js          → fonction apiFetch() centrale (token + erreurs)
-    │   ├── auth.js            → login / logout (mock + real)
+    │   ├── auth.js            → login / register / forgot-password (mock + real)
     │   ├── events.js          → CRUD événements (mock + real)
     │   └── participants.js    → CRUD participants + inscriptions (mock + real)
     ├── components/
@@ -100,16 +100,21 @@ frontend-react/
     │   └── AdminRoute.jsx     → protection par rôle admin
     ├── pages/
     │   ├── Login.jsx          → page de connexion
-    │   ├── Dashboard.jsx      → tableau de bord
-    │   ├── Events.jsx         → liste + filtres + CRUD
-    │   ├── EventDetail.jsx    → détail + participants inscrits
+    │   ├── Register.jsx       → création de compte viewer (mock → Thomas)
+    │   ├── ForgotPassword.jsx → mot de passe oublié (mock → Thomas)
+    │   ├── Dashboard.jsx      → tableau de bord (stats, graphiques, activité récente)
+    │   ├── Events.jsx         → liste + filtres + CRUD événements
+    │   ├── EventDetail.jsx    → détail événement + gestion participants inscrits
     │   └── Participants.jsx   → liste + CRUD participants
     ├── store/
     │   └── authStore.js       → gestion token JWT + rôles (localStorage)
     ├── styles/
-    │   ├── global.css         → classes CSS réutilisables
-    │   ├── Login.css          → styles page login
-    │   └── Layout.css         → styles sidebar + header
+    │   ├── Login.css          → styles page login / register / forgot-password
+    │   ├── Layout.css         → styles sidebar + header
+    │   ├── Dashboard.css      → styles dashboard
+    │   ├── Events.css         → styles page events
+    │   ├── EventDetail.css    → styles page event detail
+    │   └── Participants.css   → styles page participants
     ├── App.js                 → définition des routes
     └── index.js               → point d'entrée
 ```
@@ -120,25 +125,41 @@ frontend-react/
 
 Le token JWT est stocké dans le `localStorage` après connexion.
 
-| Clé localStorage | Valeur |
-|-----------------|--------|
-| `access_token` | Token JWT court (envoyé à chaque requête API) |
-| `refresh_token` | Token JWT long (renouvellement automatique) |
-| `role` | `admin` ou `viewer` |
+| Clé localStorage  | Valeur                                          |
+|-------------------|-------------------------------------------------|
+| `access_token`    | Token JWT court (envoyé à chaque requête API)   |
+| `refresh_token`   | Token JWT long (renouvellement automatique)     |
+| `role`            | `admin` ou `viewer`                             |
 
 ### Fonctions disponibles — `src/store/authStore.js`
 
-| Fonction | Description |
-|----------|-------------|
-| `getToken()` | Récupère le access token |
-| `setToken(token)` | Sauvegarde le access token |
-| `getRefreshToken()` | Récupère le refresh token |
-| `setRefreshToken(token)` | Sauvegarde le refresh token |
-| `getRole()` | Récupère le rôle |
-| `setRole(role)` | Sauvegarde le rôle |
-| `isAuthed()` | `true` si connecté |
-| `isAdmin()` | `true` si rôle admin |
-| `logout()` | Efface tout (token + rôle) |
+| Fonction               | Description                      |
+|------------------------|----------------------------------|
+| `getToken()`           | Récupère le access token         |
+| `setToken(token)`      | Sauvegarde le access token       |
+| `getRefreshToken()`    | Récupère le refresh token        |
+| `setRefreshToken(token)` | Sauvegarde le refresh token    |
+| `getRole()`            | Récupère le rôle                 |
+| `setRole(role)`        | Sauvegarde le rôle               |
+| `isAuthed()`           | `true` si connecté               |
+| `isAdmin()`            | `true` si rôle admin             |
+| `logout()`             | Efface tout (token + rôle)       |
+
+### Différences admin vs viewer
+
+| Fonctionnalité              | Admin | Viewer |
+|-----------------------------|-------|--------|
+| Voir les événements         | ✅    | ✅     |
+| Voir le dashboard           | ✅    | ✅     |
+| Voir les participants       | ✅    | ✅     |
+| Créer un événement          | ✅    | ❌     |
+| Modifier un événement       | ✅    | ❌     |
+| Supprimer un événement      | ✅    | ❌     |
+| Créer un participant        | ✅    | ❌     |
+| Modifier un participant     | ✅    | ❌     |
+| Supprimer un participant    | ✅    | ❌     |
+| Inscrire un participant     | ✅    | ❌     |
+| Désinscrire un participant  | ✅    | ❌     |
 
 ---
 
@@ -146,13 +167,15 @@ Le token JWT est stocké dans le `localStorage` après connexion.
 
 ### Routes disponibles
 
-| URL | Accès | Composant | Description |
-|-----|-------|-----------|-------------|
-| `/login` | Public | Login.jsx | Page de connexion |
-| `/dashboard` | Connecté | Dashboard.jsx | Vue résumée |
-| `/events` | Connecté | Events.jsx | Liste + filtres |
-| `/events/:id` | Connecté | EventDetail.jsx | Détail + participants |
-| `/participants` | Connecté | Participants.jsx | Gestion participants |
+| URL               | Accès     | Composant        | Description                        |
+|-------------------|-----------|------------------|------------------------------------|
+| `/login`          | Public    | Login.jsx        | Page de connexion                  |
+| `/register`       | Public    | Register.jsx     | Créer un compte viewer             |
+| `/forgot-password`| Public    | ForgotPassword.jsx | Réinitialisation mot de passe    |
+| `/dashboard`      | Connecté  | Dashboard.jsx    | Vue résumée                        |
+| `/events`         | Connecté  | Events.jsx       | Liste + filtres + CRUD             |
+| `/events/:id`     | Connecté  | EventDetail.jsx  | Détail + participants inscrits     |
+| `/participants`   | Connecté  | Participants.jsx | Gestion participants               |
 
 ### Comment ça marche ?
 
@@ -189,10 +212,10 @@ export const USE_MOCK = true;  // true = mock | false = vrai backend Django
 
 ### Credentials de test
 
-| Username | Password | Rôle |
-|----------|----------|------|
-| `admin` | `admin123` | admin (accès complet — CRUD) |
-| `viewer` | `viewer123` | viewer (lecture seule) |
+| Username  | Password    | Rôle   | Accès         |
+|-----------|-------------|--------|---------------|
+| `admin`   | `admin123`  | admin  | CRUD complet  |
+| `viewer`  | `viewer123` | viewer | Lecture seule |
 
 ### Données mock disponibles
 - **3 événements** : Workshop ML, Conférence Federated Learning, Séminaire Multi-Agent Systems
@@ -200,9 +223,16 @@ export const USE_MOCK = true;  // true = mock | false = vrai backend Django
 - **2 inscriptions** pré-existantes (Alice → ML, Bob → ML)
 
 ### Passer au vrai backend (quand Thomas est prêt)
-1. Mettre `USE_MOCK = false` dans `src/api/auth.js`, `events.js`, `participants.js`
-2. Vérifier que `.env` pointe vers `http://localhost:8000`
-3. Tester chaque endpoint via l'app
+```bash
+# Dans src/api/auth.js
+export const USE_MOCK = false;
+
+# Dans src/api/events.js
+export const USE_MOCK = false;
+
+# Dans src/api/participants.js
+export const USE_MOCK = false;
+```
 
 ---
 
@@ -222,7 +252,7 @@ REACT_APP_API_BASE=http://localhost:8000
 python manage.py runserver 8000
 ```
 
-#### 2. CORS — déjà installé par Thomas
+#### 2. CORS
 Vérifier dans `settings.py` :
 ```python
 MIDDLEWARE = [
@@ -250,38 +280,44 @@ POST /api/token/
 ### Endpoints attendus par le Frontend
 
 #### Authentification
-| Méthode | URL | Description |
-|---------|-----|-------------|
-| POST | `/api/token/` | Login → access + refresh + role |
-| POST | `/api/token/refresh/` | Renouveler le access token |
+
+| Méthode | URL                          | Description                    |
+|---------|------------------------------|--------------------------------|
+| POST    | `/api/token/`                | Login → access + refresh + role|
+| POST    | `/api/token/refresh/`        | Renouveler le access token     |
+| POST    | `/api/auth/register/`        | Créer un compte viewer         |
+| POST    | `/api/auth/forgot-password/` | Envoyer email reset password   |
 
 #### Événements
-| Méthode | URL | Description |
-|---------|-----|-------------|
-| GET | `/api/events/` | Liste (supporte `?status=` et `?date=`) |
-| POST | `/api/events/` | Créer (admin) |
-| GET | `/api/events/:id/` | Détail |
-| PUT | `/api/events/:id/` | Modifier (admin) |
-| DELETE | `/api/events/:id/` | Supprimer (admin) |
+
+| Méthode | URL                  | Description             |
+|---------|----------------------|-------------------------|
+| GET     | `/api/events/`       | Liste (supporte `?status=` et `?date=`) |
+| POST    | `/api/events/`       | Créer (admin)           |
+| GET     | `/api/events/:id/`   | Détail                  |
+| PUT     | `/api/events/:id/`   | Modifier (admin)        |
+| DELETE  | `/api/events/:id/`   | Supprimer (admin)       |
 
 #### Participants
-| Méthode | URL | Description |
-|---------|-----|-------------|
-| GET | `/api/participants/` | Liste |
-| POST | `/api/participants/` | Créer (admin) |
-| PUT | `/api/participants/:id/` | Modifier (admin) |
-| DELETE | `/api/participants/:id/` | Supprimer (admin) |
+
+| Méthode | URL                        | Description        |
+|---------|----------------------------|--------------------|
+| GET     | `/api/participants/`       | Liste              |
+| POST    | `/api/participants/`       | Créer (admin)      |
+| PUT     | `/api/participants/:id/`   | Modifier (admin)   |
+| DELETE  | `/api/participants/:id/`   | Supprimer (admin)  |
 
 #### Inscriptions
-| Méthode | URL | Description |
-|---------|-----|-------------|
-| GET | `/api/registrations/?event=:id` | Participants d'un événement |
-| POST | `/api/registrations/` | Inscrire un participant |
-| DELETE | `/api/registrations/:id/` | Désinscrire |
+
+| Méthode | URL                              | Description                   |
+|---------|----------------------------------|-------------------------------|
+| GET     | `/api/registrations/?event=:id`  | Participants d'un événement   |
+| POST    | `/api/registrations/`            | Inscrire un participant        |
+| DELETE  | `/api/registrations/:id/`        | Désinscrire                   |
 
 ### Headers envoyés automatiquement par le Frontend
 ```
-Content-Type: application/json
+Content-Type:  application/json
 Authorization: Bearer <access_token>
 ```
 
