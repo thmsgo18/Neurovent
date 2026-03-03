@@ -42,7 +42,32 @@ Fonctions disponibles depuis `src/store/authStore.js` :
 - `isAdmin()` → retourne true si rôle admin
 
 
+## 🛡️ Système de Routing & Protection des Routes
 
+### Routes disponibles
+| URL | Accès | Page |
+|-----|-------|------|
+| `/login` | Public | Page de connexion |
+| `/dashboard` | Connecté | Tableau de bord |
+| `/events` | Connecté | Liste des événements |
+| `/events/:id` | Connecté | Détail d'un événement |
+| `/participants` | Connecté | Liste des participants |
+
+### Comment ça marche ?
+- **ProtectedRoute** : vérifie si un token existe dans le localStorage
+  - Token présent → accès autorisé
+  - Token absent → redirection automatique vers `/login`
+- **AdminRoute** : en plus de vérifier le token, vérifie si le rôle est `admin`
+  - Rôle `viewer` → redirigé vers `/dashboard`
+
+### Tester la protection des routes
+Sans être connecté, aller sur `/events` redirige automatiquement vers `/login`.
+Pour simuler une connexion en dev :
+```javascript
+// Dans la console du navigateur (F12)
+localStorage.setItem("token", "test123")
+localStorage.setItem("role", "admin")
+```
 
 
 

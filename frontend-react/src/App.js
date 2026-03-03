@@ -1,25 +1,35 @@
-import logo from './logo.svg';
-import './App.css';
+import { Routes, Route, Navigate } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-function App() {
+// Pages (on va les créer juste après)
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Events from "./pages/Events";
+import EventDetail from "./pages/EventDetail";
+import Participants from "./pages/Participants";
+
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Routes>
+      {/* Redirect racine vers dashboard */}
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+      
+      {/* Page publique */}
+      <Route path="/login" element={<Login />} />
+      
+      {/* Pages protégées */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute><Dashboard /></ProtectedRoute>
+      } />
+      <Route path="/events" element={
+        <ProtectedRoute><Events /></ProtectedRoute>
+      } />
+      <Route path="/events/:id" element={
+        <ProtectedRoute><EventDetail /></ProtectedRoute>
+      } />
+      <Route path="/participants" element={
+        <ProtectedRoute><Participants /></ProtectedRoute>
+      } />
+    </Routes>
   );
 }
-
-export default App;
