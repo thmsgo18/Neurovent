@@ -33,6 +33,7 @@ Le projet est une "coloration" de la consigne de base — même structure techni
 - **Django 6.0.2** + **Django REST Framework**
 - **djangorestframework-simplejwt** — authentification par token JWT
 - **django-cors-headers** — CORS pour autoriser les requêtes React
+- **django-filter** — filtres sur la liste des events
 - **Pillow** — upload d'images (logos company)
 - Base de données : **SQLite** (développement)
 - Dossier : `backend-django/`
@@ -58,11 +59,11 @@ Le projet est une "coloration" de la consigne de base — même structure techni
 ```
 backend-django/
 ├── config/          → settings.py, urls.py, wsgi.py, asgi.py
-├── users/           → CustomUser, auth, profil, stats admin
-├── events/          → Event, CRUD events
+├── users/           → CustomUser, auth, profil, stats admin, profil public company
+├── events/          → Event, CRUD events, filtres, stats par event
 ├── registrations/   → Registration, inscriptions
 ├── tags/            → Tag, liste gérée par admin
-└── participants/    → app vide (ancienne version, ignorée)
+└── media/           → fichiers uploadés (logos) — non versionné
 ```
 
 ---
@@ -188,16 +189,47 @@ ou `user_id, role, company_name, company_identifier` (company)
 - Pour **écrire** les tags : champ `tag_ids` → envoyer `[1, 2, 3]` (IDs)
 - Exemple PATCH : `{"tag_ids": [1]}` (PAS `{"tags": [1]}`)
 
+**Upload logo company** : utiliser `multipart/form-data` (pas JSON)
+```bash
+curl -X PATCH /api/auth/me/ -H "Authorization: Bearer TOKEN" -F "company_logo=@logo.png"
+```
+
 ### Événements
 
 | Méthode | URL | Accès | Notes |
 |---------|-----|-------|-------|
-| GET | `/api/events/` | Public | Liste events PUBLISHED |
+| GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
 | GET | `/api/events/<id>/` | Public | Détail event PUBLISHED |
 | POST | `/api/events/create/` | Company | Crée un event |
 | PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifie son event |
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprime son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
+| GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats de l'event |
+
+**Filtres disponibles sur `GET /api/events/` :**
+```
+?format=ONSITE|ONLINE|HYBRID
+?tags=1&tags=2          → events avec au moins un de ces tags
+?date_after=2026-04-01  → events démarrant après cette date
+?date_before=2026-05-01 → events démarrant avant cette date
+?city=Paris
+?country=France
+?search=neurosciences   → recherche dans titre + description
+?ordering=date_start    → tri croissant (défaut)
+?ordering=-date_start   → tri décroissant
+?page=2                 → page 2 (10 events par page)
+```
+
+**Réponse paginée :**
+```json
+{ "count": 42, "next": "...?page=2", "previous": null, "results": [...] }
+```
+
+### Companies
+
+| Méthode | URL | Accès | Notes |
+|---------|-----|-------|-------|
+| GET | `/api/companies/<id>/` | Public | Profil public + events publiés de la company |
 
 ### Inscriptions
 
@@ -224,10 +256,12 @@ ou `user_id, role, company_name, company_identifier` (company)
 |--------|-------------|-------------|---------|-------|
 | Voir liste events | ✅ | ✅ | ✅ | ✅ |
 | Voir détail event | ✅ | ✅ | ✅ | ✅ |
+| Voir profil public company | ✅ | ✅ | ✅ | ✅ |
 | S'inscrire à un event | ❌ | ✅ | ❌ | ❌ |
 | Créer un event | ❌ | ❌ | ✅ | ❌ |
 | Modifier/supprimer son event | ❌ | ❌ | ✅ (owner) | ✅ |
 | Valider des inscriptions | ❌ | ❌ | ✅ (owner) | ✅ |
+| Voir stats d'un event | ❌ | ❌ | ✅ (owner) | ✅ |
 | Voir stats globales | ❌ | ❌ | ❌ | ✅ |
 | Gérer les tags | ❌ | ❌ | ❌ | ✅ |
 | Désactiver un compte | ❌ | ❌ | ❌ | ✅ (admin Django) |
@@ -236,37 +270,35 @@ ou `user_id, role, company_name, company_identifier` (company)
 
 ## 8. État d'avancement
 
-### ✅ Milestone 1 — Complété (20 mars 2026)
-- Tous les modèles créés et migrés
-- 14 endpoints testés et fonctionnels
-- JWT avec rôle dans le token
-- Login séparé participant / company
-- Tags M2M fonctionnels (bug update corrigé)
-- Stats admin
-- Admin Django configuré
-- CORS configuré
-- README API Contract à jour
+### ✅ Backend Django (Thomas) — 100% TERMINÉ
 
-### 🔲 Milestone 2 — À faire (avant 10 avril 2026)
-**Backend (Thomas) :**
-- [ ] Filtres sur les events (`?format=ONSITE&tags=1&date_after=...`)
-- [ ] Tester upload logo company (PATCH /api/auth/me/ avec multipart/form-data)
-- [ ] Endpoint profil public company (`GET /api/companies/<id>/`)
-- [ ] Pagination sur la liste des events
-- [ ] Stats par event pour la company (`GET /api/events/<id>/stats/`)
+- [x] Tous les modèles créés et migrés (CustomUser, Event, Registration, Tag)
+- [x] 16 endpoints testés et fonctionnels
+- [x] JWT avec rôle dans le token
+- [x] Login séparé participant (email) / company (identifiant)
+- [x] Tags M2M fonctionnels (tag_ids pour écriture, tags pour lecture)
+- [x] Stats admin globales
+- [x] Filtres events (format, tags, date, ville, pays, search, ordering)
+- [x] Pagination (10 events/page)
+- [x] Upload logo company (multipart/form-data)
+- [x] Profil public company avec events publiés
+- [x] Stats par event (company owner + admin)
+- [x] Admin Django configuré
+- [x] CORS configuré (localhost:3000 et :5173)
+- [x] README backend à jour
 
-**Frontend (Noureddine) :**
+### 🔲 Frontend (Noureddine) — En cours
 - [ ] Pages Login/Register (participant + company)
-- [ ] Page liste des events
+- [ ] Page liste des events (avec filtres)
 - [ ] Page détail event + bouton inscription
 - [ ] Dashboard company (mes events, inscrits)
 - [ ] Page profil utilisateur
 
-**Node.js (Azouaou) :**
+### 🔲 Node.js (Azouaou) — À faire
 - [ ] API Express simplifiée (subset des endpoints Django)
 - [ ] Comparaison Django vs Node (rapport)
 
-**Tous :**
+### 🔲 Tous — À faire
 - [ ] Rapport écrit
 - [ ] Slides présentation
 - [ ] Déploiement
@@ -316,6 +348,15 @@ pip install -r requirements.txt
 6. **Visibilité adresse/lien** : la company choisit FULL ou PARTIAL + date de révélation optionnelle.
    La logique de révélation est calculée côté backend dans le serializer.
 
+7. **Pagination** : 10 events par page, navigable avec `?page=2`. Réponse enveloppée dans
+   `{count, next, previous, results}`.
+
+8. **URL_FORMAT_OVERRIDE = 'response_format'** : DRF utilise nativement `?format=` pour le
+   content negotiation. On l'a renommé pour libérer `?format=` pour nos filtres d'events.
+
+9. **Profil public company** : `GET /api/companies/<id>/` retourne les infos publiques uniquement.
+   `recovery_email` et `company_identifier` ne sont jamais exposés publiquement.
+
 ---
 
 ## 11. Pièges connus
@@ -325,4 +366,6 @@ pip install -r requirements.txt
 - **ManyToMany** : toujours utiliser `instance.tags.set(tags)` dans `update()`, jamais `setattr()`.
 - **company_identifier** : doit être unique, pas d'espaces recommandés (style `braincorp2026`).
 - **Migration conflit** : si erreur `InconsistentMigrationHistory`, supprimer `db.sqlite3` et relancer `migrate`.
-- **Upload image** : utiliser `multipart/form-data` (pas `application/json`) pour les requêtes avec fichiers.
+- **Upload image** : utiliser `multipart/form-data` (pas `application/json`) pour les requêtes avec fichiers. Avec curl : `-F "company_logo=@fichier.png"` sans header `Content-Type`.
+- **Filtre format** : `?format=` est réservé par DRF (content negotiation). On a configuré `URL_FORMAT_OVERRIDE = 'response_format'` dans settings.py pour lever ce conflit. Ne pas supprimer ce paramètre.
+- **Pagination** : la réponse de `GET /api/events/` est maintenant enveloppée. Person B doit lire `response.results` et pas directement `response`.

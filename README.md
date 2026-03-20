@@ -189,12 +189,32 @@ npm run dev
 
 | Méthode | URL | Accès | Notes |
 |---------|-----|-------|-------|
-| GET | `/api/events/` | Public | Liste des events PUBLISHED |
+| GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
 | GET | `/api/events/<id>/` | Public | Détail d'un event |
 | POST | `/api/events/create/` | Company | Créer un event |
 | PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifier son event |
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
+| GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats de l'event |
+
+**Filtres disponibles sur `GET /api/events/` :**
+```
+?format=ONSITE|ONLINE|HYBRID
+?tags=1&tags=2          → events avec au moins un de ces tags
+?date_after=2026-04-01
+?date_before=2026-05-01
+?city=Paris
+?country=France
+?search=neurosciences
+?ordering=date_start ou ?ordering=-date_start
+?page=2
+```
+
+### Companies
+
+| Méthode | URL | Accès | Notes |
+|---------|-----|-------|-------|
+| GET | `/api/companies/<id>/` | Public | Profil public + events publiés |
 
 ### Inscriptions
 

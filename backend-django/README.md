@@ -116,12 +116,44 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 
 | Méthode | URL | Accès | Notes |
 |---------|-----|-------|-------|
-| GET | `/api/events/` | Public | Liste events PUBLISHED |
+| GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
 | GET | `/api/events/<id>/` | Public | Détail d'un event |
 | POST | `/api/events/create/` | Company | Créer un event |
 | PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifier son event |
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
+| GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats détaillées de l'event |
+
+**Filtres disponibles sur `GET /api/events/` :**
+```
+?format=ONSITE|ONLINE|HYBRID
+?tags=1&tags=2          → events avec au moins un de ces tags (OR)
+?date_after=2026-04-01  → events démarrant après cette date
+?date_before=2026-05-01 → events démarrant avant cette date
+?city=Paris             → filtre sur la ville (insensible à la casse)
+?country=France         → filtre sur le pays (insensible à la casse)
+?search=neurosciences   → recherche dans titre + description
+?ordering=date_start    → tri croissant par date (défaut)
+?ordering=-date_start   → tri décroissant par date
+?page=2                 → page 2
+```
+
+**Réponse paginée :**
+```json
+{
+  "count": 42,
+  "next": "http://127.0.0.1:8000/api/events/?page=2",
+  "previous": null,
+  "results": [{ "id": 1, "title": "..." }, ...]
+}
+```
+> ⚠️ Person B doit lire `response.results` (pas directement `response`).
+
+### Companies
+
+| Méthode | URL | Accès | Notes |
+|---------|-----|-------|-------|
+| GET | `/api/companies/<id>/` | Public | Profil public + events publiés de la company |
 
 ### Inscriptions
 
