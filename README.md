@@ -160,3 +160,58 @@ Tous les membres doivent comprendre l'ensemble du projet.
 - Le dossier `.venv/` est local a chaque membre (non versionne).
 - Le fichier `db.sqlite3` local n'est pas versionne.
 - Ne jamais commiter de secrets (`.env`, cles API, etc.).
+
+## 12. API Contract
+
+> Base URL : `http://127.0.0.1:8000`
+> Authentification : header `Authorization: Bearer <access_token>` (JWT)
+
+### Authentification & Profil
+
+| Methode | URL | Acces | Body attendu | Description |
+| --- | --- | --- | --- | --- |
+| POST | /api/auth/register/participant/ | Public | `email, password, password_confirm, first_name, last_name` | Inscription participant |
+| POST | /api/auth/register/company/ | Public | `company_identifier, password, password_confirm, company_name, recovery_email` | Inscription company |
+| POST | /api/auth/login/participant/ | Public | `email, password` | Login participant → JWT |
+| POST | /api/auth/login/company/ | Public | `identifier, password` | Login company → JWT (pas d'email, identifiant unique) |
+| POST | /api/auth/token/refresh/ | Public | `refresh` | Rafraichir le token JWT |
+| GET | /api/auth/me/ | Connecte | - | Voir son profil (participant ou company) |
+| PATCH | /api/auth/me/ | Connecte | champs a modifier | Modifier son profil (envoi partiel OK) |
+| GET | /api/auth/admin/stats/ | Admin | - | Statistiques globales de la plateforme |
+
+### Evenements
+
+| Methode | URL | Acces | Body attendu | Description |
+| --- | --- | --- | --- | --- |
+| GET | /api/events/ | Public | - | Liste des events publies (sans token) |
+| GET | /api/events/\<id\>/ | Public | - | Detail d'un event (sans token) |
+| POST | /api/events/create/ | Company | `title, description, date_start, date_end, capacity, format, registration_mode, status, ...` | Creer un event |
+| PUT/PATCH | /api/events/\<id\>/update/ | Company (owner) | champs a modifier | Modifier un event |
+| DELETE | /api/events/\<id\>/delete/ | Company (owner) | - | Supprimer un event |
+| GET | /api/events/my-events/ | Company | - | Voir tous ses events (tous statuts) |
+
+**Valeurs possibles :**
+- `format` : `ONSITE` / `ONLINE` / `HYBRID`
+- `status` : `DRAFT` / `PUBLISHED` / `CANCELLED`
+- `registration_mode` : `AUTO` (inscription directement confirmee) / `VALIDATION` (en attente d'approbation company)
+- `address_visibility` / `online_visibility` : `FULL` / `PARTIAL`
+
+### Inscriptions
+
+| Methode | URL | Acces | Body attendu | Description |
+| --- | --- | --- | --- | --- |
+| POST | /api/registrations/ | Participant | `event: <id>` | S'inscrire a un event |
+| GET | /api/registrations/my/ | Participant | - | Voir ses inscriptions |
+| PATCH | /api/registrations/\<id\>/cancel/ | Participant | - | Annuler son inscription |
+| GET | /api/registrations/event/\<id\>/ | Company | - | Voir les inscrits d'un event |
+| PATCH | /api/registrations/\<id\>/status/ | Company | `status: CONFIRMED / REJECTED` | Confirmer ou rejeter une inscription |
+
+**Valeurs possibles :**
+- `status` retourne : `PENDING` / `CONFIRMED` / `REJECTED` / `CANCELLED`
+
+### Tags
+
+| Methode | URL | Acces | Body attendu | Description |
+| --- | --- | --- | --- | --- |
+| GET | /api/tags/ | Public | - | Liste de tous les tags disponibles |
+| POST | /api/tags/create/ | Admin | `name` | Creer un tag (liste geree par l'admin) |

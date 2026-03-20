@@ -48,9 +48,28 @@ venv/
 env/
 ENV/
 
+# Python packaging
+*.egg-info/
+*.egg
+dist/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Pyenv
+.python-version
+
 # Django generated/static/media (local)
 backend-django/staticfiles/
 backend-django/media/
+media/
+
+# Django local settings override (surcharge dev locale)
+local_settings.py
+backend-django/config/local_settings.py
+
+# Django compiled translations
+*.mo
+*.pot
 
 # -----------------------------
 # Node.js / React
@@ -79,3 +98,9 @@ temp/
 *.pid
 *.seed
 *.pid.lock
+
+# -----------------------------
+# Uploads utilisateurs (logos, images)
+# -----------------------------
+backend-django/logos/
+uploads/
