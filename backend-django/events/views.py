@@ -1,7 +1,10 @@
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Event
 from .serializers import EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer
+from .filters import EventFilter
 from users.models import UserRole
 
 
@@ -22,9 +25,27 @@ class IsCompanyOwner(permissions.BasePermission):
 # --- Vues publiques (sans authentification) ---
 
 class EventListView(generics.ListAPIView):
-    """Liste des events publiés — accessible à tous"""
+    """
+    Liste des events publiés — accessible à tous.
+
+    Filtres disponibles :
+        ?format=ONSITE|ONLINE|HYBRID
+        ?tags=1&tags=2          → events avec au moins un de ces tags
+        ?date_after=2026-04-01  → events démarrant après cette date
+        ?date_before=2026-05-01 → events démarrant avant cette date
+        ?city=Paris
+        ?country=France
+        ?search=neurosciences   → recherche dans titre + description
+        ?ordering=date_start    → tri croissant par date
+        ?ordering=-date_start   → tri décroissant par date
+        ?ordering=capacity      → tri par capacité
+    """
     serializer_class = EventListSerializer
     permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = EventFilter
+    ordering_fields = ['date_start', 'date_end', 'capacity', 'created_at']
+    ordering = ['date_start']  # tri par défaut : les plus prochains en premier
 
     def get_queryset(self):
         return Event.objects.filter(status='PUBLISHED')

@@ -60,6 +60,8 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
     ),
+    # Renomme le paramètre de format DRF pour éviter le conflit avec ?format= de nos filtres
+    "URL_FORMAT_OVERRIDE": "response_format",
 }
 
 
