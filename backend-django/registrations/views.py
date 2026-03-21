@@ -8,12 +8,14 @@ from .models import Registration, RegistrationStatus
 from .serializers import RegistrationSerializer, RegistrationStatusUpdateSerializer
 from events.models import Event
 from users.models import UserRole
+from emails import send_registration_confirmed, send_registration_rejected
 
 
 def _promote_from_waitlist(event):
     """
     Promeut automatiquement le premier participant en liste d'attente
     si une place vient de se libérer. Appelé après chaque annulation/rejet.
+    Envoie un email de confirmation au participant promu.
     """
     confirmed_count = event.registrations.filter(status=RegistrationStatus.CONFIRMED).count()
     if confirmed_count < event.capacity:
@@ -26,6 +28,7 @@ def _promote_from_waitlist(event):
         if next_in_line:
             next_in_line.status = RegistrationStatus.CONFIRMED
             next_in_line.save()
+            send_registration_confirmed(next_in_line, from_waitlist=True)
             return next_in_line
     return None
 
@@ -79,20 +82,30 @@ class RegisterToEventView(generics.CreateAPIView):
         else:
             # Places disponibles → AUTO=CONFIRMED, VALIDATION=PENDING
             initial_status = RegistrationStatus.CONFIRMED if event.registration_mode == 'AUTO' else RegistrationStatus.PENDING
-            serializer.save(participant=self.request.user, status=initial_status)
+            registration = serializer.save(participant=self.request.user, status=initial_status)
+            # Notifier le participant si confirmation immédiate (mode AUTO)
+            if initial_status == RegistrationStatus.CONFIRMED:
+                send_registration_confirmed(registration)
 
 
 class MyRegistrationsView(generics.ListAPIView):
-    """Un participant voit toutes ses inscriptions"""
+    """
+    Un participant voit toutes ses inscriptions.
+    Filtre optionnel : ?status=CONFIRMED|PENDING|REJECTED|CANCELLED|WAITLIST
+    """
     serializer_class = RegistrationSerializer
     permission_classes = [IsParticipant]
 
     def get_queryset(self):
-        return (
+        qs = (
             Registration.objects
             .filter(participant=self.request.user)
             .select_related('event', 'participant')
         )
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter.upper())
+        return qs
 
 
 class CancelRegistrationView(generics.UpdateAPIView):
@@ -147,8 +160,11 @@ class UpdateRegistrationStatusView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        # Si la company rejette → promouvoir le premier en liste d'attente
-        if instance.status == RegistrationStatus.REJECTED:
+        # Notifier le participant du changement de statut
+        if instance.status == RegistrationStatus.CONFIRMED:
+            send_registration_confirmed(instance)
+        elif instance.status == RegistrationStatus.REJECTED:
+            send_registration_rejected(instance)
             _promote_from_waitlist(instance.event)
 
 

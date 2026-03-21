@@ -10,6 +10,7 @@ from .models import Event
 from .serializers import EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer
 from .filters import EventFilter
 from users.models import UserRole
+from emails import send_event_cancelled
 
 
 # --- Permissions personnalisées ---
@@ -91,6 +92,13 @@ class EventUpdateView(generics.UpdateAPIView):
             .filter(company=self.request.user)
             .prefetch_related('tags')
         )
+
+    def perform_update(self, serializer):
+        old_status = serializer.instance.status
+        instance = serializer.save()
+        # Si le statut vient de passer à CANCELLED → notifier les inscrits
+        if old_status != 'CANCELLED' and instance.status == 'CANCELLED':
+            send_event_cancelled(instance)
 
 
 class EventDeleteView(generics.DestroyAPIView):

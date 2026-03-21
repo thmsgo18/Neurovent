@@ -3,7 +3,6 @@ from django.db.models import Count, Avg
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -22,6 +21,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
+from emails import send_password_reset
 
 
 # ─────────────────────────────────────────
@@ -232,21 +232,7 @@ class PasswordResetRequestView(APIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
-
-            send_mail(
-                subject="Réinitialisation de votre mot de passe — Neurovent",
-                message=(
-                    f"Bonjour,\n\n"
-                    f"Vous avez demandé la réinitialisation de votre mot de passe sur Neurovent.\n\n"
-                    f"Cliquez sur ce lien pour choisir un nouveau mot de passe :\n{reset_link}\n\n"
-                    f"Ce lien est valable 24 heures.\n\n"
-                    f"Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\n"
-                    f"— L'équipe Neurovent"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=True,
-            )
+            send_password_reset(email, reset_link)
 
         return Response({
             'message': "Si cet email est associé à un compte, un lien de réinitialisation a été envoyé."
