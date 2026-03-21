@@ -163,6 +163,46 @@ class CompanyPublicSerializer(serializers.ModelSerializer):
 
 
 # ─────────────────────────────────────────
+#  MOT DE PASSE
+# ─────────────────────────────────────────
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """Changement de mot de passe pour un utilisateur connecté"""
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Mot de passe actuel incorrect.')
+        return value
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({'new_password': 'Les mots de passe ne correspondent pas.'})
+        return attrs
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Demande de réinitialisation par email (mot de passe oublié)"""
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """Confirmation du reset avec le token reçu par email"""
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({'new_password': 'Les mots de passe ne correspondent pas.'})
+        return attrs
+
+
+# ─────────────────────────────────────────
 #  PROFIL GÉNÉRIQUE (dispatche selon le rôle)
 # ─────────────────────────────────────────
 

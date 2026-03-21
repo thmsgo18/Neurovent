@@ -1,5 +1,10 @@
 from django.utils import timezone
 from django.db.models import Count, Avg
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +18,9 @@ from .serializers import (
     CompanyProfileSerializer,
     CompanyPublicSerializer,
     UserProfileSerializer,
+    ChangePasswordSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
 )
 
 
@@ -171,6 +179,108 @@ class ProfileView(APIView):
             {'message': 'Compte supprimé avec succès.'},
             status=status.HTTP_200_OK
         )
+
+
+# ─────────────────────────────────────────
+#  MOT DE PASSE
+# ─────────────────────────────────────────
+
+class ChangePasswordView(APIView):
+    """
+    Changement de mot de passe — PATCH /api/auth/me/password/
+    L'utilisateur doit être connecté et fournir son mot de passe actuel.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            request.user.set_password(serializer.validated_data['new_password'])
+            request.user.save()
+            return Response({'message': 'Mot de passe modifié avec succès.'})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Demande de réinitialisation — POST /api/auth/password-reset/
+    Envoie un email avec un lien contenant un token signé.
+    Fonctionne pour les participants (email login) et les companies (recovery_email).
+    Retourne toujours 200 pour ne pas révéler si l'email existe.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
+        user = None
+
+        # Cherche un participant par son email de connexion
+        try:
+            user = CustomUser.objects.get(email=email, role=UserRole.PARTICIPANT, is_active=True)
+        except CustomUser.DoesNotExist:
+            # Cherche une company par son recovery_email
+            try:
+                user = CustomUser.objects.get(recovery_email=email, role=UserRole.COMPANY, is_active=True)
+            except CustomUser.DoesNotExist:
+                pass  # Email inconnu → on ne révèle rien
+
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+
+            send_mail(
+                subject="Réinitialisation de votre mot de passe — Neurovent",
+                message=(
+                    f"Bonjour,\n\n"
+                    f"Vous avez demandé la réinitialisation de votre mot de passe sur Neurovent.\n\n"
+                    f"Cliquez sur ce lien pour choisir un nouveau mot de passe :\n{reset_link}\n\n"
+                    f"Ce lien est valable 24 heures.\n\n"
+                    f"Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.\n\n"
+                    f"— L'équipe Neurovent"
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=True,
+            )
+
+        return Response({
+            'message': "Si cet email est associé à un compte, un lien de réinitialisation a été envoyé."
+        })
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Confirmation du reset — POST /api/auth/password-reset/confirm/
+    Valide le token reçu par email et applique le nouveau mot de passe.
+    Body : { uid, token, new_password, new_password_confirm }
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Décoder l'uid pour retrouver l'utilisateur
+        try:
+            uid = force_str(urlsafe_base64_decode(serializer.validated_data['uid']))
+            user = CustomUser.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return Response({'error': 'Lien invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Vérifier le token (signé avec le hash du mot de passe actuel → invalide après usage)
+        if not default_token_generator.check_token(user, serializer.validated_data['token']):
+            return Response({'error': 'Lien invalide ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response({'message': 'Mot de passe réinitialisé avec succès.'})
 
 
 # ─────────────────────────────────────────
