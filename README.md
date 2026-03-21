@@ -81,6 +81,7 @@ Administrateur de la plateforme, accès via Django Admin (`/admin/`).
 **Peut :**
 - Voir et gérer tous les comptes
 - Voir et modérer tous les événements
+- Suspendre / réactiver un compte (`PATCH /api/auth/admin/users/<id>/suspend/`)
 - Gérer la liste des tags
 - Consulter les statistiques globales (`GET /api/auth/admin/stats/`)
 
@@ -108,6 +109,12 @@ Administrateur de la plateforme, accès via Django Admin (`/admin/`).
 | `AUTO` | Le participant est **immédiatement confirmé** à l'inscription |
 | `VALIDATION` | L'inscription est **en attente** (PENDING), la company doit confirmer ou rejeter |
 
+### Date limite d'inscription
+La company peut fixer une `registration_deadline`. Passé cette date, plus aucune inscription n'est acceptée. Sans deadline, les inscriptions sont ouvertes jusqu'au début de l'event.
+
+### Bannière
+Chaque event peut avoir une image/bannière uploadée par la company (format recommandé : 1200x400px).
+
 ### Visibilité de l'adresse / du lien
 La company peut choisir ce qu'elle révèle publiquement :
 - `FULL` → information complète toujours visible
@@ -125,6 +132,10 @@ La company peut choisir ce qu'elle révèle publiquement :
 | `CONFIRMED` | Inscription confirmée |
 | `REJECTED` | Inscription rejetée par la company |
 | `CANCELLED` | Annulée par le participant |
+| `WAITLIST` | En liste d'attente (event complet, mode AUTO) |
+
+### Liste d'attente (Waitlist)
+Quand un event en mode `AUTO` est complet, le participant est automatiquement mis en `WAITLIST` au lieu de recevoir une erreur. Dès qu'une place se libère (annulation ou rejet), le **premier de la liste d'attente est automatiquement confirmé**. Le champ `waitlist_position` indique sa position (1 = premier).
 
 ---
 
@@ -134,13 +145,18 @@ La company peut choisir ce qu'elle révèle publiquement :
 |--------|----------|-------------|---------|-------|
 | Voir la liste des events | ✅ | ✅ | ✅ | ✅ |
 | Voir le détail d'un event | ✅ | ✅ | ✅ | ✅ |
+| Voir le profil public d'une company | ✅ | ✅ | ✅ | ✅ |
 | S'inscrire à un event | ❌ | ✅ | ❌ | ❌ |
+| Rejoindre la liste d'attente | ❌ | ✅ | ❌ | ❌ |
+| Voir les recommandations | ❌ | ✅ | ❌ | ❌ |
+| Supprimer son compte | ❌ | ✅ | ✅ | ❌ |
 | Créer un event | ❌ | ❌ | ✅ | ❌ |
 | Modifier / supprimer son event | ❌ | ❌ | ✅ | ✅ |
 | Valider des inscriptions | ❌ | ❌ | ✅ (owner) | ✅ |
+| Voir les stats d'un event | ❌ | ❌ | ✅ (owner) | ✅ |
 | Voir les stats globales | ❌ | ❌ | ❌ | ✅ |
+| Suspendre / réactiver un compte | ❌ | ❌ | ❌ | ✅ |
 | Gérer les tags | ❌ | ❌ | ❌ | ✅ |
-| Désactiver un compte | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -181,7 +197,10 @@ npm run dev
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
 | GET | `/api/auth/me/` | Connecté | — |
 | PATCH | `/api/auth/me/` | Connecté | champs à modifier (`tag_ids` pour les tags) |
+| DELETE | `/api/auth/me/` | Connecté | — Suppression RGPD |
 | GET | `/api/auth/admin/stats/` | Admin | — |
+| PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — |
+| PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — |
 
 > **Note tags :** pour lire → champ `tags` retourne `[{id, name}]`. Pour écrire → envoyer `tag_ids: [1, 2]`
 
@@ -196,6 +215,7 @@ npm run dev
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
 | GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats de l'event |
+| GET | `/api/events/recommended/` | Participant | Events recommandés selon ses tags |
 
 **Filtres disponibles sur `GET /api/events/` :**
 ```
@@ -225,6 +245,13 @@ npm run dev
 | PATCH | `/api/registrations/<id>/cancel/` | Participant | Annule l'inscription |
 | GET | `/api/registrations/event/<id>/` | Company | Inscrits d'un event |
 | PATCH | `/api/registrations/<id>/status/` | Company | `{"status": "CONFIRMED"}` ou `"REJECTED"` |
+
+### Documentation API
+
+| URL | Description |
+|-----|-------------|
+| `/api/docs/` | Interface Swagger interactive |
+| `/api/redoc/` | Interface ReDoc |
 
 ### Tags
 

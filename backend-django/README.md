@@ -1,6 +1,6 @@
 # Backend Django — Neurovent
 
-API REST principale du projet Neurovent. Gère l'authentification, les utilisateurs, les événements et les inscriptions.
+API REST principale du projet Neurovent. Gère l'authentification, les utilisateurs, les événements, les inscriptions et la liste d'attente.
 
 ---
 
@@ -9,7 +9,9 @@ API REST principale du projet Neurovent. Gère l'authentification, les utilisate
 - **Django 6.0.2** + **Django REST Framework**
 - **djangorestframework-simplejwt** — authentification JWT
 - **django-cors-headers** — autorise les requêtes depuis React
-- **Pillow** — upload d'images (logos company)
+- **django-filter** — filtres avancés sur les événements
+- **drf-spectacular** — documentation API interactive (Swagger / ReDoc)
+- **Pillow** — upload d'images (logos company + bannières events)
 - **SQLite** — base de données (développement)
 
 ---
@@ -29,6 +31,8 @@ python manage.py runserver
 
 L'API est disponible sur `http://127.0.0.1:8000`
 L'admin Django est sur `http://127.0.0.1:8000/admin/`
+La doc Swagger est sur `http://127.0.0.1:8000/api/docs/`
+La doc ReDoc est sur `http://127.0.0.1:8000/api/redoc/`
 
 ---
 
@@ -51,10 +55,12 @@ python manage.py runserver
 backend-django/
 ├── config/              → settings.py, urls.py (configuration globale)
 ├── users/               → CustomUser, authentification, profil, stats admin
-├── events/              → Event, CRUD événements
-├── registrations/       → Registration, inscriptions
+├── events/              → Event, CRUD événements, filtres, recommandations
+├── registrations/       → Registration, inscriptions, liste d'attente
 ├── tags/                → Tag, liste gérée par l'admin
-├── media/               → fichiers uploadés (logos) — non versionné
+├── media/               → fichiers uploadés — non versionné
+│   ├── logos/           → logos des companies
+│   └── banners/         → bannières des events
 ├── manage.py
 └── requirements.txt
 ```
@@ -109,8 +115,16 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | POST | `/api/auth/login/company/` | Public | `identifier, password` |
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
 | GET | `/api/auth/me/` | Connecté | — |
-| PATCH | `/api/auth/me/` | Connecté | champs à modifier |
+| PATCH | `/api/auth/me/` | Connecté | champs à modifier (`tag_ids` pour les tags) |
+| DELETE | `/api/auth/me/` | Connecté | — Suppression compte RGPD |
 | GET | `/api/auth/admin/stats/` | Admin | — |
+| PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend un compte |
+| PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive un compte |
+
+> **Upload logo company** : utiliser `multipart/form-data` (pas JSON)
+> ```bash
+> curl -X PATCH /api/auth/me/ -H "Authorization: Bearer TOKEN" -F "company_logo=@logo.png"
+> ```
 
 ### Événements
 
@@ -123,6 +137,7 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
 | GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats détaillées de l'event |
+| GET | `/api/events/recommended/` | Participant | Events recommandés selon ses tags |
 
 **Filtres disponibles sur `GET /api/events/` :**
 ```
@@ -149,6 +164,11 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 ```
 > ⚠️ Person B doit lire `response.results` (pas directement `response`).
 
+> **Upload bannière event** : utiliser `multipart/form-data`
+> ```bash
+> curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=@image.png"
+> ```
+
 ### Companies
 
 | Méthode | URL | Accès | Notes |
@@ -171,6 +191,14 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 |---------|-----|-------|------|
 | GET | `/api/tags/` | Public | — |
 | POST | `/api/tags/create/` | Admin | `{"name": "Neurosciences"}` |
+
+### Documentation API
+
+| URL | Description |
+|-----|-------------|
+| `/api/docs/` | Interface Swagger interactive |
+| `/api/redoc/` | Interface ReDoc |
+| `/api/schema/` | Schéma OpenAPI brut (JSON/YAML) |
 
 ---
 
@@ -197,7 +225,7 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/company/ \
   -d '{"identifier": "braincorp2026", "password": "Test1234!"}'
 ```
 
-### Créer un event (token company requis)
+### Créer un event avec date limite et bannière
 ```bash
 curl -X POST http://127.0.0.1:8000/api/events/create/ \
   -H "Content-Type: application/json" \
@@ -214,16 +242,19 @@ curl -X POST http://127.0.0.1:8000/api/events/create/ \
     "address_full": "123 Rue de la Science, 75001 Paris",
     "address_city": "Paris",
     "address_country": "France",
-    "address_visibility": "FULL"
+    "address_visibility": "FULL",
+    "registration_deadline": "2026-04-10T23:59:00Z"
   }'
 ```
 
-### S'inscrire à un event (token participant requis)
+### S'inscrire à un event (liste d'attente si complet)
 ```bash
 curl -X POST http://127.0.0.1:8000/api/registrations/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <PARTICIPANT_TOKEN>" \
   -d '{"event": 1}'
+# Si places disponibles → status: "CONFIRMED"
+# Si event complet (mode AUTO) → status: "WAITLIST", waitlist_position: 1
 ```
 
 ### Modifier son profil + ajouter des tags
@@ -234,6 +265,14 @@ curl -X PATCH http://127.0.0.1:8000/api/auth/me/ \
   -d '{"employer_name": "Sorbonne Université", "tag_ids": [1, 2]}'
 ```
 > Pour les tags : envoyer `tag_ids` (liste d'IDs) pour écrire, le champ `tags` retourne `[{id, name}]` en lecture.
+
+### Supprimer son compte (RGPD)
+```bash
+curl -X DELETE http://127.0.0.1:8000/api/auth/me/ \
+  -H "Authorization: Bearer <TOKEN>"
+# → anonymise les données perso + annule les inscriptions futures
+# → garde l'historique des events passés
+```
 
 ---
 
@@ -246,7 +285,7 @@ Un seul modèle pour tous les rôles (`PARTICIPANT`, `COMPANY`, `ADMIN`).
 
 **Champs PARTICIPANT :** `email` (login), `first_name`, `last_name`, `employer_name`
 
-**Champs COMPANY :** `company_identifier` (login), `recovery_email`, `company_name`, `company_logo`, `company_description`, `website_url`, `youtube_url`, `linkedin_url`, `twitter_url`, `instagram_url`, `facebook_url`
+**Champs COMPANY :** `company_identifier` (login — lettres, chiffres, tirets, min 3 car.), `recovery_email`, `company_name`, `company_logo`, `company_description`, `website_url`, `youtube_url`, `linkedin_url`, `twitter_url`, `instagram_url`, `facebook_url`
 
 ### Event
 **Formats :** `ONSITE` / `ONLINE` / `HYBRID`
@@ -257,10 +296,18 @@ Champs de localisation : `address_full`, `address_city`, `address_country`, `add
 
 Champs distanciel : `online_platform`, `online_link`, `online_visibility`, `online_reveal_date`
 
+Champs calculés : `spots_remaining`, `registration_open`, `is_full`
+
+Champ date limite : `registration_deadline` (optionnel)
+
+Champ visuel : `banner` (image uploadée, stockée dans `media/banners/`)
+
 ### Registration
-**Statuts :** `PENDING` / `CONFIRMED` / `REJECTED` / `CANCELLED`
+**Statuts :** `PENDING` / `CONFIRMED` / `REJECTED` / `CANCELLED` / `WAITLIST`
 
 Un participant ne peut avoir qu'une seule inscription par événement (contrainte `unique_together`).
+
+Champ calculé : `waitlist_position` (position dans la liste d'attente, `null` si pas en WAITLIST)
 
 ---
 
@@ -270,10 +317,27 @@ Un participant ne peut avoir qu'une seule inscription par événement (contraint
 - `AUTO` → à la création de l'inscription, statut = `CONFIRMED` immédiatement
 - `VALIDATION` → statut = `PENDING`, la company doit confirmer ou rejeter manuellement
 
+### Liste d'attente (Waitlist)
+- En mode `AUTO`, si l'event est complet → statut = `WAITLIST` (pas d'erreur)
+- En mode `VALIDATION`, si l'event est complet → erreur "complet"
+- Dès qu'une place se libère (annulation ou rejet) → le premier en `WAITLIST` est automatiquement promu à `CONFIRMED`
+- `waitlist_position` indique la position dans la file (1 = premier)
+
+### Date limite d'inscription
+- Si `registration_deadline` est définie et dépassée → inscription refusée
+- Sans deadline → inscriptions ouvertes jusqu'au début de l'event
+- `registration_open` (booléen) calculé automatiquement selon ces règles
+
 ### Visibilité adresse / lien
 - `FULL` → toujours afficher l'info complète
 - `PARTIAL` sans `reveal_date` → toujours afficher seulement ville+pays ou nom plateforme
 - `PARTIAL` avec `reveal_date` → afficher partiel jusqu'à la date, puis complet automatiquement
+
+### Suppression de compte RGPD
+- Les données personnelles sont anonymisées (pas supprimées)
+- Les inscriptions aux events futurs sont annulées
+- L'historique des events passés est conservé (anonymisé)
+- Le compte est désactivé (`is_active = False`)
 
 ### tags vs tag_ids
 - **Lecture** (`GET`) → champ `tags` retourne `[{"id": 1, "name": "Neurosciences"}]`
