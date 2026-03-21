@@ -1,7 +1,11 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.filters import OrderingFilter
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Count, Q
+from django.utils import timezone
 from .models import Event
 from .serializers import EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer
 from .filters import EventFilter
@@ -48,14 +52,24 @@ class EventListView(generics.ListAPIView):
     ordering = ['date_start']  # tri par défaut : les plus prochains en premier
 
     def get_queryset(self):
-        return Event.objects.filter(status='PUBLISHED')
+        return (
+            Event.objects
+            .filter(status='PUBLISHED')
+            .select_related('company')
+            .prefetch_related('tags', 'registrations')
+        )
 
 
 class EventDetailView(generics.RetrieveAPIView):
     """Détail d'un event — accessible à tous"""
     serializer_class = EventDetailSerializer
     permission_classes = [permissions.AllowAny]
-    queryset = Event.objects.filter(status='PUBLISHED')
+    queryset = (
+        Event.objects
+        .filter(status='PUBLISHED')
+        .select_related('company')
+        .prefetch_related('tags', 'registrations')
+    )
 
 
 # --- Vues Company ---
@@ -72,7 +86,11 @@ class EventUpdateView(generics.UpdateAPIView):
     permission_classes = [IsCompany, IsCompanyOwner]
 
     def get_queryset(self):
-        return Event.objects.filter(company=self.request.user)
+        return (
+            Event.objects
+            .filter(company=self.request.user)
+            .prefetch_related('tags')
+        )
 
 
 class EventDeleteView(generics.DestroyAPIView):
@@ -89,4 +107,110 @@ class MyEventsView(generics.ListAPIView):
     permission_classes = [IsCompany]
 
     def get_queryset(self):
-        return Event.objects.filter(company=self.request.user)
+        return (
+            Event.objects
+            .filter(company=self.request.user)
+            .select_related('company')
+            .prefetch_related('tags', 'registrations')
+        )
+
+
+class RecommendedEventsView(generics.ListAPIView):
+    """
+    Events recommandés — GET /api/events/recommended/
+    Accessible aux participants connectés uniquement.
+    Retourne les events publiés dont les tags correspondent aux intérêts du participant.
+    Exclut les events auxquels le participant est déjà inscrit.
+    Si le participant n'a aucun tag → retourne une liste vide.
+    """
+    serializer_class = EventListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        participant_tags = user.tags.all()
+
+        if not participant_tags.exists():
+            return Event.objects.none()
+
+        already_registered = user.registrations.values_list('event_id', flat=True)
+
+        return (
+            Event.objects
+            .filter(
+                status='PUBLISHED',
+                date_start__gt=timezone.now(),
+                tags__in=participant_tags,
+            )
+            .exclude(id__in=already_registered)
+            .select_related('company')
+            .prefetch_related('tags', 'registrations')
+            .distinct()
+            .order_by('date_start')
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        if not request.user.tags.exists():
+            return Response({
+                'message': 'Ajoutez des tags à votre profil pour recevoir des recommandations.',
+                'results': []
+            })
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'results': serializer.data})
+
+
+class EventStatsView(APIView):
+    """
+    Statistiques détaillées d'un event — GET /api/events/<id>/stats/
+    Accessible uniquement par la company propriétaire ou un admin.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        # Récupérer l'event
+        try:
+            event = Event.objects.get(pk=pk)
+        except Event.DoesNotExist:
+            return Response({'error': 'Événement introuvable'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Vérifier que c'est la company propriétaire ou un admin
+        is_owner = request.user.role == UserRole.COMPANY and event.company == request.user
+        is_admin = request.user.is_staff
+        if not is_owner and not is_admin:
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Calcul des stats — 1 seule requête SQL avec agrégation
+        from registrations.models import Registration
+        stats = Registration.objects.filter(event=event).aggregate(
+            total=Count('id'),
+            confirmed=Count('id', filter=Q(status='CONFIRMED')),
+            pending=Count('id', filter=Q(status='PENDING')),
+            rejected=Count('id', filter=Q(status='REJECTED')),
+            cancelled=Count('id', filter=Q(status='CANCELLED')),
+        )
+
+        confirmed = stats['confirmed']
+        occupation_rate = round((confirmed / event.capacity) * 100, 1) if event.capacity > 0 else 0
+
+        return Response({
+            'event': {
+                'id': event.id,
+                'title': event.title,
+                'status': event.status,
+                'format': event.format,
+                'date_start': event.date_start,
+                'date_end': event.date_end,
+                'capacity': event.capacity,
+                'registration_mode': event.registration_mode,
+            },
+            'registrations': {
+                'total': stats['total'],
+                'confirmed': stats['confirmed'],
+                'pending': stats['pending'],
+                'rejected': stats['rejected'],
+                'cancelled': stats['cancelled'],
+            },
+            'spots_remaining': event.spots_remaining,
+            'occupation_rate': occupation_rate,  # en %
+        })

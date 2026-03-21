@@ -115,6 +115,54 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
 
 
 # ─────────────────────────────────────────
+#  PROFIL PUBLIC — COMPANY
+# ─────────────────────────────────────────
+
+class CompanyPublicSerializer(serializers.ModelSerializer):
+    """
+    Profil public d'une company — accessible sans authentification.
+    Ne retourne PAS les infos sensibles (recovery_email, company_identifier).
+    Inclut les events publiés de la company.
+    """
+    tags = TagSerializer(many=True, read_only=True)
+    events = serializers.SerializerMethodField()
+    member_since = serializers.DateTimeField(source='date_joined', read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id',
+            'company_name',
+            'company_logo',
+            'company_description',
+            'website_url',
+            'youtube_url',
+            'linkedin_url',
+            'twitter_url',
+            'instagram_url',
+            'facebook_url',
+            'tags',
+            'events',
+            'member_since',
+        ]
+
+    def get_events(self, obj):
+        """Retourne les events publiés de la company (résumé)"""
+        from events.models import Event
+        published = Event.objects.filter(company=obj, status='PUBLISHED').order_by('date_start')
+        return [
+            {
+                'id': e.id,
+                'title': e.title,
+                'date_start': e.date_start,
+                'format': e.format,
+                'spots_remaining': e.spots_remaining,
+            }
+            for e in published
+        ]
+
+
+# ─────────────────────────────────────────
 #  PROFIL GÉNÉRIQUE (dispatche selon le rôle)
 # ─────────────────────────────────────────
 

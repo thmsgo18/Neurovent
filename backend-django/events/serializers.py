@@ -8,18 +8,23 @@ class EventListSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='company.company_name', read_only=True)
     company_logo = serializers.ImageField(source='company.company_logo', read_only=True)
     spots_remaining = serializers.IntegerField(read_only=True)
+    registration_open = serializers.BooleanField(read_only=True)
+    is_full = serializers.SerializerMethodField()
     tags = TagSerializer(many=True, read_only=True)
     # Adresse partielle toujours visible dans la liste
     address_city = serializers.CharField(read_only=True)
     address_country = serializers.CharField(read_only=True)
     online_platform = serializers.CharField(read_only=True)
 
+    def get_is_full(self, obj):
+        return obj.spots_remaining <= 0
+
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'date_start', 'date_end',
-            'format', 'registration_mode',
-            'capacity', 'spots_remaining',
+            'id', 'title', 'banner', 'date_start', 'date_end',
+            'format', 'registration_mode', 'registration_deadline', 'registration_open',
+            'capacity', 'spots_remaining', 'is_full',
             'status', 'tags',
             'company_name', 'company_logo',
             # Localisation partielle
@@ -36,6 +41,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
     company_logo = serializers.ImageField(source='company.company_logo', read_only=True)
     company_description = serializers.CharField(source='company.company_description', read_only=True)
     spots_remaining = serializers.IntegerField(read_only=True)
+    registration_open = serializers.BooleanField(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     visible_address = serializers.DictField(read_only=True)
     visible_online = serializers.DictField(read_only=True)
@@ -43,9 +49,9 @@ class EventDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'description',
+            'id', 'title', 'description', 'banner',
             'date_start', 'date_end',
-            'format', 'registration_mode',
+            'format', 'registration_mode', 'registration_deadline', 'registration_open',
             'capacity', 'spots_remaining',
             'status', 'tags',
             'company_name', 'company_logo', 'company_description',
@@ -68,9 +74,9 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
-            'id', 'title', 'description',
+            'id', 'title', 'description', 'banner',
             'date_start', 'date_end', 'capacity', 'status',
-            'format', 'registration_mode',
+            'format', 'registration_mode', 'registration_deadline',
             # Adresse
             'address_full', 'address_city', 'address_country',
             'address_visibility', 'address_reveal_date',

@@ -41,6 +41,11 @@ class Event(models.Model):
     # --- Infos de base ---
     title = models.CharField(max_length=200)
     description = models.TextField()
+    banner = models.ImageField(
+        upload_to='banners/',
+        null=True, blank=True,
+        help_text="Image/bannière de l'événement (format recommandé : 1200x400)"
+    )
     date_start = models.DateTimeField()
     date_end = models.DateTimeField()
     capacity = models.PositiveIntegerField()
@@ -53,6 +58,10 @@ class Event(models.Model):
         max_length=10,
         choices=RegistrationMode.choices,
         default=RegistrationMode.AUTO
+    )
+    registration_deadline = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Date limite d'inscription. Si vide, les inscriptions sont ouvertes jusqu'au début de l'event."
     )
 
     # --- Localisation (ONSITE et HYBRID) ---
@@ -91,6 +100,20 @@ class Event(models.Model):
     # ─────────────────────────────────────────
     #  PROPRIÉTÉS CALCULÉES
     # ─────────────────────────────────────────
+
+    @property
+    def registration_open(self):
+        """
+        Les inscriptions sont ouvertes si :
+        - L'event n'a pas encore commencé
+        - ET la deadline n'est pas dépassée (si elle est fixée)
+        """
+        now = timezone.now()
+        if now >= self.date_start:
+            return False
+        if self.registration_deadline and now >= self.registration_deadline:
+            return False
+        return True
 
     @property
     def spots_remaining(self):

@@ -7,6 +7,7 @@ class RegistrationStatus(models.TextChoices):
     CONFIRMED = 'CONFIRMED', 'Confirmé'
     REJECTED = 'REJECTED', 'Rejeté'
     CANCELLED = 'CANCELLED', 'Annulé'
+    WAITLIST = 'WAITLIST', 'Liste d\'attente'
 
 
 class Registration(models.Model):
@@ -33,6 +34,17 @@ class Registration(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Inscription'
         verbose_name_plural = 'Inscriptions'
+
+    @property
+    def waitlist_position(self):
+        """Position dans la liste d'attente (1 = premier). None si pas en attente."""
+        if self.status != RegistrationStatus.WAITLIST:
+            return None
+        return (
+            Registration.objects
+            .filter(event=self.event, status=RegistrationStatus.WAITLIST, created_at__lt=self.created_at)
+            .count() + 1
+        )
 
     def __str__(self):
         return f"{self.participant} → {self.event} ({self.status})"

@@ -12,10 +12,10 @@ class EventAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Infos de base', {
-            'fields': ('company', 'title', 'description', 'date_start', 'date_end', 'capacity', 'status', 'tags')
+            'fields': ('company', 'title', 'description', 'banner', 'date_start', 'date_end', 'capacity', 'status', 'tags')
         }),
         ('Format & Inscription', {
-            'fields': ('format', 'registration_mode')
+            'fields': ('format', 'registration_mode', 'registration_deadline')
         }),
         ('Localisation (Présentiel)', {
             'fields': ('address_full', 'address_city', 'address_country', 'address_visibility', 'address_reveal_date'),

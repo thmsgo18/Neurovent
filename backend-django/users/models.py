@@ -1,5 +1,12 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.core.validators import RegexValidator, MinLengthValidator
 from django.db import models
+
+# Validateur pour company_identifier : lettres, chiffres, tirets uniquement, min 3 caractères
+company_identifier_validator = RegexValidator(
+    regex=r'^[a-zA-Z0-9\-]+$',
+    message="L'identifiant ne peut contenir que des lettres, chiffres et tirets (-). Pas d'espaces."
+)
 
 
 class UserRole(models.TextChoices):
@@ -46,7 +53,17 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     # === COMPANY ===
     # company_identifier sert de login pour les companies (pas l'email)
-    company_identifier = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    company_identifier = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(3, message="L'identifiant doit contenir au moins 3 caractères."),
+            company_identifier_validator,
+        ],
+        help_text="3 à 50 caractères. Lettres, chiffres et tirets uniquement. Ex: braincorp-2026"
+    )
     recovery_email = models.EmailField(blank=True)  # email de récupération de mot de passe
     company_name = models.CharField(max_length=200, blank=True)
     company_logo = models.ImageField(upload_to='logos/', null=True, blank=True)

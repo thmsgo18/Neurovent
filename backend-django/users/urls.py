@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterParticipantView, RegisterCompanyView, ProfileView, AdminStatsView, CompanyLoginView
+from .views import RegisterParticipantView, RegisterCompanyView, ProfileView, AdminStatsView, CompanyLoginView, AdminSuspendUserView, AdminActivateUserView
 from .tokens import CustomTokenObtainPairView
 
 urlpatterns = [
@@ -20,4 +20,8 @@ urlpatterns = [
 
     # Statistiques admin
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
+
+    # Modération admin
+    path('admin/users/<int:pk>/suspend/', AdminSuspendUserView.as_view(), name='admin-suspend-user'),
+    path('admin/users/<int:pk>/activate/', AdminActivateUserView.as_view(), name='admin-activate-user'),
 ]

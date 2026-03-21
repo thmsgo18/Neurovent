@@ -11,6 +11,7 @@ from .serializers import (
     RegisterCompanySerializer,
     ParticipantProfileSerializer,
     CompanyProfileSerializer,
+    CompanyPublicSerializer,
     UserProfileSerializer,
 )
 
@@ -124,6 +125,111 @@ class ProfileView(APIView):
 
     def put(self, request):
         return self.patch(request)
+
+    def delete(self, request):
+        """
+        Suppression de compte RGPD — DELETE /api/auth/me/
+        - Annule les inscriptions aux events futurs (PENDING/CONFIRMED → CANCELLED)
+        - Anonymise les données personnelles
+        - Désactive le compte (is_active = False)
+        - Garde l'historique des events passés (anonymisé)
+        """
+        from registrations.models import Registration
+
+        user = request.user
+        now = timezone.now()
+
+        # 1. Annuler les inscriptions aux events futurs
+        Registration.objects.filter(
+            participant=user,
+            event__date_start__gt=now,
+            status__in=['PENDING', 'CONFIRMED']
+        ).update(status='CANCELLED')
+
+        # 2. Anonymiser les données personnelles selon le rôle
+        if user.role == UserRole.PARTICIPANT:
+            user.email = f"deleted_{user.id}@deleted.neurovent.com"
+            user.first_name = "[Supprimé]"
+            user.last_name = "[Supprimé]"
+            user.employer_name = ""
+        elif user.role == UserRole.COMPANY:
+            user.company_name = "[Entreprise supprimée]"
+            user.company_description = ""
+            user.recovery_email = ""
+            user.website_url = ""
+            user.youtube_url = ""
+            user.linkedin_url = ""
+            user.twitter_url = ""
+            user.instagram_url = ""
+            user.facebook_url = ""
+
+        # 3. Désactiver le compte
+        user.is_active = False
+        user.save()
+
+        return Response(
+            {'message': 'Compte supprimé avec succès.'},
+            status=status.HTTP_200_OK
+        )
+
+
+# ─────────────────────────────────────────
+#  PROFIL PUBLIC COMPANY
+# ─────────────────────────────────────────
+
+class CompanyPublicView(generics.RetrieveAPIView):
+    """
+    Profil public d'une company — GET /api/companies/<id>/
+    Accessible sans authentification.
+    Retourne les infos publiques + les events publiés.
+    """
+    serializer_class = CompanyPublicSerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = CustomUser.objects.filter(role=UserRole.COMPANY, is_active=True)
+
+
+# ─────────────────────────────────────────
+#  MODÉRATION ADMIN
+# ─────────────────────────────────────────
+
+class AdminSuspendUserView(APIView):
+    """
+    Suspension d'un compte — PATCH /api/admin/users/<id>/suspend/
+    Réservé à l'admin. Désactive le compte sans toucher aux données.
+    Réversible via AdminActivateUserView.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == UserRole.ADMIN:
+            return Response({'error': 'Impossible de suspendre un admin.'}, status=status.HTTP_403_FORBIDDEN)
+
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        return Response({'message': f'Compte {user} suspendu avec succès.'})
+
+
+class AdminActivateUserView(APIView):
+    """
+    Réactivation d'un compte — PATCH /api/admin/users/<id>/activate/
+    Réservé à l'admin. Réactive un compte suspendu.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        return Response({'message': f'Compte {user} réactivé avec succès.'})
 
 
 # ─────────────────────────────────────────

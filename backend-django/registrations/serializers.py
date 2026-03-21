@@ -7,12 +7,13 @@ class RegistrationSerializer(serializers.ModelSerializer):
     event_title = serializers.CharField(source='event.title', read_only=True)
     event_date = serializers.DateTimeField(source='event.date_start', read_only=True)
     participant_name = serializers.SerializerMethodField()
+    waitlist_position = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Registration
         fields = [
             'id', 'event', 'event_title', 'event_date',
-            'participant_name', 'status', 'created_at'
+            'participant_name', 'status', 'waitlist_position', 'created_at'
         ]
         read_only_fields = ['id', 'status', 'created_at']
 
