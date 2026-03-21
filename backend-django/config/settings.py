@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_filters',
+    'drf_spectacular',
 
     # Apps du projet
     'tags',
@@ -60,8 +61,40 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
     ),
+    # Pagination : 10 events par page, navigable avec ?page=2
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
     # Renomme le paramètre de format DRF pour éviter le conflit avec ?format= de nos filtres
     "URL_FORMAT_OVERRIDE": "response_format",
+    # Swagger — schéma OpenAPI auto-généré
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+
+# ─────────────────────────────────────────
+#  Swagger / OpenAPI (drf-spectacular)
+# ─────────────────────────────────────────
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Neurovent API',
+    'DESCRIPTION': (
+        'API REST de la plateforme Neurovent — gestion d\'événements scientifiques '
+        '(conférences, workshops, séminaires en Neurosciences, IA, ML...).\n\n'
+        '## Authentification\n'
+        'Utiliser le token JWT obtenu via `/api/auth/login/participant/` '
+        'ou `/api/auth/login/company/`.\n'
+        'Cliquer sur **Authorize** et entrer : `Bearer <votre_token>`'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'TAGS': [
+        {'name': 'Auth', 'description': 'Inscription, connexion, profil'},
+        {'name': 'Events', 'description': 'Gestion des événements'},
+        {'name': 'Registrations', 'description': 'Inscriptions aux événements'},
+        {'name': 'Tags', 'description': 'Tags / thématiques'},
+        {'name': 'Companies', 'description': 'Profils publics des organisateurs'},
+    ],
 }
 
 
