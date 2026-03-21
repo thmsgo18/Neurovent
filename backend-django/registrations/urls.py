@@ -5,6 +5,7 @@ from .views import (
     CancelRegistrationView,
     EventRegistrationsView,
     UpdateRegistrationStatusView,
+    ExportEventRegistrationsView,
 )
 
 urlpatterns = [
@@ -14,6 +15,7 @@ urlpatterns = [
     path('<int:pk>/cancel/', CancelRegistrationView.as_view(), name='cancel-registration'),  # PATCH /api/registrations/1/cancel/
 
     # Company
-    path('event/<int:event_id>/', EventRegistrationsView.as_view(), name='event-registrations'),         # GET   /api/registrations/event/1/
-    path('<int:pk>/status/', UpdateRegistrationStatusView.as_view(), name='update-registration-status'), # PATCH /api/registrations/1/status/
+    path('event/<int:event_id>/', EventRegistrationsView.as_view(), name='event-registrations'),                  # GET  /api/registrations/event/1/
+    path('event/<int:event_id>/export/', ExportEventRegistrationsView.as_view(), name='export-registrations'),    # GET  /api/registrations/event/1/export/
+    path('<int:pk>/status/', UpdateRegistrationStatusView.as_view(), name='update-registration-status'),          # PATCH /api/registrations/1/status/
 ]

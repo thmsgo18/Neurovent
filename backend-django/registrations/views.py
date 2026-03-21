@@ -1,6 +1,9 @@
+import csv
 from django.utils import timezone
+from django.http import HttpResponse
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.views import APIView
 from .models import Registration, RegistrationStatus
 from .serializers import RegistrationSerializer, RegistrationStatusUpdateSerializer
 from events.models import Event
@@ -147,3 +150,58 @@ class UpdateRegistrationStatusView(generics.UpdateAPIView):
         # Si la company rejette → promouvoir le premier en liste d'attente
         if instance.status == RegistrationStatus.REJECTED:
             _promote_from_waitlist(instance.event)
+
+
+class ExportEventRegistrationsView(APIView):
+    """Exporte la liste des inscrits d'un event en CSV (Company owner ou Admin)"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, event_id):
+        try:
+            event = Event.objects.select_related('company').get(id=event_id)
+        except Event.DoesNotExist:
+            raise ValidationError("Événement introuvable.")
+
+        # Seuls la company owner et l'admin peuvent exporter
+        is_owner = (request.user.role == UserRole.COMPANY and event.company == request.user)
+        is_admin = request.user.is_staff
+        if not (is_owner or is_admin):
+            raise PermissionDenied("Vous n'êtes pas autorisé à exporter ces données.")
+
+        registrations = (
+            Registration.objects
+            .filter(event=event)
+            .select_related('participant')
+            .order_by('status', 'created_at')
+        )
+
+        # Préparer la réponse HTTP CSV
+        filename = f"inscrits_{event.id}_{event.title[:30].replace(' ', '_')}.csv"
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        # BOM UTF-8 pour compatibilité Excel
+        response.write('\ufeff')
+
+        writer = csv.writer(response, delimiter=';')
+
+        # En-tête
+        writer.writerow([
+            'Prénom', 'Nom', 'Email',
+            'Statut', 'Position liste d\'attente',
+            'Date d\'inscription',
+        ])
+
+        # Lignes
+        for reg in registrations:
+            p = reg.participant
+            writer.writerow([
+                p.first_name,
+                p.last_name,
+                p.email,
+                reg.get_status_display(),
+                reg.waitlist_position if reg.status == RegistrationStatus.WAITLIST else '',
+                reg.created_at.strftime('%d/%m/%Y %H:%M'),
+            ])
+
+        return response
