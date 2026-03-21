@@ -4,11 +4,11 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-wi)u4idasouy08dmw=+u7i*3%bg^o3ihyncq4s@b^6tkj(zzra'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-wi)u4idasouy08dmw=+u7i*3%bg^o3ihyncq4s@b^6tkj(zzra')
 
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [h.strip() for h in v.split(',')])
 
 
 # ─────────────────────────────────────────
@@ -25,6 +25,7 @@ INSTALLED_APPS = [
 
     # Packages tiers
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
     'drf_spectacular',

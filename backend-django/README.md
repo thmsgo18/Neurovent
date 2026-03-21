@@ -7,7 +7,7 @@ API REST principale du projet Neurovent. Gère l'authentification, les utilisate
 ## Stack
 
 - **Django 6.0.2** + **Django REST Framework**
-- **djangorestframework-simplejwt** — authentification JWT
+- **djangorestframework-simplejwt** — authentification JWT + blacklist logout
 - **django-cors-headers** — autorise les requêtes depuis React
 - **django-filter** — filtres avancés sur les événements
 - **drf-spectacular** — documentation API interactive (Swagger / ReDoc)
@@ -37,20 +37,45 @@ La doc ReDoc est sur `http://127.0.0.1:8000/api/redoc/`
 
 ---
 
-## Configuration email (.env)
+## Configuration (.env)
 
 Créer un fichier `.env` dans `backend-django/` (jamais commité) :
 
 ```
+# Email (Gmail SMTP)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_HOST_USER=neurovent.noreply@gmail.com
 EMAIL_HOST_PASSWORD=xxxxxxxxxxxx
+
+# Frontend
 FRONTEND_URL=http://localhost:5173
 ```
 
-> Le mot de passe est un **mot de passe d'application Google** (pas le vrai mot de passe).
+> Le mot de passe email est un **mot de passe d'application Google** (16 caractères, sans espaces).
 > Pour en créer un : [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) (nécessite la validation en 2 étapes activée).
+
+Ces variables ont des **valeurs par défaut** pour le dev — `SECRET_KEY`, `DEBUG` et `ALLOWED_HOSTS` n'ont pas besoin d'être dans le `.env` en développement.
+
+---
+
+## Déploiement (Railway / Render)
+
+En production, ajouter ces variables supplémentaires dans le dashboard de la plateforme (pas dans un `.env` commité) :
+
+```
+SECRET_KEY=une-vraie-clé-secrète-générée
+DEBUG=False
+ALLOWED_HOSTS=ton-domaine.up.railway.app,localhost
+```
+
+Pour générer une `SECRET_KEY` sécurisée :
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+> En dev, `SECRET_KEY` utilise une valeur fallback insecure (préfixée `django-insecure-`).
+> En prod, une vraie clé est obligatoire — ne jamais utiliser la clé insecure.
 
 ---
 
@@ -67,6 +92,27 @@ python manage.py runserver
 
 ---
 
+## Tests
+
+```bash
+# Lancer tous les tests
+python manage.py test users events registrations tags
+
+# Avec détail de chaque test
+python manage.py test users events registrations tags --verbosity=2
+```
+
+**95 tests** couvrant les 4 apps :
+
+| App | Tests | Ce qui est couvert |
+|-----|-------|--------------------|
+| `users` | 28 | Inscription, login, profil, mot de passe, RGPD, admin |
+| `events` | 28 | CRUD, filtres, stats, recommandations, permissions |
+| `registrations` | 28 | AUTO/VALIDATION, waitlist, annulation, CSV, permissions |
+| `tags` | 10 | Liste, création, suppression, permissions |
+
+---
+
 ## Structure du projet
 
 ```
@@ -80,7 +126,7 @@ backend-django/
 ├── media/               → fichiers uploadés — non versionné
 │   ├── logos/           → logos des companies
 │   └── banners/         → bannières des events
-├── .env                 → credentials email — non versionné
+├── .env                 → credentials — non versionné
 ├── manage.py
 └── requirements.txt
 ```
@@ -134,15 +180,18 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | POST | `/api/auth/login/participant/` | Public | `email, password` |
 | POST | `/api/auth/login/company/` | Public | `identifier, password` |
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
+| POST | `/api/auth/logout/` | Connecté | `refresh` — invalide le token |
 | GET | `/api/auth/me/` | Connecté | — |
 | PATCH | `/api/auth/me/` | Connecté | champs à modifier (`tag_ids` pour les tags) |
 | DELETE | `/api/auth/me/` | Connecté | — Suppression compte RGPD |
-| GET | `/api/auth/admin/stats/` | Admin | — |
-| PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend un compte |
-| PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive un compte |
 | PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
 | POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien par email |
 | POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
+| GET | `/api/auth/admin/stats/` | Admin | — |
+| GET | `/api/auth/admin/users/` | Admin | `?role=PARTICIPANT\|COMPANY\|ADMIN` — liste des utilisateurs |
+| PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend un compte |
+| PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive un compte |
+| DELETE | `/api/auth/admin/users/<id>/delete/` | Admin | — Suppression RGPD forcée (impossible sur un autre admin) |
 
 > **Upload logo company** : utiliser `multipart/form-data` (pas JSON)
 > ```bash
@@ -154,13 +203,16 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | Méthode | URL | Accès | Notes |
 |---------|-----|-------|-------|
 | GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
-| GET | `/api/events/<id>/` | Public | Détail d'un event |
+| GET | `/api/events/<id>/` | Public | Détail d'un event **PUBLISHED** (404 si DRAFT) |
 | POST | `/api/events/create/` | Company | Créer un event |
 | PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifier son event |
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
-| GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
+| GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts, y compris DRAFT) |
 | GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats détaillées de l'event |
-| GET | `/api/events/recommended/` | Participant | Events recommandés selon ses tags |
+| GET | `/api/events/recommended/` | Participant uniquement | Events recommandés selon ses tags |
+
+> ⚠️ **Important pour Noureddine** : `GET /api/events/<id>/` retourne **404 pour un event DRAFT**.
+> Pour afficher un brouillon sur le dashboard company, utiliser `GET /api/events/my-events/`.
 
 **Filtres disponibles sur `GET /api/events/` :**
 ```
@@ -174,6 +226,7 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 ?ordering=date_start    → tri croissant par date (défaut)
 ?ordering=-date_start   → tri décroissant par date
 ?page=2                 → page 2
+?status=DRAFT           → admin uniquement — voir les events non publiés
 ```
 
 **Réponse paginée :**
@@ -185,7 +238,7 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
   "results": [{ "id": 1, "title": "..." }, ...]
 }
 ```
-> ⚠️ Person B doit lire `response.results` (pas directement `response`).
+> ⚠️ Noureddine doit lire `response.results` (pas directement `response`).
 
 > **Upload bannière event** : utiliser `multipart/form-data`
 > ```bash
@@ -202,12 +255,16 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 
 | Méthode | URL | Accès | Body |
 |---------|-----|-------|------|
-| POST | `/api/registrations/` | Participant | `{"event": <id>}` |
+| POST | `/api/registrations/` | Participant | `{"event": <id>}` — optionnel : `accessibility_needs` |
 | GET | `/api/registrations/my/` | Participant | `?status=CONFIRMED\|PENDING\|WAITLIST\|CANCELLED\|REJECTED` |
 | PATCH | `/api/registrations/<id>/cancel/` | Participant | — |
 | GET | `/api/registrations/event/<id>/` | Company | — |
-| PATCH | `/api/registrations/<id>/status/` | Company | `{"status": "CONFIRMED"}` ou `"REJECTED"` |
+| PATCH | `/api/registrations/<id>/status/` | Company / Admin | `{"status": "CONFIRMED\|REJECTED", "company_comment": "..."}` |
 | GET | `/api/registrations/event/<id>/export/` | Company (owner) / Admin | Télécharge un CSV des inscrits |
+
+**Champs de l'inscription :**
+- `accessibility_needs` — besoins d'accessibilité du participant (PMR, etc.), optionnel, renseigné à l'inscription
+- `company_comment` — commentaire de l'organisateur (visible par le participant), renseigné lors de la validation
 
 ### Tags
 
@@ -215,6 +272,7 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 |---------|-----|-------|------|
 | GET | `/api/tags/` | Public | — |
 | POST | `/api/tags/create/` | Admin | `{"name": "Neurosciences"}` |
+| DELETE | `/api/tags/<id>/delete/` | Admin | — |
 
 ### Documentation API
 
@@ -242,6 +300,14 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/participant/ \
   -d '{"email": "alice@test.com", "password": "Test1234!"}'
 ```
 
+### Logout (invalide le refresh token)
+```bash
+curl -X POST http://127.0.0.1:8000/api/auth/logout/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"refresh": "<REFRESH_TOKEN>"}'
+```
+
 ### Login company (identifiant, pas email)
 ```bash
 curl -X POST http://127.0.0.1:8000/api/auth/login/company/ \
@@ -249,7 +315,7 @@ curl -X POST http://127.0.0.1:8000/api/auth/login/company/ \
   -d '{"identifier": "braincorp2026", "password": "Test1234!"}'
 ```
 
-### Créer un event avec date limite et bannière
+### Créer un event
 ```bash
 curl -X POST http://127.0.0.1:8000/api/events/create/ \
   -H "Content-Type: application/json" \
@@ -266,17 +332,16 @@ curl -X POST http://127.0.0.1:8000/api/events/create/ \
     "address_full": "123 Rue de la Science, 75001 Paris",
     "address_city": "Paris",
     "address_country": "France",
-    "address_visibility": "FULL",
     "registration_deadline": "2026-04-10T23:59:00Z"
   }'
 ```
 
-### S'inscrire à un event (liste d'attente si complet)
+### S'inscrire à un event (avec besoins d'accessibilité)
 ```bash
 curl -X POST http://127.0.0.1:8000/api/registrations/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <PARTICIPANT_TOKEN>" \
-  -d '{"event": 1}'
+  -d '{"event": 1, "accessibility_needs": "Fauteuil roulant"}'
 # Si places disponibles → status: "CONFIRMED"
 # Si event complet (mode AUTO) → status: "WAITLIST", waitlist_position: 1
 ```
@@ -329,33 +394,36 @@ Champ visuel : `banner` (image uploadée, stockée dans `media/banners/`)
 ### Registration
 **Statuts :** `PENDING` / `CONFIRMED` / `REJECTED` / `CANCELLED` / `WAITLIST`
 
-Un participant ne peut avoir qu'une seule inscription par événement (contrainte `unique_together`).
+**Champs notables :**
+- `accessibility_needs` — besoins du participant (renseigné à l'inscription)
+- `company_comment` — commentaire de l'organisateur (renseigné lors de la validation)
+- `waitlist_position` — calculé dynamiquement, `null` si pas en WAITLIST
 
-Champ calculé : `waitlist_position` (position dans la liste d'attente, `null` si pas en WAITLIST)
+Un participant ne peut avoir qu'une seule inscription par événement (contrainte `unique_together`). Tenter de s'inscrire deux fois retourne une erreur 400.
 
 ---
 
 ## Logique métier importante
 
 ### Mode d'inscription AUTO vs VALIDATION
-- `AUTO` → à la création de l'inscription, statut = `CONFIRMED` immédiatement
-- `VALIDATION` → statut = `PENDING`, la company doit confirmer ou rejeter manuellement
+- `AUTO` → statut = `CONFIRMED` immédiatement
+- `VALIDATION` → statut = `PENDING`, la company (ou un admin) doit confirmer ou rejeter manuellement
 
 ### Liste d'attente (Waitlist)
 - En mode `AUTO`, si l'event est complet → statut = `WAITLIST` (pas d'erreur)
-- En mode `VALIDATION`, si l'event est complet → erreur "complet"
+- En mode `VALIDATION`, si l'event est complet → erreur 400 "complet"
 - Dès qu'une place se libère (annulation ou rejet) → le premier en `WAITLIST` est automatiquement promu à `CONFIRMED`
 - `waitlist_position` indique la position dans la file (1 = premier)
 
 ### Date limite d'inscription
 - Si `registration_deadline` est définie et dépassée → inscription refusée
 - Sans deadline → inscriptions ouvertes jusqu'au début de l'event
-- `registration_open` (booléen) calculé automatiquement selon ces règles
+- `registration_open` (booléen) calculé automatiquement
 
 ### Visibilité adresse / lien
 - `FULL` → toujours afficher l'info complète
-- `PARTIAL` sans `reveal_date` → toujours afficher seulement ville+pays ou nom plateforme
-- `PARTIAL` avec `reveal_date` → afficher partiel jusqu'à la date, puis complet automatiquement
+- `PARTIAL` sans `reveal_date` → afficher seulement ville+pays ou nom plateforme
+- `PARTIAL` avec `reveal_date` → partiel jusqu'à la date, puis complet automatiquement
 
 ### Suppression de compte RGPD
 - Les données personnelles sont anonymisées (pas supprimées)
@@ -372,6 +440,9 @@ Champ calculé : `waitlist_position` (position dans la liste d'attente, `null` s
 ## Commandes utiles
 
 ```bash
+# Lancer les tests
+python manage.py test users events registrations tags
+
 # Recréer la base depuis zéro (dev uniquement, efface toutes les données)
 rm db.sqlite3
 find . -path "*/migrations/0*.py" -delete
@@ -401,15 +472,4 @@ Toutes les fonctions d'envoi sont centralisées dans `emails.py`.
 | Event passé à CANCELLED | Tous les inscrits actifs | Notification annulation |
 | Demande reset mot de passe | Demandeur | Lien de réinitialisation (valable 24h) |
 
-> **Architecture HTML-ready** : les emails utilisent `EmailMultiAlternatives`. Pour ajouter un template HTML, il suffit de passer `html_message=<contenu>` à `_send()` dans `emails.py`.
-
----
-
-## Variables d'environnement (production)
-
-En développement, les credentials sont dans `.env`. En production, externaliser également :
-- `SECRET_KEY`
-- `DEBUG=False`
-- `ALLOWED_HOSTS`
-- Configuration base de données (PostgreSQL recommandé)
-- `CORS_ALLOWED_ORIGINS` (URL du frontend déployé)
+> **Architecture HTML-ready** : les emails utilisent `EmailMultiAlternatives`. Pour ajouter un template HTML, passer `html_message=<contenu>` à `_send()` dans `emails.py`.

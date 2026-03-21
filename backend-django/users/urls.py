@@ -4,8 +4,11 @@ from .views import (
     RegisterParticipantView, RegisterCompanyView,
     ProfileView,
     AdminStatsView,
+    AdminUserListView,
+    AdminDeleteUserView,
     CompanyLoginView,
     AdminSuspendUserView, AdminActivateUserView,
+    LogoutView,
     ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView,
 )
@@ -26,6 +29,9 @@ urlpatterns = [
     # Profil de l'utilisateur connecté
     path('me/', ProfileView.as_view(), name='profile'),
 
+    # Logout
+    path('logout/', LogoutView.as_view(), name='logout'),
+
     # Mot de passe
     path('me/password/', ChangePasswordView.as_view(), name='change-password'),             # PATCH — changer son mdp (connecté)
     path('password-reset/', PasswordResetRequestView.as_view(), name='password-reset'),    # POST  — demander un reset par email
@@ -34,7 +40,9 @@ urlpatterns = [
     # Statistiques admin
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
 
-    # Modération admin
+    # Liste & modération admin
+    path('admin/users/', AdminUserListView.as_view(), name='admin-user-list'),
+    path('admin/users/<int:pk>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('admin/users/<int:pk>/suspend/', AdminSuspendUserView.as_view(), name='admin-suspend-user'),
     path('admin/users/<int:pk>/activate/', AdminActivateUserView.as_view(), name='admin-activate-user'),
 ]

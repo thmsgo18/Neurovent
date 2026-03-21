@@ -26,6 +26,10 @@ class Registration(models.Model):
         choices=RegistrationStatus.choices,
         default=RegistrationStatus.PENDING
     )
+    # Note optionnelle de l'organisateur (raison de rejet, message de confirmation...)
+    company_comment = models.TextField(blank=True, default='')
+    # Besoins d'accessibilité du participant (mobilité réduite, etc.)
+    accessibility_needs = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

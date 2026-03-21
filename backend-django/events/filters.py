@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Q
-from .models import Event, EventFormat
+from .models import Event, EventFormat, EventStatus
 from tags.models import Tag
 
 
@@ -19,6 +19,12 @@ class EventFilter(django_filters.FilterSet):
         ?ordering=date_start    → tri par date croissante
         ?ordering=-date_start   → tri par date décroissante
     """
+
+    # Filtre par statut : DRAFT / PUBLISHED / CANCELLED (admin uniquement en pratique)
+    status = django_filters.ChoiceFilter(
+        choices=EventStatus.choices,
+        label='Statut'
+    )
 
     # Filtre par format : ONSITE / ONLINE / HYBRID
     format = django_filters.ChoiceFilter(
@@ -71,4 +77,4 @@ class EventFilter(django_filters.FilterSet):
 
     class Meta:
         model = Event
-        fields = ['format', 'tags', 'date_after', 'date_before', 'city', 'country', 'search']
+        fields = ['status', 'format', 'tags', 'date_after', 'date_before', 'city', 'country', 'search']

@@ -13,12 +13,23 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = Registration
         fields = [
             'id', 'event', 'event_title', 'event_date',
-            'participant_name', 'status', 'waitlist_position', 'created_at'
+            'participant_name', 'status', 'waitlist_position',
+            'accessibility_needs', 'company_comment',
+            'created_at',
         ]
-        read_only_fields = ['id', 'status', 'created_at']
+        read_only_fields = ['id', 'status', 'company_comment', 'created_at']
 
     def get_participant_name(self, obj):
         return f"{obj.participant.first_name} {obj.participant.last_name}".strip() or obj.participant.email
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        event = attrs.get('event')
+        if event and Registration.objects.filter(participant=user, event=event).exists():
+            raise serializers.ValidationError(
+                {"event": "Vous êtes déjà inscrit à cet événement."}
+            )
+        return attrs
 
     def create(self, validated_data):
         validated_data['participant'] = self.context['request'].user
@@ -26,14 +37,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class RegistrationStatusUpdateSerializer(serializers.ModelSerializer):
-    """Serializer pour que la Company confirme ou rejette une inscription"""
+    """Serializer pour que la Company confirme ou rejette une inscription.
+    La company peut aussi laisser un commentaire (company_comment).
+    """
 
     class Meta:
         model = Registration
-        fields = ['status']
+        fields = ['status', 'company_comment']
 
     def validate_status(self, value):
-        allowed = [Registration.status.field.choices[1][0], Registration.status.field.choices[2][0]]
         # CONFIRMED ou REJECTED uniquement
         if value not in ['CONFIRMED', 'REJECTED']:
             raise serializers.ValidationError('Valeur invalide. Choisir: CONFIRMED ou REJECTED')

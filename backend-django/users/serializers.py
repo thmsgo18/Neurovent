@@ -163,6 +163,31 @@ class CompanyPublicSerializer(serializers.ModelSerializer):
 
 
 # ─────────────────────────────────────────
+#  LISTE UTILISATEURS (admin)
+# ─────────────────────────────────────────
+
+class UserListSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la liste admin des utilisateurs.
+    Retourne un champ 'name' adapté selon le rôle :
+    - PARTICIPANT → "Prénom Nom"
+    - COMPANY     → nom de l'entreprise
+    """
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'role', 'email', 'name', 'is_active', 'date_joined']
+
+    def get_name(self, obj):
+        if obj.role == UserRole.PARTICIPANT:
+            return f"{obj.first_name} {obj.last_name}".strip()
+        if obj.role == UserRole.COMPANY:
+            return obj.company_name
+        return ''
+
+
+# ─────────────────────────────────────────
 #  MOT DE PASSE
 # ─────────────────────────────────────────
 

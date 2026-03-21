@@ -1,6 +1,7 @@
 import csv
 from django.utils import timezone
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.views import APIView
@@ -43,6 +44,13 @@ class IsParticipant(permissions.BasePermission):
 class IsCompany(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == UserRole.COMPANY
+
+
+class IsCompanyOrAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and (
+            request.user.role == UserRole.COMPANY or request.user.is_staff
+        )
 
 
 # --- Vues Participant ---
@@ -135,7 +143,7 @@ class EventRegistrationsView(generics.ListAPIView):
 
     def get_queryset(self):
         event_id = self.kwargs['event_id']
-        event = Event.objects.select_related('company').get(id=event_id)
+        event = get_object_or_404(Event.objects.select_related('company'), id=event_id)
         if event.company != self.request.user:
             raise PermissionDenied("Vous n'êtes pas l'organisateur de cet événement")
         return (
@@ -146,12 +154,14 @@ class EventRegistrationsView(generics.ListAPIView):
 
 
 class UpdateRegistrationStatusView(generics.UpdateAPIView):
-    """La company confirme ou rejette une inscription (mode VALIDATION uniquement)"""
+    """La company confirme ou rejette une inscription — Admin peut aussi intervenir"""
     serializer_class = RegistrationStatusUpdateSerializer
-    permission_classes = [IsCompany]
+    permission_classes = [IsCompanyOrAdmin]
 
     def get_queryset(self):
-        # La company ne peut modifier que les inscriptions de ses propres events
+        # L'admin voit toutes les inscriptions, la company uniquement celles de ses events
+        if self.request.user.is_staff:
+            return Registration.objects.select_related('event', 'participant')
         return (
             Registration.objects
             .filter(event__company=self.request.user)
@@ -173,10 +183,7 @@ class ExportEventRegistrationsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, event_id):
-        try:
-            event = Event.objects.select_related('company').get(id=event_id)
-        except Event.DoesNotExist:
-            raise ValidationError("Événement introuvable.")
+        event = get_object_or_404(Event.objects.select_related('company'), id=event_id)
 
         # Seuls la company owner et l'admin peuvent exporter
         is_owner = (request.user.role == UserRole.COMPANY and event.company == request.user)
@@ -205,6 +212,7 @@ class ExportEventRegistrationsView(APIView):
         writer.writerow([
             'Prénom', 'Nom', 'Email',
             'Statut', 'Position liste d\'attente',
+            'Besoins accessibilité', 'Commentaire organisateur',
             'Date d\'inscription',
         ])
 
@@ -217,6 +225,8 @@ class ExportEventRegistrationsView(APIView):
                 p.email,
                 reg.get_status_display(),
                 reg.waitlist_position if reg.status == RegistrationStatus.WAITLIST else '',
+                reg.accessibility_needs,
+                reg.company_comment,
                 reg.created_at.strftime('%d/%m/%Y %H:%M'),
             ])
 

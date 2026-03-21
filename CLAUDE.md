@@ -168,11 +168,13 @@ online_reveal_date   → DateTimeField (optionnel)
 
 ### Registration (`registrations/models.py`)
 ```
-participant  → FK → CustomUser (role=PARTICIPANT)
-event        → FK → Event
-status       → PENDING | CONFIRMED | REJECTED | CANCELLED | WAITLIST
-created_at   → DateTimeField auto
-updated_at   → DateTimeField auto
+participant          → FK → CustomUser (role=PARTICIPANT)
+event                → FK → Event
+status               → PENDING | CONFIRMED | REJECTED | CANCELLED | WAITLIST
+accessibility_needs  → TextField (besoins d'accessibilité du participant, optionnel)
+company_comment      → TextField (commentaire organisateur, optionnel)
+created_at           → DateTimeField auto
+updated_at           → DateTimeField auto
 unique_together = ['participant', 'event']
 ```
 
@@ -213,12 +215,15 @@ s'y associer via ManyToMany mais ne peuvent pas créer de tags.
 | POST | `/api/auth/login/participant/` | Public | `email, password` |
 | POST | `/api/auth/login/company/` | Public | `identifier, password` |
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
+| POST | `/api/auth/logout/` | Connecté | `refresh` — blackliste le token |
 | GET | `/api/auth/me/` | Connecté | — |
 | PATCH | `/api/auth/me/` | Connecté | champs partiels (ex: `tag_ids: [1,2]`) |
 | DELETE | `/api/auth/me/` | Connecté | — Suppression compte RGPD |
 | GET | `/api/auth/admin/stats/` | Admin | — |
+| GET | `/api/auth/admin/users/` | Admin | `?role=PARTICIPANT\|COMPANY\|ADMIN` — liste des utilisateurs |
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend le compte |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive le compte |
+| DELETE | `/api/auth/admin/users/<id>/delete/` | Admin | — Suppression RGPD forcée (impossible sur un autre admin) |
 | PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
 | POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien signé par email |
 | POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
@@ -284,11 +289,11 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 
 | Méthode | URL | Accès | Body / Notes |
 |---------|-----|-------|--------------|
-| POST | `/api/registrations/` | Participant | `{"event": <id>}` |
+| POST | `/api/registrations/` | Participant | `{"event": <id>}` — optionnel : `accessibility_needs` |
 | GET | `/api/registrations/my/` | Participant | Ses inscriptions — `?status=CONFIRMED\|PENDING\|WAITLIST\|...` |
 | PATCH | `/api/registrations/<id>/cancel/` | Participant | Annule → promeut le 1er WAITLIST |
 | GET | `/api/registrations/event/<id>/` | Company | Inscrits d'un event |
-| PATCH | `/api/registrations/<id>/status/` | Company | `{"status": "CONFIRMED"}` ou `"REJECTED"` |
+| PATCH | `/api/registrations/<id>/status/` | Company / Admin | `{"status": "CONFIRMED\|REJECTED", "company_comment": "..."}` |
 | GET | `/api/registrations/event/<id>/export/` | Company (owner) / Admin | Export CSV des inscrits |
 
 ### Tags
@@ -297,6 +302,7 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 |---------|-----|-------|
 | GET | `/api/tags/` | Public |
 | POST | `/api/tags/create/` | Admin |
+| DELETE | `/api/tags/<id>/delete/` | Admin |
 
 ### Documentation API
 
@@ -334,7 +340,7 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 
 **Core :**
 - [x] Tous les modèles créés et migrés (CustomUser, Event, Registration, Tag)
-- [x] 22+ endpoints testés et fonctionnels
+- [x] 26+ endpoints fonctionnels
 - [x] JWT avec rôle dans le token
 - [x] Login séparé participant (email) / company (identifiant)
 - [x] Tags M2M fonctionnels (tag_ids pour écriture, tags pour lecture)
@@ -353,17 +359,35 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 - [x] Validation company_identifier (regex + longueur)
 - [x] Suppression compte RGPD (anonymisation + annulation events futurs)
 - [x] Suspension / réactivation compte par admin
-- [x] Recommandations personnalisées (`GET /api/events/recommended/`)
+- [x] Liste & modération admin (`GET /api/auth/admin/users/` avec filtre `?role=`)
+- [x] Suppression admin forcée (`DELETE /api/auth/admin/users/<id>/delete/`)
+- [x] Logout avec blacklist JWT (`POST /api/auth/logout/`)
+- [x] Recommandations personnalisées (`GET /api/events/recommended/`) — participants uniquement
+- [x] Filtre `?status=` sur `GET /api/events/` — admin uniquement
 - [x] Date limite d'inscription (`registration_deadline`)
 - [x] Bannière event (ImageField → `media/banners/`)
 - [x] Liste d'attente automatique (WAITLIST + promotion auto)
+- [x] Champs `accessibility_needs` et `company_comment` sur Registration
 - [x] Export CSV des inscrits par event (`GET /api/registrations/event/<id>/export/`)
+- [x] Suppression tag admin (`DELETE /api/tags/<id>/delete/`)
 - [x] Réinitialisation mot de passe par email (`POST /api/auth/password-reset/`)
 - [x] Changement mot de passe connecté (`PATCH /api/auth/me/password/`)
 - [x] Notifications email automatiques (CONFIRMED, REJECTED, WAITLIST promu, event annulé)
 - [x] Filtre sur mes inscriptions (`?status=CONFIRMED|PENDING|...`)
 - [x] `emails.py` centralisé — architecture prête pour le HTML
 - [x] Gmail SMTP configuré via `python-decouple` + `.env`
+- [x] `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` passent par `.env` (prêt pour le déploiement)
+
+**Tests :**
+- [x] 95 tests Django (users: 28, events: 28, registrations: 28+1, tags: 10)
+- [x] Tous les fichiers `tests.py` des 4 apps remplis
+
+**Bugs corrigés :**
+- [x] `RecommendedEventsView` : permission `IsParticipant` (était `IsAuthenticated` → companies pouvaient accéder)
+- [x] `RegistrationSerializer` : validation doublon inscription avant DB (évite IntegrityError → 400 propre)
+- [x] `UpdateRegistrationStatusView` : permission `IsCompanyOrAdmin` + queryset adaptatif (admin voit tout)
+- [x] `EventRegistrationsView` : `get_object_or_404` (évite crash 500 si event_id inexistant)
+- [x] `ExportEventRegistrationsView` : retourne 404 (plus 400) pour event introuvable
 
 ### 🔲 Frontend (Noureddine) — En cours
 - [ ] Pages Login/Register (participant + company)
@@ -464,6 +488,20 @@ pip install -r requirements.txt
     En dev : `neurovent.noreply@gmail.com` avec mot de passe d'application Google.
     Pour passer en prod : changer `EMAIL_HOST` dans `.env`, aucune modification du code.
 
+18. **`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` via python-decouple** : ces 3 variables ont des
+    valeurs fallback en dev. En production, les renseigner dans le dashboard Railway/Render :
+    - `SECRET_KEY=<clé générée par get_random_secret_key()>`
+    - `DEBUG=False`
+    - `ALLOWED_HOSTS=ton-domaine.up.railway.app,localhost`
+
+19. **`IsCompanyOrAdmin`** : permission custom dans `registrations/views.py` qui accepte à la fois
+    les companies ET les admins. Utilisée sur `UpdateRegistrationStatusView`. Le `get_queryset()`
+    est adaptatif : admin voit toutes les inscriptions, company uniquement celles de ses events.
+
+20. **`get_object_or_404`** : toujours utiliser `get_object_or_404()` plutôt que `.get()` dans les
+    vues qui reçoivent un ID en paramètre d'URL. `.get()` lève `DoesNotExist` (non catchée par DRF
+    → 500 en prod). `get_object_or_404()` lève `Http404` (catchée → 404 propre).
+
 ---
 
 ## 11. Pièges connus
@@ -484,3 +522,6 @@ pip install -r requirements.txt
 - **Comptes RGPD exclus des emails** : `_is_valid_recipient()` vérifie que l'email ne contient pas `deleted.neurovent.com` avant tout envoi.
 - **App password Google** : le mot de passe SMTP Gmail doit être un mot de passe d'application (16 caractères), **sans espaces** dans le `.env`. La validation en 2 étapes doit être activée sur le compte Gmail.
 - **`from_waitlist=True`** : passer ce paramètre à `send_registration_confirmed()` quand la confirmation vient d'une promotion depuis la waitlist — le texte de l'email est différent.
+- **`GET /api/events/<id>/` retourne 404 pour un DRAFT** : `EventDetailView` filtre sur `status=PUBLISHED`. Une company qui veut voir le détail de son brouillon doit passer par `GET /api/events/my-events/`. Noureddine ne doit pas s'attendre à avoir le détail d'un DRAFT via l'endpoint public.
+- **Doublon inscription** : tenter de s'inscrire deux fois au même event retourne une erreur 400 propre (validation dans `RegistrationSerializer.validate()`). Ne pas confondre avec l'ancienne IntegrityError qui causait un crash.
+- **`SECRET_KEY` en dev** : la clé par défaut contient le préfixe `django-insecure-` — Django lui-même prévient que c'est insecure. En prod, toujours générer une vraie clé avec `get_random_secret_key()`.

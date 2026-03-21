@@ -15,6 +15,12 @@ from emails import send_event_cancelled
 
 # --- Permissions personnalisées ---
 
+class IsParticipant(permissions.BasePermission):
+    """Seuls les participants peuvent accéder"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == UserRole.PARTICIPANT
+
+
 class IsCompany(permissions.BasePermission):
     """Seules les entreprises peuvent accéder"""
     def has_permission(self, request, view):
@@ -53,6 +59,14 @@ class EventListView(generics.ListAPIView):
     ordering = ['date_start']  # tri par défaut : les plus prochains en premier
 
     def get_queryset(self):
+        # Les admins voient tous les statuts (filtrables via ?status=)
+        # Les autres (public, participants, companies) voient uniquement les PUBLISHED
+        if self.request.user.is_authenticated and self.request.user.is_staff:
+            return (
+                Event.objects
+                .select_related('company')
+                .prefetch_related('tags', 'registrations')
+            )
         return (
             Event.objects
             .filter(status='PUBLISHED')
@@ -132,7 +146,7 @@ class RecommendedEventsView(generics.ListAPIView):
     Si le participant n'a aucun tag → retourne une liste vide.
     """
     serializer_class = EventListSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsParticipant]
 
     def get_queryset(self):
         user = self.request.user

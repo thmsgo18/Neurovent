@@ -8,6 +8,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 from .models import CustomUser, UserRole
 from .serializers import (
@@ -17,6 +18,7 @@ from .serializers import (
     CompanyProfileSerializer,
     CompanyPublicSerializer,
     UserProfileSerializer,
+    UserListSerializer,
     ChangePasswordSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
@@ -182,6 +184,36 @@ class ProfileView(APIView):
 
 
 # ─────────────────────────────────────────
+#  LOGOUT
+# ─────────────────────────────────────────
+
+class LogoutView(APIView):
+    """
+    Déconnexion — POST /api/auth/logout/
+    Blackliste le refresh token pour l'invalider côté serveur.
+    Body : { "refresh": "<refresh_token>" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response(
+                {'error': 'Le refresh token est requis.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({'message': 'Déconnexion réussie.'})
+        except TokenError:
+            return Response(
+                {'error': 'Token invalide ou déjà blacklisté.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+# ─────────────────────────────────────────
 #  MOT DE PASSE
 # ─────────────────────────────────────────
 
@@ -285,8 +317,90 @@ class CompanyPublicView(generics.RetrieveAPIView):
 
 
 # ─────────────────────────────────────────
+#  LISTE UTILISATEURS ADMIN
+# ─────────────────────────────────────────
+
+class AdminUserListView(generics.ListAPIView):
+    """
+    Liste tous les utilisateurs — GET /api/auth/admin/users/
+    Réservé aux admins. Paginée (10 par page).
+
+    Filtres :
+        ?role=PARTICIPANT   → uniquement les participants
+        ?role=COMPANY       → uniquement les companies
+        ?is_active=true     → comptes actifs uniquement
+        ?is_active=false    → comptes suspendus/supprimés
+    """
+    serializer_class = UserListSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        queryset = CustomUser.objects.exclude(role=UserRole.ADMIN).order_by('date_joined')
+
+        role = self.request.query_params.get('role')
+        if role in [UserRole.PARTICIPANT, UserRole.COMPANY]:
+            queryset = queryset.filter(role=role)
+
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+
+        return queryset
+
+
+# ─────────────────────────────────────────
 #  MODÉRATION ADMIN
 # ─────────────────────────────────────────
+
+class AdminDeleteUserView(APIView):
+    """
+    Suppression d'un compte par l'admin — DELETE /api/auth/admin/users/<id>/
+    Effectue une anonymisation RGPD (comme la suppression par l'user lui-même).
+    Irréversible.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def delete(self, request, pk):
+        try:
+            user = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == UserRole.ADMIN:
+            return Response({'error': 'Impossible de supprimer un admin.'}, status=status.HTTP_403_FORBIDDEN)
+
+        from registrations.models import Registration
+        now = timezone.now()
+
+        # Annuler les inscriptions futures
+        Registration.objects.filter(
+            participant=user,
+            event__date_start__gt=now,
+            status__in=['PENDING', 'CONFIRMED']
+        ).update(status='CANCELLED')
+
+        # Anonymiser les données
+        if user.role == UserRole.PARTICIPANT:
+            user.email = f"deleted_{user.id}@deleted.neurovent.com"
+            user.first_name = "[Supprimé]"
+            user.last_name = "[Supprimé]"
+            user.employer_name = ""
+        elif user.role == UserRole.COMPANY:
+            user.company_name = "[Entreprise supprimée]"
+            user.company_description = ""
+            user.recovery_email = ""
+            user.website_url = ""
+            user.youtube_url = ""
+            user.linkedin_url = ""
+            user.twitter_url = ""
+            user.instagram_url = ""
+            user.facebook_url = ""
+
+        user.is_active = False
+        user.save()
+
+        return Response({'message': f'Compte {pk} supprimé avec succès.'})
+
 
 class AdminSuspendUserView(APIView):
     """
