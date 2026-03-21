@@ -40,7 +40,7 @@ neurovent/
 
 | Partie | Technologies |
 |--------|-------------|
-| Backend principal | Django 6.0.2, Django REST Framework, JWT, SQLite |
+| Backend principal | Django 6.0.2, Django REST Framework, JWT, SQLite, python-decouple |
 | Frontend | React, React Router DOM, CSS natif, Lucide React |
 | Backend comparaison | Node.js, Express.js |
 | Auth | JWT (djangorestframework-simplejwt) |
@@ -201,6 +201,9 @@ npm run dev
 | GET | `/api/auth/admin/stats/` | Admin | — |
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — |
+| PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
+| POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien de reset par email |
+| POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
 
 > **Note tags :** pour lire → champ `tags` retourne `[{id, name}]`. Pour écrire → envoyer `tag_ids: [1, 2]`
 
@@ -241,10 +244,11 @@ npm run dev
 | Méthode | URL | Accès | Body / Notes |
 |---------|-----|-------|--------------|
 | POST | `/api/registrations/` | Participant | `{"event": <id>}` |
-| GET | `/api/registrations/my/` | Participant | Ses inscriptions |
+| GET | `/api/registrations/my/` | Participant | Ses inscriptions (`?status=CONFIRMED\|PENDING\|...`) |
 | PATCH | `/api/registrations/<id>/cancel/` | Participant | Annule l'inscription |
 | GET | `/api/registrations/event/<id>/` | Company | Inscrits d'un event |
 | PATCH | `/api/registrations/<id>/status/` | Company | `{"status": "CONFIRMED"}` ou `"REJECTED"` |
+| GET | `/api/registrations/event/<id>/export/` | Company (owner) / Admin | Export CSV des inscrits |
 
 ### Documentation API
 

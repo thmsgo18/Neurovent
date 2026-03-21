@@ -12,6 +12,7 @@ API REST principale du projet Neurovent. Gère l'authentification, les utilisate
 - **django-filter** — filtres avancés sur les événements
 - **drf-spectacular** — documentation API interactive (Swagger / ReDoc)
 - **Pillow** — upload d'images (logos company + bannières events)
+- **python-decouple** — variables d'environnement (.env)
 - **SQLite** — base de données (développement)
 
 ---
@@ -36,6 +37,23 @@ La doc ReDoc est sur `http://127.0.0.1:8000/api/redoc/`
 
 ---
 
+## Configuration email (.env)
+
+Créer un fichier `.env` dans `backend-django/` (jamais commité) :
+
+```
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=neurovent.noreply@gmail.com
+EMAIL_HOST_PASSWORD=xxxxxxxxxxxx
+FRONTEND_URL=http://localhost:5173
+```
+
+> Le mot de passe est un **mot de passe d'application Google** (pas le vrai mot de passe).
+> Pour en créer un : [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) (nécessite la validation en 2 étapes activée).
+
+---
+
 ## Après un git pull
 
 Si un coéquipier a modifié des modèles :
@@ -56,11 +74,13 @@ backend-django/
 ├── config/              → settings.py, urls.py (configuration globale)
 ├── users/               → CustomUser, authentification, profil, stats admin
 ├── events/              → Event, CRUD événements, filtres, recommandations
-├── registrations/       → Registration, inscriptions, liste d'attente
+├── registrations/       → Registration, inscriptions, liste d'attente, export CSV
 ├── tags/                → Tag, liste gérée par l'admin
+├── emails.py            → centralisation de tous les emails de la plateforme
 ├── media/               → fichiers uploadés — non versionné
 │   ├── logos/           → logos des companies
 │   └── banners/         → bannières des events
+├── .env                 → credentials email — non versionné
 ├── manage.py
 └── requirements.txt
 ```
@@ -120,6 +140,9 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | GET | `/api/auth/admin/stats/` | Admin | — |
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend un compte |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive un compte |
+| PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
+| POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien par email |
+| POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
 
 > **Upload logo company** : utiliser `multipart/form-data` (pas JSON)
 > ```bash
@@ -180,10 +203,11 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | Méthode | URL | Accès | Body |
 |---------|-----|-------|------|
 | POST | `/api/registrations/` | Participant | `{"event": <id>}` |
-| GET | `/api/registrations/my/` | Participant | — |
+| GET | `/api/registrations/my/` | Participant | `?status=CONFIRMED\|PENDING\|WAITLIST\|CANCELLED\|REJECTED` |
 | PATCH | `/api/registrations/<id>/cancel/` | Participant | — |
 | GET | `/api/registrations/event/<id>/` | Company | — |
 | PATCH | `/api/registrations/<id>/status/` | Company | `{"status": "CONFIRMED"}` ou `"REJECTED"` |
+| GET | `/api/registrations/event/<id>/export/` | Company (owner) / Admin | Télécharge un CSV des inscrits |
 
 ### Tags
 
@@ -365,9 +389,25 @@ python manage.py check
 
 ---
 
+## Notifications email automatiques
+
+Toutes les fonctions d'envoi sont centralisées dans `emails.py`.
+
+| Déclencheur | Destinataire | Email envoyé |
+|-------------|-------------|--------------|
+| Inscription confirmée (AUTO ou validation manuelle) | Participant | Confirmation + détails event (lieu/lien) |
+| Promotion depuis la liste d'attente | Participant | "Une place vient de se libérer" + détails |
+| Inscription rejetée | Participant | Notification rejet + lien autres events |
+| Event passé à CANCELLED | Tous les inscrits actifs | Notification annulation |
+| Demande reset mot de passe | Demandeur | Lien de réinitialisation (valable 24h) |
+
+> **Architecture HTML-ready** : les emails utilisent `EmailMultiAlternatives`. Pour ajouter un template HTML, il suffit de passer `html_message=<contenu>` à `_send()` dans `emails.py`.
+
+---
+
 ## Variables d'environnement (production)
 
-En développement tout est dans `settings.py`. En production, externaliser :
+En développement, les credentials sont dans `.env`. En production, externaliser également :
 - `SECRET_KEY`
 - `DEBUG=False`
 - `ALLOWED_HOSTS`

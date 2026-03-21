@@ -36,6 +36,7 @@ Le projet est une "coloration" de la consigne de base — même structure techni
 - **django-filter** — filtres avancés sur la liste des events
 - **drf-spectacular** — documentation API automatique (Swagger + ReDoc)
 - **Pillow** — upload d'images (logos company + bannières events)
+- **python-decouple** — variables d'environnement via fichier `.env`
 - Base de données : **SQLite** (développement)
 - Dossier : `backend-django/`
 - Config Django : `backend-django/config/`
@@ -64,8 +65,10 @@ backend-django/
 ├── config/          → settings.py, urls.py, wsgi.py, asgi.py
 ├── users/           → CustomUser, auth, profil, stats admin, profil public company
 ├── events/          → Event, CRUD events, filtres, stats par event, recommandations
-├── registrations/   → Registration, inscriptions, liste d'attente (waitlist)
+├── registrations/   → Registration, inscriptions, liste d'attente (waitlist), export CSV
 ├── tags/            → Tag, liste gérée par admin
+├── emails.py        → centralisation de tous les emails (notifications + reset mdp)
+├── .env             → credentials email (Gmail SMTP) — non versionné
 └── media/           → fichiers uploadés — non versionné
     ├── logos/       → logos des companies
     └── banners/     → bannières des events
@@ -216,6 +219,9 @@ s'y associer via ManyToMany mais ne peuvent pas créer de tags.
 | GET | `/api/auth/admin/stats/` | Admin | — |
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend le compte |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive le compte |
+| PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
+| POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien signé par email |
+| POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
 
 **Réponse login** : `{ refresh: "...", access: "..." }`
 **Token JWT contient** : `user_id, role, email, first_name, last_name` (participant)
@@ -279,10 +285,11 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 | Méthode | URL | Accès | Body / Notes |
 |---------|-----|-------|--------------|
 | POST | `/api/registrations/` | Participant | `{"event": <id>}` |
-| GET | `/api/registrations/my/` | Participant | Ses inscriptions (avec waitlist_position) |
+| GET | `/api/registrations/my/` | Participant | Ses inscriptions — `?status=CONFIRMED\|PENDING\|WAITLIST\|...` |
 | PATCH | `/api/registrations/<id>/cancel/` | Participant | Annule → promeut le 1er WAITLIST |
 | GET | `/api/registrations/event/<id>/` | Company | Inscrits d'un event |
 | PATCH | `/api/registrations/<id>/status/` | Company | `{"status": "CONFIRMED"}` ou `"REJECTED"` |
+| GET | `/api/registrations/event/<id>/export/` | Company (owner) / Admin | Export CSV des inscrits |
 
 ### Tags
 
@@ -350,6 +357,13 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 - [x] Date limite d'inscription (`registration_deadline`)
 - [x] Bannière event (ImageField → `media/banners/`)
 - [x] Liste d'attente automatique (WAITLIST + promotion auto)
+- [x] Export CSV des inscrits par event (`GET /api/registrations/event/<id>/export/`)
+- [x] Réinitialisation mot de passe par email (`POST /api/auth/password-reset/`)
+- [x] Changement mot de passe connecté (`PATCH /api/auth/me/password/`)
+- [x] Notifications email automatiques (CONFIRMED, REJECTED, WAITLIST promu, event annulé)
+- [x] Filtre sur mes inscriptions (`?status=CONFIRMED|PENDING|...`)
+- [x] `emails.py` centralisé — architecture prête pour le HTML
+- [x] Gmail SMTP configuré via `python-decouple` + `.env`
 
 ### 🔲 Frontend (Noureddine) — En cours
 - [ ] Pages Login/Register (participant + company)
@@ -437,6 +451,19 @@ pip install -r requirements.txt
 14. **`is_full` dans le serializer liste** : permet à Person B d'afficher le bouton
     "Rejoindre la liste d'attente" au lieu du bouton "S'inscrire" quand l'event est complet.
 
+15. **`emails.py` centralisé** : toutes les fonctions d'envoi d'email sont dans un seul fichier
+    à la racine du backend. Les vues importent la fonction dont elles ont besoin, sans logique
+    d'email en dur. Architecture `EmailMultiAlternatives` prête pour le HTML.
+
+16. **Reset mot de passe par email** : utilise `default_token_generator` de Django (token signé
+    avec le hash du mot de passe actuel). Token invalide après usage et expire en 24h.
+    Fonctionne pour participants (email login) et companies (recovery_email).
+    Retourne toujours 200 même si l'email n'existe pas (anti-énumération).
+
+17. **Gmail SMTP via python-decouple** : credentials dans `.env` (jamais commité).
+    En dev : `neurovent.noreply@gmail.com` avec mot de passe d'application Google.
+    Pour passer en prod : changer `EMAIL_HOST` dans `.env`, aucune modification du code.
+
 ---
 
 ## 11. Pièges connus
@@ -453,3 +480,7 @@ pip install -r requirements.txt
 - **Promotion waitlist** : la fonction `_promote_from_waitlist(event)` est appelée après chaque `CANCELLED` ou `REJECTED`. Si on ajoute un nouveau cas de libération de place, penser à l'appeler.
 - **Suppression RGPD** : l'email est remplacé par `deleted_<id>@deleted.neurovent.com` pour garantir l'unicité (contrainte `unique=True` sur le champ email). Ne pas mettre `null`.
 - **`registration_open` vs `is_full`** : ce sont deux choses différentes. Un event peut être ouvert aux inscriptions (`registration_open: true`) ET complet (`is_full: true`) → dans ce cas, le participant rejoint la waitlist.
+- **Emails non envoyés silencieusement** : `_send()` dans `emails.py` utilise un `try/except` (équivalent `fail_silently=True`). Si l'email échoue, l'opération principale (inscription, annulation...) réussit quand même.
+- **Comptes RGPD exclus des emails** : `_is_valid_recipient()` vérifie que l'email ne contient pas `deleted.neurovent.com` avant tout envoi.
+- **App password Google** : le mot de passe SMTP Gmail doit être un mot de passe d'application (16 caractères), **sans espaces** dans le `.env`. La validation en 2 étapes doit être activée sur le compte Gmail.
+- **`from_waitlist=True`** : passer ce paramètre à `send_registration_confirmed()` quand la confirmation vient d'une promotion depuis la waitlist — le texte de l'email est différent.
