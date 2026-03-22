@@ -6,7 +6,7 @@ export default function AdminRoute({ children }) {
   if (!isAuthed()) return <Navigate to="/login" replace />;
   
   // Si connecté mais pas admin → dashboard (accès refusé)
-  if (!isAdmin()) return <Navigate to="/dashboard" replace />;
+  if (!isAdmin()) return <Navigate to="/events" replace />;
   
   return children;
 }

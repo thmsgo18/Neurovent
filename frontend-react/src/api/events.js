@@ -1,87 +1,203 @@
 import { apiFetch } from "./client";
+import { getUsername, getUserId } from "../store/authStore";
 
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 
 // ---- MOCK DATA ----
+// Les champs des mock utilisent les noms du backend Django
 const MOCK_EVENTS = [
   {
     id: 1,
-    title: "Workshop Machine Learning",
-    description: "Introduction au ML supervisé",
-    date: "2026-04-15",
-    status: "upcoming",
-    location: "Salle A101",
+    title: "Workshop on Federated Learning & Privacy",
+    description:
+      "This intensive workshop covers advanced differential privacy techniques, secure aggregation protocols, and practical cross-silo architecture implementations for researchers.",
+    status: "PUBLISHED",
+    date_start: "2026-04-14T09:00:00Z",
+    date_end: "2026-04-14T18:00:00Z",
+    address_city: "Paris",
+    address_country: "France",
+    address_full: "INRIA Paris Lab, Bâtiment A, 2 rue Simone Iff, 75012 Paris",
+    address_visibility: "FULL",
+    organizer: "INRIA Paris",
+    capacity: 50,
+    registered_count: 32,
+    format: "ONSITE",
+    tags: [{ id: 1, name: "Privacy" }, { id: 2, name: "Federated Learning" }, { id: 3, name: "Differential Privacy" }],
+    registration_mode: "VALIDATION",
+    owner: "admin",
+    // champs UI dérivés (calculés côté frontend à partir des données backend)
+    category: "FL",
   },
   {
     id: 2,
-    title: "Conférence Federated Learning",
-    description: "Apprentissage fédéré et confidentialité",
-    date: "2026-05-20",
-    status: "upcoming",
-    location: "Amphithéâtre B",
+    title: "Multi-Agent Systems Practice",
+    description:
+      "A live online session on distributed multi-agent systems, coordination protocols, and emergent behavior in complex environments.",
+    status: "PUBLISHED",
+    date_start: "2026-03-15T14:00:00Z",
+    date_end: "2026-03-15T17:00:00Z",
+    address_city: null,
+    address_country: null,
+    address_full: null,
+    online_platform: "Zoom",
+    online_link: "https://zoom.us/...",
+    online_visibility: "PARTIAL",
+    organizer: "LIP6",
+    capacity: 100,
+    registered_count: 87,
+    format: "ONLINE",
+    tags: [{ id: 4, name: "Multi-Agent" }, { id: 5, name: "Distributed Systems" }, { id: 6, name: "AI" }],
+    registration_mode: "AUTO",
+    owner: "admin",
+    category: "MAS",
   },
   {
     id: 3,
-    title: "Séminaire Multi-Agent Systems",
-    description: "Systèmes multi-agents distribués",
-    date: "2026-03-10",
-    status: "past",
-    location: "Salle C203",
+    title: "International Conference on ML Security",
+    description:
+      "Top-tier conference on adversarial machine learning, model robustness, and trustworthy AI systems.",
+    status: "PUBLISHED",
+    date_start: "2026-05-20T10:00:00Z",
+    date_end: "2026-05-20T18:00:00Z",
+    address_city: "Lyon",
+    address_country: "France",
+    address_full: "Université Claude Bernard Lyon 1, Salle des Conférences, 43 bd du 11 Novembre",
+    address_visibility: "FULL",
+    organizer: "Université Claude Bernard",
+    capacity: 200,
+    registered_count: 145,
+    format: "ONSITE",
+    tags: [{ id: 7, name: "Security" }, { id: 8, name: "ML" }, { id: 9, name: "Robustness" }],
+    registration_mode: "AUTO",
+    owner: "ucbl",
+    category: "Security",
   },
 ];
 
-// Liste tous les événements avec filtres optionnels
+// Normalise un event backend → shape utilisée dans les composants.
+// Le backend retourne 3 shapes différentes selon l'endpoint :
+//   - list (GET /api/events/) : champs plats address_city, online_platform...
+//   - detail (GET /api/events/:id/) : objets imbriqués visible_address, visible_online
+//   - create/update response : champs plats bruts (même chose que list)
+export function normalizeEvent(e) {
+  const capacity = e.capacity || 0;
+  // L'API ne retourne pas registered_count — on le déduit de capacity - spots_remaining
+  const spotsRemaining = e.spots_remaining ?? 0;
+  const registered = e.registered_count ?? Math.max(0, capacity - spotsRemaining);
+
+  // Résoudre l'adresse selon la shape disponible
+  const va = e.visible_address; // detail endpoint
+  const addressFull = va?.full || e.address_full || "";
+  const addressCity = va?.city || e.address_city || "";
+  const addressCountry = va?.country || e.address_country || "";
+
+  // Résoudre les infos en ligne selon la shape disponible
+  const vo = e.visible_online; // detail endpoint
+  const onlinePlatform = vo?.platform || e.online_platform || "";
+  const onlineLink = vo?.link || e.online_link || "";
+
+  // Localisation affichée
+  let location = null;
+  if (e.format === "ONLINE") {
+    location = onlinePlatform ? `${onlinePlatform} (online)` : "Online";
+  } else if (e.format === "HYBRID") {
+    const place = addressCity || addressFull;
+    location = place ? `${place} + ${onlinePlatform || "Online"}` : (onlinePlatform || "Hybrid");
+  } else {
+    location = addressFull || (addressCity ? `${addressCity}, ${addressCountry}` : null);
+  }
+
+  return {
+    ...e,
+    // Dates
+    date: e.date_start ? e.date_start.split("T")[0] : null,
+    time: e.date_start ? e.date_start.split("T")[1]?.substring(0, 5) : null,
+    // Capacité
+    max_participants: capacity,
+    registered_count: registered,
+    spots_remaining: spotsRemaining,
+    is_full: e.is_full ?? spotsRemaining <= 0,
+    registration_open: e.registration_open ?? true,
+    // Organizer
+    organizer: e.company_name || e.organizer || "",
+    // Localisation normalisée (gère list + detail + create)
+    location,
+    city: addressCity,
+    country: addressCountry,
+    address_full: addressFull,
+    online_platform: onlinePlatform,
+    online_link: onlineLink,
+    // Normalisation des valeurs enum → UI
+    format: e.format === "ONSITE" ? "presential" : e.format === "ONLINE" ? "online" : e.format === "HYBRID" ? "hybrid" : e.format?.toLowerCase(),
+    validation: e.registration_mode === "VALIDATION" ? "manual" : "auto",
+    status: e.status === "PUBLISHED" ? "upcoming" : e.status === "CANCELLED" ? "cancelled" : e.status?.toLowerCase(),
+    tags: (e.tags || []).map((t) => (typeof t === "object" ? t.name : t)),
+    tag_ids: (e.tags || []).filter((t) => typeof t === "object").map((t) => t.id),
+  };
+}
+
 export const getEvents = async (filters = {}) => {
   if (USE_MOCK) {
-    await new Promise((r) => setTimeout(r, 500));
-    let events = [...MOCK_EVENTS];
-    if (filters.status) {
-      events = events.filter((e) => e.status === filters.status);
-    }
-    if (filters.date) {
-      events = events.filter((e) => e.date === filters.date);
-    }
-    return events;
+    await new Promise((r) => setTimeout(r, 400));
+    let events = MOCK_EVENTS.map(normalizeEvent);
+    if (filters.status) events = events.filter((e) => e.status === filters.status);
+    if (filters.format) events = events.filter((e) => e.format === filters.format);
+    if (filters.category) events = events.filter((e) => e.category === filters.category);
+    return { results: events, count: events.length, next: null, previous: null };
   }
-  const params = new URLSearchParams(filters).toString();
-  return apiFetch(`/api/events/${params ? "?" + params : ""}`);
+  const FORMAT_MAP = { presential: "ONSITE", online: "ONLINE", hybrid: "HYBRID" };
+  const params = new URLSearchParams();
+  if (filters.search) params.set("search", filters.search);
+  if (filters.format) params.set("format", FORMAT_MAP[filters.format] || filters.format.toUpperCase());
+  if (filters.page && filters.page > 1) params.set("page", filters.page);
+  if (filters.ordering) params.set("ordering", filters.ordering);
+  if (filters.city) params.set("city", filters.city);
+  if (filters.country) params.set("country", filters.country);
+  // tags peut être un tableau d'IDs
+  const tags = Array.isArray(filters.tags) ? filters.tags : filters.tags ? [filters.tags] : [];
+  tags.forEach((t) => params.append("tags", t));
+  const qs = params.toString();
+  const data = await apiFetch(`/api/events/${qs ? "?" + qs : ""}`);
+  return {
+    results: (data.results || data).map(normalizeEvent),
+    count: data.count ?? (data.results || data).length,
+    next: data.next || null,
+    previous: data.previous || null,
+  };
 };
 
-// Détail d'un événement
 export const getEvent = async (id) => {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 300));
     const event = MOCK_EVENTS.find((e) => e.id === parseInt(id));
     if (!event) throw new Error("Événement non trouvé");
-    return event;
+    return normalizeEvent(event);
   }
-  return apiFetch(`/api/events/${id}/`);
+  const data = await apiFetch(`/api/events/${id}/`);
+  return normalizeEvent(data);
 };
 
-// Créer un événement
 export const createEvent = async (data) => {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 500));
-    const newEvent = { id: MOCK_EVENTS.length + 1, ...data };
+    const newEvent = { id: MOCK_EVENTS.length + 1, registered_count: 0, status: "PUBLISHED", ...data };
     MOCK_EVENTS.push(newEvent);
-    return newEvent;
+    return normalizeEvent(newEvent);
   }
-  return apiFetch("/api/events/", { method: "POST", body: data });
+  return apiFetch("/api/events/create/", { method: "POST", body: data });
 };
 
-// Modifier un événement
 export const updateEvent = async (id, data) => {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 500));
     const index = MOCK_EVENTS.findIndex((e) => e.id === parseInt(id));
     if (index === -1) throw new Error("Événement non trouvé");
     MOCK_EVENTS[index] = { ...MOCK_EVENTS[index], ...data };
-    return MOCK_EVENTS[index];
+    return normalizeEvent(MOCK_EVENTS[index]);
   }
-  return apiFetch(`/api/events/${id}/`, { method: "PUT", body: data });
+  return apiFetch(`/api/events/${id}/update/`, { method: "PATCH", body: data });
 };
 
-// Supprimer un événement
 export const deleteEvent = async (id) => {
   if (USE_MOCK) {
     await new Promise((r) => setTimeout(r, 300));
@@ -89,5 +205,29 @@ export const deleteEvent = async (id) => {
     if (index !== -1) MOCK_EVENTS.splice(index, 1);
     return { success: true };
   }
-  return apiFetch(`/api/events/${id}/`, { method: "DELETE" });
+  return apiFetch(`/api/events/${id}/delete/`, { method: "DELETE" });
+};
+
+// Événements recommandés pour le participant connecté (selon ses tags)
+export const getRecommendedEvents = async () => {
+  if (USE_MOCK) return [];
+  const data = await apiFetch("/api/events/recommended/");
+  return (data.results || data).map(normalizeEvent);
+};
+
+// Stats d'un event (company owner / admin)
+export const getEventStats = async (id) => {
+  if (USE_MOCK) return { confirmed: 0, pending: 0, waitlist: 0, cancelled: 0, total: 0, capacity: 50 };
+  return apiFetch(`/api/events/${id}/stats/`);
+};
+
+// Événements de la company connectée (tous statuts)
+export const getMyEventsApi = async () => {
+  if (USE_MOCK) {
+    await new Promise((r) => setTimeout(r, 400));
+    const username = getUsername();
+    return MOCK_EVENTS.filter((e) => e.owner === username).map(normalizeEvent);
+  }
+  const data = await apiFetch("/api/events/my-events/");
+  return (data.results || data).map(normalizeEvent);
 };

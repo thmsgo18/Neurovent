@@ -1,358 +1,525 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft, Calendar, MapPin, Users,
-  Clock, Plus, X, UserMinus
-} from "lucide-react";
-import { getEvent } from "../api/events";
-import {
-  getParticipants,
-  getEventRegistrations,
-  registerToEvent,
-  unregisterFromEvent
-} from "../api/participants";
-import { isAdmin } from "../store/authStore";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, MapPin, Lock, Download, Check, X, Users } from "lucide-react";
+import NavUserMenu from "../components/NavUserMenu";
 import "../styles/EventDetail.css";
-
-function RegisterModal({ eventId, registered, allParticipants, onClose, onRegister }) {
-  const available = allParticipants.filter(
-    p => !registered.find(r => r.participant === p.id || r.participant_detail?.id === p.id)
-  );
-  const [selected, setSelected] = useState("");
-  const [loading, setLoading]   = useState(false);
-
-  const handleSubmit = async () => {
-    if (!selected) return;
-    setLoading(true);
-    try {
-      await onRegister(Number(selected));
-      onClose();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">Register Participant</span>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">Select Participant</label>
-          <select
-            className="register-select"
-            value={selected}
-            onChange={e => setSelected(e.target.value)}
-          >
-            <option value="">— Choose a participant —</option>
-            {available.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.first_name} {p.last_name} — {p.institution}
-              </option>
-            ))}
-          </select>
-          {available.length === 0 && (
-            <p style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: 8 }}>
-              All participants are already registered.
-            </p>
-          )}
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSubmit}
-            disabled={!selected || loading}
-          >
-            {loading ? "Registering..." : "Register"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { getEvent, deleteEvent, getEventStats } from "../api/events";
+import { registerToEvent, cancelRegistration, getMyRegistrations, getEventRegistrations, updateRegistrationStatus, exportEventRegistrations } from "../api/registrations";
+import { isAuthed, isCompany, getCompanyName } from "../store/authStore";
 
 export default function EventDetail() {
-  const { id }     = useParams();
-  const navigate   = useNavigate();
-  const admin      = isAdmin();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const authed = isAuthed();
 
-  const [event, setEvent]               = useState(null);
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [registered, setRegistered] = useState(false);
+  const [registrationId, setRegistrationId] = useState(null);
+  const [registrationStatus, setRegistrationStatus] = useState(null);
+  const [registerError, setRegisterError] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  // Company owner panel
+  const [showRegistrations, setShowRegistrations] = useState(false);
   const [registrations, setRegistrations] = useState([]);
-  const [allParticipants, setAllParticipants] = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [showModal, setShowModal]       = useState(false);
+  const [regsLoading, setRegsLoading] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
-    load();
+    getEvent(id)
+      .then(setEvent)
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, [id]);
 
-  async function load() {
-    setLoading(true);
+  // Vérifier si le participant est déjà inscrit
+  useEffect(() => {
+    if (!authed || isCompany()) return;
+    getMyRegistrations().then((regs) => {
+      const eventId = parseInt(id);
+      const reg = regs.find((r) => {
+        const rEventId = typeof r.event === "object" ? r.event.id : r.event;
+        return rEventId === eventId;
+      });
+      if (reg) {
+        if (reg.status !== "CANCELLED" && reg.status !== "REJECTED") {
+          setRegistered(true);
+          setRegistrationId(reg.id);
+          setRegistrationStatus(reg.status);
+        }
+      }
+    }).catch(console.error);
+  }, [id, authed]);
+
+  const handleRegister = async () => {
+    if (!authed) { setShowAccessModal(true); return; }
+    setRegisterError("");
     try {
-      const [evt, regs, parts] = await Promise.all([
-        getEvent(id),
-        getEventRegistrations(id),
-        getParticipants(),
-      ]);
-      setEvent(evt);
-      setRegistrations(regs);
-      setAllParticipants(parts);
-    } catch (e) {
-      console.error(e);
+      const reg = await registerToEvent(parseInt(id));
+      setRegistered(true);
+      setRegistrationId(reg.id);
+      const status = reg.status || (
+        event.validation === "manual" ? "PENDING" :
+        isFull ? "WAITLIST" : "CONFIRMED"
+      );
+      setRegistrationStatus(status);
+      // Mettre à jour le compteur localement
+      if (reg.status === "CONFIRMED") {
+        setEvent((prev) => prev ? {
+          ...prev,
+          registered_count: (prev.registered_count || 0) + 1,
+          spots_remaining: Math.max(0, (prev.spots_remaining ?? prev.max_participants ?? 0) - 1),
+        } : prev);
+      }
+    } catch (err) {
+      if (err.message?.toLowerCase().includes("déjà inscrit")) {
+        // Déjà inscrit → recharger silencieusement le statut
+        getMyRegistrations().then((regs) => {
+          const reg = regs.find((r) => {
+            const rId = typeof r.event === "object" ? r.event.id : r.event;
+            return rId === parseInt(id);
+          });
+          if (reg) {
+            setRegistered(true);
+            setRegistrationId(reg.id);
+            setRegistrationStatus(reg.status);
+          }
+        }).catch(console.error);
+      } else {
+        setRegisterError(err.message || "Registration failed. Please try again.");
+      }
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!registrationId) return;
+    setCancelLoading(true);
+    try {
+      await cancelRegistration(registrationId);
+      setRegistered(false);
+      setRegistrationId(null);
+      setRegistrationStatus(null);
+      // Mettre à jour le compteur localement
+      setEvent((prev) => prev ? {
+        ...prev,
+        registered_count: Math.max(0, (prev.registered_count || 0) - 1),
+        spots_remaining: (prev.spots_remaining ?? 0) + 1,
+      } : prev);
+    } catch (err) {
+      setRegisterError(err.message || "Failed to cancel registration.");
     } finally {
-      setLoading(false);
+      setCancelLoading(false);
     }
-  }
-
-  async function handleRegister(participantId) {
-    const reg = await registerToEvent(participantId, Number(id));
-    setRegistrations(prev => [...prev, reg]);
-  }
-
-  async function handleUnregister(regId) {
-    await unregisterFromEvent(regId);
-    setRegistrations(prev => prev.filter(r => r.id !== regId));
-  }
-
-  const formatDate = (d) => {
-    if (!d) return "—";
-    return new Date(d).toLocaleDateString("en-GB", {
-      day: "numeric", month: "short", year: "numeric"
-    });
   };
 
-  const getInitials = (p) => {
-    if (!p) return "?";
-    return `${p.first_name?.charAt(0) || ""}${p.last_name?.charAt(0) || ""}`.toUpperCase();
+  const loadRegistrations = () => {
+    setRegsLoading(true);
+    Promise.all([
+      getEventRegistrations(id),
+      getEventStats(id),
+    ]).then(([regs, s]) => {
+      setRegistrations(regs);
+      setStats(s);
+    }).catch(console.error)
+      .finally(() => setRegsLoading(false));
   };
 
-  const getParticipantName = (reg) => {
-    if (reg.participant_detail) {
-      return `${reg.participant_detail.first_name} ${reg.participant_detail.last_name}`;
+  const handleToggleRegistrations = () => {
+    const next = !showRegistrations;
+    setShowRegistrations(next);
+    if (next && registrations.length === 0) loadRegistrations();
+  };
+
+  const handleUpdateStatus = async (regId, status) => {
+    try {
+      await updateRegistrationStatus(regId, status);
+      setRegistrations((prev) => prev.map((r) => r.id === regId ? { ...r, status } : r));
+      // Recharger les stats pour refléter le nouveau décompte
+      getEventStats(id).then(setStats).catch(console.error);
+    } catch (err) {
+      alert(err.message);
     }
-    const p = allParticipants.find(p => p.id === reg.participant);
-    return p ? `${p.first_name} ${p.last_name}` : `Participant #${reg.participant}`;
   };
 
-  const getParticipantDetail = (reg) => {
-    if (reg.participant_detail) return reg.participant_detail;
-    return allParticipants.find(p => p.id === reg.participant) || null;
+  const handleCancelEvent = async () => {
+    if (!cancelConfirm) { setCancelConfirm(true); return; }
+    try {
+      await deleteEvent(id);
+      navigate("/dashboard");
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  if (loading) return (
-    <div className="loading-container">
-      <div className="spinner" /> Loading event...
-    </div>
-  );
+  const handleExport = async () => {
+    setExportLoading(true);
+    try {
+      await exportEventRegistrations(id);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
-  if (!event) return (
-    <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
-      Event not found.
-      <button className="back-btn" onClick={() => navigate("/events")}
-        style={{ display: "block", margin: "16px auto" }}>
-        ← Back to Events
-      </button>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p className="mono" style={{ color: "var(--text-dim)", fontSize: "12px" }}>{"// loading..."}</p>
+      </div>
+    );
+  }
 
-  const pct = event.max_participants
-    ? Math.round((registrations.length / event.max_participants) * 100)
-    : 0;
+  if (!event) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={{ color: "var(--text-muted)" }}>Event not found.</p>
+      </div>
+    );
+  }
+
+  // Le backend retourne company_name dans les events (pas d'ID numérique company exposé).
+  // On compare le company_name de l'event avec celui stocké au login.
+  const myCompanyName = getCompanyName();
+  const isEventOwner = isCompany() && myCompanyName && event.company_name === myCompanyName;
+  const spotsLeft = event.spots_remaining ?? Math.max(0, (event.max_participants || 50) - (event.registered_count || 0));
+  const isFull = event.is_full ?? spotsLeft <= 0;
+  const registrationOpen = event.registration_open !== false;
+  const initials = (event.organizer || "NV").substring(0, 2).toUpperCase();
+  const isPast = event.status === "past" || event.status === "cancelled";
+
+  const statusColor = {
+    CONFIRMED: "var(--success)",
+    PENDING: "#f5c400",
+    WAITLIST: "var(--accent)",
+    REJECTED: "var(--error)",
+    CANCELLED: "var(--text-dim)",
+  };
 
   return (
-    <div>
-      {/* Back */}
-      <button className="back-btn" onClick={() => navigate("/events")}>
-        <ArrowLeft size={16} /> Back to Events
-      </button>
-
-      {/* Header card */}
-      <div className="event-detail-header">
-        <div className="event-detail-top">
-          <div className="event-detail-badges">
-            <span style={{
-              fontSize: "0.75rem", fontWeight: 600,
-              padding: "2px 8px", borderRadius: 6,
-              background: "#eff6ff", color: "#6366f1"
-            }}>
-              {event.category || "General"}
+    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
+      {/* Top bar */}
+      <header style={{ height: "60px", display: "flex", alignItems: "center", padding: "0 32px", borderBottom: "1px solid var(--border)", background: "var(--bg)", position: "sticky", top: 0, zIndex: 50 }}>
+        <button onClick={() => navigate("/events")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: 0 }}>
+          <ArrowLeft size={15} />
+          Back to discovery
+        </button>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <Link to="/" style={{ textDecoration: "none" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "18px", color: "var(--text)" }}>
+              Neuro<span style={{ color: "var(--accent)" }}>vent</span>
             </span>
-            <span className={`badge badge-${event.status}`}>
-              {event.status}
-            </span>
-          </div>
-          {admin && (
-            <div className="event-detail-actions">
-              <button
-                className="btn btn-secondary"
-                onClick={() => navigate("/events")}
-              >
-                Edit
-              </button>
-              <button className="btn btn-danger">
-                Delete
-              </button>
-            </div>
+          </Link>
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", minWidth: "120px" }}>
+          {authed ? <NavUserMenu /> : (
+            <Link to="/login" className="btn btn-secondary" style={{ padding: "8px 20px", fontSize: "13px", border: "1px solid var(--border-strong)" }}>
+              Log In
+            </Link>
           )}
         </div>
+      </header>
 
-        <h1 className="event-detail-title">{event.title}</h1>
-        <p className="event-detail-desc">{event.description}</p>
-
-        <div className="event-detail-meta-grid">
-          <div className="event-detail-meta-item">
-            <span className="meta-item-label">Start Date</span>
-            <span className="meta-item-value">
-              <Calendar size={14} />
-              {formatDate(event.date)}
-            </span>
-          </div>
-          <div className="event-detail-meta-item">
-            <span className="meta-item-label">End Date</span>
-            <span className="meta-item-value">
-              <Clock size={14} />
-              {formatDate(event.end_date)}
-            </span>
-          </div>
-          <div className="event-detail-meta-item">
-            <span className="meta-item-label">Location</span>
-            <span className="meta-item-value">
-              <MapPin size={14} />
-              {event.location || "—"}
-            </span>
-          </div>
-          <div className="event-detail-meta-item">
-            <span className="meta-item-label">Capacity</span>
-            <span className="meta-item-value">
-              <Users size={14} />
-              {event.max_participants || "Unlimited"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress */}
-      <div className="event-progress-card">
-        <div className="progress-stats">
-          <div className="progress-stat">
-            <div className="progress-stat-value">{registrations.length}</div>
-            <div className="progress-stat-label">Registered</div>
-          </div>
-          <div className="progress-stat">
-            <div className="progress-stat-value">
-              {event.max_participants
-                ? event.max_participants - registrations.length
-                : "∞"}
+      {/* Content */}
+      <main style={{ flex: 1, maxWidth: "1100px", margin: "0 auto", width: "100%", padding: "48px 32px", display: "flex", gap: "48px", alignItems: "flex-start" }}>
+        {/* Left column */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Title */}
+          <div style={{ display: "flex", gap: "20px", marginBottom: "32px", alignItems: "flex-start" }}>
+            <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: "var(--secondary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "17px", fontWeight: "800", color: "#fff", letterSpacing: "0.05em" }}>
+              {initials}
             </div>
-            <div className="progress-stat-label">Available spots</div>
+            <div>
+              <h1 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: "800", lineHeight: "1.1", marginBottom: "8px" }}>
+                {event.title}
+              </h1>
+              <p style={{ fontSize: "14px", color: "var(--accent)", fontWeight: "600" }}>
+                {event.organizer || "Unknown"}
+              </p>
+            </div>
           </div>
-          <div className="progress-stat">
-            <div className="progress-stat-value">{event.max_participants || "∞"}</div>
-            <div className="progress-stat-label">Total capacity</div>
-          </div>
-          <div className="progress-stat">
-            <div className="progress-stat-value">{pct}%</div>
-            <div className="progress-stat-label">Occupancy</div>
-          </div>
-        </div>
-        <div className="progress-bar-lg">
-          <div className="progress-fill-lg" style={{ width: `${Math.min(pct, 100)}%` }} />
-        </div>
-        <p className="progress-label">{pct}% capacity filled</p>
-      </div>
 
-      {/* Registered participants */}
-      <div className="participants-section">
-        <div className="section-header">
-          <span className="section-title">
-            Registered Participants ({registrations.length})
-          </span>
-          {admin && (
-            <button
-              className="btn btn-primary"
-              style={{ fontSize: "0.8rem", padding: "7px 14px" }}
-              onClick={() => setShowModal(true)}
-            >
-              <Plus size={14} /> Register Participant
-            </button>
+          {/* Description */}
+          <p style={{ fontSize: "15px", color: "var(--text-muted)", lineHeight: "1.8", marginBottom: "32px" }}>
+            {event.description || "No description available."}
+          </p>
+
+          {/* Location */}
+          {event.location && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", marginBottom: "28px" }}>
+              <MapPin size={16} color="var(--accent)" style={{ marginTop: "2px", flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: "14px", color: "var(--text)", fontWeight: "600" }}>{event.location}</p>
+                {event.city && (
+                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px" }}>
+                    {event.city}, {event.country}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
-        </div>
 
-        {registrations.length === 0 ? (
-          <div className="empty-state">
-            <p>No participants registered yet</p>
-            <p>Click "Register Participant" to add someone</p>
-          </div>
-        ) : (
-          <table className="detail-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Organization</th>
-                <th>Status</th>
-                {admin && <th>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {registrations.map(reg => {
-                const detail = getParticipantDetail(reg);
-                return (
-                  <tr key={reg.id}>
-                    <td>
-                      <div className="participant-name-cell">
-                        <div className="participant-avatar">
-                          {getInitials(detail)}
+          {/* Tags */}
+          {(event.tags || []).length > 0 && (
+            <div>
+              <p style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Tags
+              </p>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {event.tags.map((tag) => (
+                  <span key={tag} style={{ padding: "6px 14px", borderRadius: "100px", background: "var(--surface)", border: "1px solid var(--border)", fontSize: "12px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inline registrations panel (company owner only) */}
+          {isEventOwner && showRegistrations && (
+            <div style={{ marginTop: "40px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                <h3 style={{ fontSize: "16px", fontWeight: "700" }}>
+                  Registrations
+                  {stats && (
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-dim)", fontWeight: "400", marginLeft: "12px" }}>
+                      {stats.registrations?.confirmed || 0} confirmed · {stats.registrations?.pending || 0} pending · {stats.spots_remaining ?? 0} spots left
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={handleExport}
+                  disabled={exportLoading}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-high)", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+                >
+                  <Download size={13} />
+                  {exportLoading ? "Exporting..." : "Export CSV"}
+                </button>
+              </div>
+              {regsLoading ? (
+                <p style={{ fontSize: "12px", color: "var(--text-dim)" }}>Loading...</p>
+              ) : registrations.length === 0 ? (
+                <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>No registrations yet.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {registrations.map((reg) => {
+                    const name = reg.participant_name || `#${reg.id}`;
+                    const regDate = reg.created_at ? new Date(reg.created_at).toLocaleDateString() : null;
+                    return (
+                      <div key={reg.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "12px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px" }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: "14px", fontWeight: "600", color: "var(--text)" }}>{name}</p>
+                          {regDate && (
+                            <p style={{ fontSize: "12px", color: "var(--text-dim)" }}>Registered {regDate}</p>
+                          )}
                         </div>
-                        <span>{getParticipantName(reg)}</span>
+                        <span style={{ fontSize: "11px", fontWeight: "700", color: statusColor[reg.status] || "var(--text-muted)", fontFamily: "var(--font-mono)", padding: "3px 10px", borderRadius: "100px", border: `1px solid ${statusColor[reg.status] || "var(--border)"}`, background: "rgba(255,255,255,0.03)" }}>
+                          {reg.status}
+                        </span>
+                        {reg.status === "PENDING" && (
+                          <div style={{ display: "flex", gap: "6px" }}>
+                            <button
+                              onClick={() => handleUpdateStatus(reg.id, "CONFIRMED")}
+                              style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid var(--success)", background: "rgba(0,255,149,0.08)", color: "var(--success)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                            >
+                              <Check size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(reg.id, "REJECTED")}
+                              style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid var(--error)", background: "rgba(255,77,77,0.08)", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </td>
-                    <td style={{ color: "#64748b" }}>
-                      {detail?.email || "—"}
-                    </td>
-                    <td style={{ color: "#64748b" }}>
-                      {detail?.institution || "—"}
-                    </td>
-                    <td>
-                      <span className="badge badge-confirmed">confirmed</span>
-                    </td>
-                    {admin && (
-                      <td>
-                        <button
-                          className="btn btn-danger"
-                          style={{ fontSize: "0.8rem", padding: "5px 12px" }}
-                          onClick={() => handleUnregister(reg.id)}
-                        >
-                          <UserMinus size={13} /> Unregister
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-      {/* Modal */}
-      {showModal && (
-        <RegisterModal
-          eventId={Number(id)}
-          registered={registrations}
-          allParticipants={allParticipants}
-          onClose={() => setShowModal(false)}
-          onRegister={handleRegister}
-        />
+        {/* Right column — Registration / Management card */}
+        <div style={{ width: "300px", flexShrink: 0 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "28px", position: "sticky", top: "80px" }}>
+            <h3 style={{ fontSize: "19px", fontWeight: "800", marginBottom: "20px" }}>
+              {isEventOwner ? "Management" : isCompany() ? "Event Info" : "Registration"}
+            </h3>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+              <div style={{ background: "var(--surface-high)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px" }}>
+                <p style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginBottom: "6px", textTransform: "uppercase" }}>Status</p>
+                <p style={{ fontSize: "14px", fontWeight: "700", color: event.status === "upcoming" ? "var(--accent)" : event.status === "cancelled" ? "var(--error)" : "var(--text-dim)" }}>
+                  {event.status === "upcoming" ? "Upcoming" : event.status === "cancelled" ? "Cancelled" : event.status || "Unknown"}
+                </p>
+              </div>
+              <div style={{ background: "var(--surface-high)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px" }}>
+                <p style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginBottom: "6px", textTransform: "uppercase" }}>Capacity</p>
+                <p style={{ fontSize: "14px", fontWeight: "700", color: "var(--text)" }}>
+                  {event.registered_count || 0} / {event.max_participants || 50}
+                </p>
+              </div>
+            </div>
+
+            {isEventOwner ? (
+              /* ---- Company owner: manage buttons ---- */
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: "100%", height: "44px", fontSize: "14px", borderRadius: "10px" }}
+                  onClick={() => navigate(`/events/${id}/edit`)}
+                >
+                  Edit Event
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ width: "100%", height: "44px", fontSize: "14px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                  onClick={handleToggleRegistrations}
+                >
+                  <Users size={14} />
+                  {showRegistrations ? "Hide Registrations" : "View Registrations"}
+                </button>
+                <button
+                  onClick={handleCancelEvent}
+                  style={{
+                    width: "100%",
+                    height: "44px",
+                    fontSize: "14px",
+                    borderRadius: "10px",
+                    background: cancelConfirm ? "rgba(255,77,77,0.2)" : "rgba(255,77,77,0.08)",
+                    border: "1px solid rgba(255,77,77,0.25)",
+                    color: "var(--error)",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    transition: "var(--transition)",
+                  }}
+                  onMouseEnter={(e) => { if (!cancelConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.15)"; }}
+                  onMouseLeave={(e) => { if (!cancelConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
+                >
+                  {cancelConfirm ? "Click again to confirm" : "Delete Event"}
+                </button>
+                {cancelConfirm && (
+                  <button
+                    onClick={() => setCancelConfirm(false)}
+                    style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer", padding: "4px 0" }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            ) : isCompany() ? (
+              /* ---- Company non-owner ---- */
+              <div style={{ padding: "20px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
+                <p style={{ fontSize: "12px", color: "var(--text-dim)", lineHeight: "1.6" }}>
+                  This event is managed by another organization.
+                </p>
+              </div>
+            ) : (
+              /* ---- Participant view ---- */
+              <>
+                {event.validation === "manual" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", fontSize: "12px", color: "var(--text-muted)", padding: "10px", background: "rgba(255,255,255,0.03)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                    <Lock size={13} />
+                    Manual validation required by organizer.
+                  </div>
+                )}
+                {registerError && (
+                  <div style={{ fontSize: "12px", color: "var(--error)", background: "rgba(255,77,77,0.08)", border: "1px solid rgba(255,77,77,0.2)", borderRadius: "8px", padding: "10px 12px", marginBottom: "12px", lineHeight: "1.5" }}>
+                    {registerError}
+                  </div>
+                )}
+                {registered ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{
+                      width: "100%",
+                      height: "48px",
+                      borderRadius: "10px",
+                      background: registrationStatus === "WAITLIST" ? "rgba(0,229,255,0.08)" : registrationStatus === "PENDING" ? "rgba(245,196,0,0.08)" : "rgba(0,255,149,0.1)",
+                      border: `1px solid ${registrationStatus === "WAITLIST" ? "var(--accent)" : registrationStatus === "PENDING" ? "#f5c400" : "var(--success)"}`,
+                      color: registrationStatus === "WAITLIST" ? "var(--accent)" : registrationStatus === "PENDING" ? "#f5c400" : "var(--success)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      gap: "8px",
+                    }}>
+                      {registrationStatus === "WAITLIST" && "Waitlist position saved"}
+                      {registrationStatus === "PENDING" && "Pending validation"}
+                      {(registrationStatus === "CONFIRMED" || !registrationStatus) && "Registered ✓"}
+                    </div>
+                    <button
+                      onClick={handleCancelRegistration}
+                      disabled={cancelLoading}
+                      style={{
+                        width: "100%",
+                        height: "38px",
+                        borderRadius: "10px",
+                        background: "transparent",
+                        border: "1px solid rgba(255,77,77,0.3)",
+                        color: "var(--error)",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        cursor: cancelLoading ? "not-allowed" : "pointer",
+                        opacity: cancelLoading ? 0.6 : 1,
+                        transition: "var(--transition)",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    >
+                      {cancelLoading ? "Cancelling..." : "Cancel Registration"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleRegister}
+                    style={{ width: "100%", height: "48px", fontSize: "15px", borderRadius: "10px" }}
+                    disabled={isPast || !registrationOpen || (isFull && event.validation === "manual")}
+                  >
+                    {isPast ? "Event Ended" : !registrationOpen ? "Registration Closed" : isFull && event.validation === "manual" ? "Full" : isFull ? "Join Waitlist" : "Register to Event"}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Access Restricted Modal */}
+      {showAccessModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+          onClick={() => setShowAccessModal(false)}
+        >
+          <div
+            style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: "20px", padding: "48px 40px", maxWidth: "400px", width: "100%", textAlign: "center" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ width: "64px", height: "64px", background: "rgba(245,196,0,0.12)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+              <Lock size={28} color="#f5c400" />
+            </div>
+            <h2 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "12px" }}>Access Restricted</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: "1.6" }}>
+              You must be logged in to register for scientific events.
+            </p>
+            <button className="btn btn-primary" style={{ width: "100%", marginBottom: "12px", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/login")}>
+              Sign In to Account
+            </button>
+            <button className="btn btn-secondary" style={{ width: "100%", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/register")}>
+              Create New Identity
+            </button>
+            <button onClick={() => setShowAccessModal(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", marginTop: "20px", cursor: "pointer" }}>
+              -- Back to event description
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

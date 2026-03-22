@@ -1,376 +1,514 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, Plus, Filter, Calendar, MapPin, Users, X } from "lucide-react";
-import { getEvents, createEvent, updateEvent, deleteEvent } from "../api/events";
-import { isAdmin } from "../store/authStore";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Search, Lock, ChevronLeft, ChevronRight } from "lucide-react";
+import NavUserMenu from "../components/NavUserMenu";
 import "../styles/Events.css";
+import { getEvents } from "../api/events";
+import { getTags, getTagsSync } from "../api/tags";
+import { registerToEvent, getMyRegistrations } from "../api/registrations";
+import { isAdmin, isAuthed, isCompany } from "../store/authStore";
 
-const STATUS_TABS = [
-  { key: "all",       label: "All" },
-  { key: "upcoming",  label: "Upcoming" },
-  { key: "ongoing",   label: "Ongoing" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
-];
-
-const CATEGORIES = ["Technology", "AI/ML", "Design", "Cloud", "Security", "Data", "ML", "Other"];
-
-function getCatClass(cat) {
-  if (!cat) return "cat-default";
-  const c = cat.toLowerCase();
-  if (c.includes("tech"))     return "cat-technology";
-  if (c.includes("ai") || c.includes("ml")) return "cat-aiml";
-  if (c.includes("design"))   return "cat-design";
-  if (c.includes("cloud"))    return "cat-cloud";
-  if (c.includes("security")) return "cat-security";
-  if (c.includes("data"))     return "cat-data";
-  return "cat-default";
-}
-
-function EventModal({ event, onClose, onSave }) {
-  const [form, setForm] = useState(event || {
-    title: "", description: "", category: "Technology",
-    status: "upcoming", date: "", end_date: "",
-    location: "", max_participants: ""
-  });
-  const [loading, setLoading] = useState(false);
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSubmit = async () => {
-    if (!form.title || !form.date) return;
-    setLoading(true);
-    try {
-      await onSave(form);
-      onClose();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">
-            {event ? "Edit Event" : "Create Event"}
-          </span>
-          <button className="modal-close" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">Title *</label>
-          <input className="form-input" value={form.title}
-            onChange={e => set("title", e.target.value)} placeholder="Event title" />
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">Description</label>
-          <textarea className="form-textarea" value={form.description}
-            onChange={e => set("description", e.target.value)}
-            placeholder="Event description..." rows={3} />
-        </div>
-
-        <div className="form-row">
-          <div className="form-field">
-            <label className="form-label">Category</label>
-            <select className="form-select" value={form.category}
-              onChange={e => set("category", e.target.value)}>
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="form-field">
-            <label className="form-label">Status</label>
-            <select className="form-select" value={form.status}
-              onChange={e => set("status", e.target.value)}>
-              <option value="upcoming">Upcoming</option>
-              <option value="ongoing">Ongoing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-field">
-            <label className="form-label">Start Date *</label>
-            <input className="form-input" type="date" value={form.date}
-              onChange={e => set("date", e.target.value)} />
-          </div>
-          <div className="form-field">
-            <label className="form-label">End Date</label>
-            <input className="form-input" type="date" value={form.end_date}
-              onChange={e => set("end_date", e.target.value)} />
-          </div>
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">Location</label>
-          <input className="form-input" value={form.location}
-            onChange={e => set("location", e.target.value)}
-            placeholder="City, Country — Venue" />
-        </div>
-
-        <div className="form-field">
-          <label className="form-label">Max Participants</label>
-          <input className="form-input" type="number" value={form.max_participants}
-            onChange={e => set("max_participants", e.target.value)}
-            placeholder="300" />
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Saving..." : event ? "Save Changes" : "Create Event"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const PAGE_SIZE = 10;
 
 export default function Events() {
   const navigate = useNavigate();
   const admin = isAdmin();
+  const authed = isAuthed();
+  const companyUser = isCompany();
 
-  const [events, setEvents]     = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [modal, setModal]       = useState(null); // null | "create" | event object
-  const [deleting, setDeleting] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
 
+  // Filters
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [formatFilter, setFormatFilter] = useState(""); // "" | "presential" | "online"
+  const [selectedTagId, setSelectedTagId] = useState(null);
+
+  // Sidebar tags from API
+  const [allTags, setAllTags] = useState(getTagsSync() || []);
+
+  const [registeredEvents, setRegisteredEvents] = useState(new Map()); // Map<eventId, status>
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [pendingEventId, setPendingEventId] = useState(null);
+  const [, setHoveredCard] = useState(null);
+
+  // Debounce search
   useEffect(() => {
-    load();
-  }, []);
+    const t = setTimeout(() => { setDebouncedSearch(searchInput); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await getEvents();
-      setEvents(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+  // Load tags for sidebar
+  useEffect(() => {
+    if (!allTags.length) {
+      getTags().then(setAllTags).catch(() => {});
     }
-  }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtered = useMemo(() => {
-    return events.filter(e => {
-      const matchSearch = !search ||
-        e.title.toLowerCase().includes(search.toLowerCase()) ||
-        (e.location || "").toLowerCase().includes(search.toLowerCase()) ||
-        (e.category || "").toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === "all" || e.status === statusFilter;
-      return matchSearch && matchStatus;
-    });
-  }, [events, search, statusFilter]);
-
-  const tabCounts = useMemo(() => {
-    const counts = { all: events.length };
-    STATUS_TABS.slice(1).forEach(t => {
-      counts[t.key] = events.filter(e => e.status === t.key).length;
-    });
-    return counts;
-  }, [events]);
-
-  async function handleSave(form) {
-    if (modal === "create") {
-      const created = await createEvent(form);
-      setEvents(prev => [...prev, created]);
-    } else {
-      const updated = await updateEvent(modal.id, form);
-      setEvents(prev => prev.map(e => e.id === updated.id ? updated : e));
+  // Parse la saisie pour détecter ville/pays ou texte
+  const parseSearch = (query) => {
+    if (!query.trim()) return {};
+    // "Paris, France" ou "Paris France" ou "Paris"
+    const parts = query.trim().split(/,\s*|\s+/).map((p) => p.trim()).filter(Boolean);
+    // Si 1 ou 2 mots courts (≤20 chars chacun) → traiter comme localisation
+    const isLocation = parts.length <= 2 && parts.every((p) => p.length <= 20 && /^[a-zA-ZÀ-ÿ\s-]+$/.test(p));
+    if (isLocation) {
+      return { city: parts[0], ...(parts[1] ? { country: parts[1] } : {}) };
     }
-  }
-
-  async function handleDelete(id) {
-    setDeleting(id);
-    try {
-      await deleteEvent(id);
-      setEvents(prev => prev.filter(e => e.id !== id));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDeleting(null);
-    }
-  }
-
-  const formatDate = (d) => {
-    if (!d) return "";
-    return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return { search: query.trim() };
   };
 
-  if (loading) return (
-    <div className="loading-container">
-      <div className="spinner" /> Loading events...
-    </div>
-  );
+  // Fetch events from backend when filters/page change
+  useEffect(() => {
+    const filters = { ...parseSearch(debouncedSearch) };
+    if (formatFilter) filters.format = formatFilter;
+    if (selectedTagId) filters.tags = selectedTagId;
+    if (page > 1) filters.page = page;
+
+    setLoading(true);
+    getEvents(filters)
+      .then(({ results, count }) => {
+        setEvents(results);
+        setTotalCount(count);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [debouncedSearch, formatFilter, selectedTagId, page]);
+
+  // Charger les inscriptions existantes du participant
+  useEffect(() => {
+    if (authed && !companyUser) {
+      getMyRegistrations()
+        .then((regs) => {
+          const map = new Map();
+          regs
+            .filter((r) => r.status !== "CANCELLED" && r.status !== "REJECTED")
+            .forEach((r) => {
+              const eid = typeof r.event === "object" ? r.event.id : r.event;
+              map.set(eid, r.status);
+            });
+          setRegisteredEvents(map);
+        })
+        .catch(console.error);
+    }
+  }, [authed, companyUser]);
+
+  const handleFormatFilter = (f) => {
+    setFormatFilter(f === formatFilter ? "" : f);
+    setSelectedTagId(null);
+    setPage(1);
+  };
+
+  const handleTagFilter = (tagId) => {
+    setSelectedTagId(tagId === selectedTagId ? null : tagId);
+    setFormatFilter("");
+    setPage(1);
+  };
+
+  const handleRegister = async (e, eventId) => {
+    e.stopPropagation();
+    if (!authed) {
+      setPendingEventId(eventId);
+      setShowAccessModal(true);
+      return;
+    }
+    try {
+      const reg = await registerToEvent(eventId);
+      const ev = events.find((e) => e.id === eventId);
+      const status = reg.status || (ev?.validation === "manual" ? "PENDING" : ev?.is_full ? "WAITLIST" : "CONFIRMED");
+      setRegisteredEvents((prev) => new Map([...prev, [eventId, status]]));
+    } catch (err) {
+      if (err.message?.toLowerCase().includes("déjà inscrit") || err.message?.toLowerCase().includes("already")) {
+        setRegisteredEvents((prev) => new Map([...prev, [eventId, "CONFIRMED"]]));
+      }
+      // Sinon l'erreur est silencieuse sur la liste (l'utilisateur peut cliquer sur l'event pour voir le détail)
+    }
+  };
+
+  const formatDate = (d) => {
+    if (!d) return "TBD";
+    return new Date(d)
+      .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      .toUpperCase();
+  };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
-    <div>
-      {/* Page header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, color: "#0f172a" }}>Events</h1>
-        <p style={{ fontSize: "0.875rem", color: "#64748b", marginTop: 4 }}>
-          {events.length} total events · {filtered.length} shown
-        </p>
-      </div>
-
-      {/* Toolbar */}
-      <div className="toolbar">
-        <div className="search-bar">
-          <Search size={16} className="search-bar-icon" />
-          <input
-            className="search-input"
-            placeholder="Search events by title, location, category..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+    <>
+    <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
+      {/* Sidebar */}
+      <aside
+        style={{
+          width: "200px",
+          minWidth: "200px",
+          background: "var(--surface)",
+          borderRight: "1px solid var(--border)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Logo */}
+        <div style={{ padding: "20px 20px", borderBottom: "1px solid var(--border)" }}>
+          <Link to="/" style={{ textDecoration: "none" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "18px", color: "var(--text)" }}>
+              Neuro<span style={{ color: "var(--accent)" }}>vent</span>
+            </span>
+          </Link>
         </div>
-        <select
-          className="toolbar-select"
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          {STATUS_TABS.map(t => (
-            <option key={t.key} value={t.key}>{t.label}</option>
+
+        {/* Filters */}
+        <nav style={{ flex: 1, padding: "20px 12px", overflowY: "auto" }}>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-dim)", paddingLeft: "8px", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            FORMAT
+          </p>
+          {[
+            { key: "", label: "All Events" },
+            { key: "presential", label: "In-Person" },
+            { key: "online", label: "Online" },
+          ].map((f) => (
+            <button
+              key={f.key}
+              onClick={() => handleFormatFilter(f.key)}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "9px 12px",
+                borderRadius: "8px",
+                border: "none",
+                fontSize: "13px",
+                fontWeight: formatFilter === f.key && !selectedTagId ? "700" : "500",
+                cursor: "pointer",
+                background: formatFilter === f.key && !selectedTagId ? "var(--accent)" : "transparent",
+                color: formatFilter === f.key && !selectedTagId ? "#000" : "var(--text-muted)",
+                marginBottom: "2px",
+                transition: "var(--transition)",
+              }}
+            >
+              {f.label}
+            </button>
           ))}
-        </select>
-        <button className="toolbar-btn secondary">
-          <Filter size={16} /> Filters
-        </button>
-        {admin && (
-          <button className="toolbar-btn primary" onClick={() => setModal("create")}>
-            <Plus size={16} /> New Event
-          </button>
-        )}
-      </div>
 
-      {/* Filter tabs */}
-      <div className="filter-tabs">
-        {STATUS_TABS.map(t => (
-          <button
-            key={t.key}
-            className={`filter-tab ${statusFilter === t.key ? "active" : ""}`}
-            onClick={() => setStatusFilter(t.key)}
-          >
-            {t.label} ({tabCounts[t.key] || 0})
-          </button>
-        ))}
-      </div>
-
-      {/* Events grid */}
-      <div className="events-grid">
-        {filtered.length === 0 ? (
-          <div className="empty-state">
-            <p>No events found</p>
-            <p>Try adjusting your filters</p>
-          </div>
-        ) : filtered.map(event => (
-          <div
-            key={event.id}
-            className="event-card"
-            onClick={() => navigate(`/events/${event.id}`)}
-          >
-            <div className="event-card-header">
-              <span className={`event-category ${getCatClass(event.category)}`}>
-                {event.category || "General"}
-              </span>
-              <span className={`badge badge-${event.status}`}>
-                {event.status}
-              </span>
-            </div>
-
-            <h3>{event.title}</h3>
-            <p className="event-card-desc">{event.description}</p>
-
-            <div className="event-meta">
-              <div className="event-meta-item">
-                <Calendar size={13} />
-                <span>
-                  {formatDate(event.date)}
-                  {event.end_date ? ` → ${formatDate(event.end_date)}` : ""}
-                </span>
-              </div>
-              {event.location && (
-                <div className="event-meta-item">
-                  <MapPin size={13} />
-                  <span>{event.location}</span>
-                </div>
-              )}
-              <div className="event-meta-item">
-                <Users size={13} />
-                <span>
-                  {event.registered_count || 0}/{event.max_participants || "∞"} registered
-                </span>
-              </div>
-            </div>
-
-            <div className="event-progress">
-              <div className="event-progress-info">
-                <span>
-                  <Users size={12} style={{ display: "inline", marginRight: 4 }} />
-                  {event.registered_count || 0}/{event.max_participants || "∞"} registered
-                </span>
-                <span>
-                  {event.max_participants
-                    ? Math.round(((event.registered_count || 0) / event.max_participants) * 100)
-                    : 0}%
-                </span>
-              </div>
-              <div className="progress-bar">
-                <div
-                  className="progress-fill"
+          {allTags.length > 0 && (
+            <>
+              <p style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--text-dim)", paddingLeft: "8px", marginTop: "16px", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                TOPICS
+              </p>
+              {allTags.map((tag) => (
+                <button
+                  key={tag.id}
+                  onClick={() => handleTagFilter(tag.id)}
                   style={{
-                    width: event.max_participants
-                      ? `${Math.min(((event.registered_count || 0) / event.max_participants) * 100, 100)}%`
-                      : "0%"
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontSize: "12px",
+                    fontWeight: selectedTagId === tag.id ? "700" : "500",
+                    cursor: "pointer",
+                    background: selectedTagId === tag.id ? "var(--accent)" : "transparent",
+                    color: selectedTagId === tag.id ? "#000" : "var(--text-muted)",
+                    marginBottom: "2px",
+                    transition: "var(--transition)",
+                    fontFamily: "var(--font-mono)",
                   }}
-                />
-              </div>
-            </div>
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </>
+          )}
+        </nav>
 
-            {/* Admin actions */}
+        {/* Help */}
+        <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "4px" }}>Need help hosting?</p>
+          <span style={{ fontSize: "12px", color: "var(--accent)", fontWeight: "600", cursor: "pointer" }}>
+            Contact us
+          </span>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Top bar */}
+        <div
+          style={{
+            height: "64px",
+            borderBottom: "1px solid var(--border)",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            padding: "0 32px",
+            background: "var(--bg)",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ flex: 1, position: "relative", maxWidth: "360px" }}>
+            <Search size={15} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--text-dim)" }} />
+            <input
+              type="text"
+              className="input"
+              placeholder="Search by topic, lab, city..."
+              style={{ paddingLeft: "42px", height: "40px", background: "var(--surface)", fontSize: "13px" }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+
+          <div style={{ marginLeft: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
             {admin && (
-              <div
-                style={{ display: "flex", gap: 8, marginTop: 14 }}
-                onClick={e => e.stopPropagation()}
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate("/events/create")}
+                style={{ padding: "8px 18px", fontSize: "13px" }}
               >
-                <button
-                  className="btn btn-secondary"
-                  style={{ flex: 1, fontSize: "0.8rem", padding: "6px 12px" }}
-                  onClick={() => setModal(event)}
-                >
-                  Edit
-                </button>
-                <button
-                  className="btn btn-danger"
-                  style={{ flex: 1, fontSize: "0.8rem", padding: "6px 12px" }}
-                  disabled={deleting === event.id}
-                  onClick={() => handleDelete(event.id)}
-                >
-                  {deleting === event.id ? "..." : "Delete"}
-                </button>
-              </div>
+                + Create Event
+              </button>
+            )}
+            {authed ? <NavUserMenu /> : (
+              <Link to="/login" className="btn btn-secondary" style={{ padding: "8px 18px", fontSize: "13px", border: "1px solid var(--border-strong)" }}>
+                Log In
+              </Link>
             )}
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Modal */}
-      {modal && (
-        <EventModal
-          event={modal === "create" ? null : modal}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-        />
-      )}
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "36px 40px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "28px" }}>
+            <h1 style={{ fontSize: "28px", fontWeight: "800", fontFamily: "var(--font-display)" }}>
+              Discovery Hub
+            </h1>
+            {!loading && (
+              <span style={{ fontSize: "12px", color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
+                {totalCount} event{totalCount !== 1 ? "s" : ""} found
+              </span>
+            )}
+          </div>
+
+          {loading ? (
+            <div style={{ padding: "80px", textAlign: "center" }}>
+              <p className="mono" style={{ fontSize: "12px", color: "var(--text-dim)" }}>{"// loading..."}</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div style={{ padding: "80px", textAlign: "center", background: "var(--surface)", borderRadius: "16px", border: "1px dashed var(--border)" }}>
+              <p style={{ color: "var(--text-dim)", marginBottom: "16px", fontSize: "14px" }}>No events found</p>
+              <button className="btn btn-secondary" onClick={() => { setSearchInput(""); setDebouncedSearch(""); setFormatFilter(""); setSelectedTagId(null); setPage(1); }}>
+                Reset filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {events.map((event) => {
+                  const isFull = event.is_full || false;
+                  const registrationOpen = event.registration_open !== false;
+                  const spotsLeft = event.spots_remaining ?? Math.max(0, (event.max_participants || 50) - (event.registered_count || 0));
+
+                  return (
+                    <div
+                      key={event.id}
+                      onClick={() => navigate(`/events/${event.id}`)}
+                      style={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "12px",
+                        padding: "18px 24px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "20px",
+                        transition: "var(--transition)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "var(--accent)";
+                        e.currentTarget.style.background = "var(--surface-high)";
+                        e.currentTarget.style.boxShadow = "0 0 0 1px rgba(0,229,255,0.15), 0 4px 20px rgba(0,229,255,0.06)";
+                        setHoveredCard(event.id);
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "var(--border)";
+                        e.currentTarget.style.background = "var(--surface)";
+                        e.currentTarget.style.boxShadow = "none";
+                        setHoveredCard(null);
+                      }}
+                    >
+                      {/* Event info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "8px", color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {event.title}
+                        </h3>
+                        {event.organizer && (
+                          <p style={{ fontSize: "13px", color: "var(--accent)", fontWeight: "600", marginBottom: "6px" }}>
+                            {event.organizer}
+                          </p>
+                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                          <span style={{ fontSize: "13px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span style={{ fontSize: "10px" }}>•</span>
+                            {event.format === "online"
+                              ? "Online Session"
+                              : event.city
+                              ? `${event.city}, ${event.country}`
+                              : "TBD"}
+                          </span>
+                          <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                            {formatDate(event.date_start)}
+                          </span>
+                          {(event.tags || []).slice(0, 2).map((tag) => (
+                            <span key={tag} style={{ fontSize: "11px", color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Right: spots + button */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "20px", flexShrink: 0 }}>
+                        <span style={{ fontSize: "13px", fontWeight: "700", color: isFull ? "var(--error)" : "var(--accent)", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
+                          {isFull ? "Full" : `${spotsLeft} left`}
+                        </span>
+
+                        {!companyUser && (
+                          <button
+                            className={registeredEvents.has(event.id) ? "" : "btn btn-primary"}
+                            style={{
+                              padding: "8px 20px",
+                              fontSize: "13px",
+                              fontWeight: "700",
+                              whiteSpace: "nowrap",
+                              ...(registeredEvents.has(event.id) && {
+                                background: registeredEvents.get(event.id) === "PENDING"
+                                  ? "rgba(245,196,0,0.12)"
+                                  : registeredEvents.get(event.id) === "WAITLIST"
+                                  ? "rgba(0,229,255,0.10)"
+                                  : "rgba(0,255,149,0.12)",
+                                border: `1px solid ${registeredEvents.get(event.id) === "PENDING" ? "#f5c400" : registeredEvents.get(event.id) === "WAITLIST" ? "var(--accent)" : "var(--success)"}`,
+                                color: registeredEvents.get(event.id) === "PENDING"
+                                  ? "#f5c400"
+                                  : registeredEvents.get(event.id) === "WAITLIST"
+                                  ? "var(--accent)"
+                                  : "var(--success)",
+                                borderRadius: "8px",
+                                cursor: "default",
+                              }),
+                            }}
+                            onClick={(e) => { if (!registeredEvents.has(event.id)) handleRegister(e, event.id); else e.stopPropagation(); }}
+                            disabled={event.status === "past" || !registrationOpen || (isFull && event.validation === "manual")}
+                          >
+                            {registeredEvents.has(event.id)
+                              ? registeredEvents.get(event.id) === "PENDING"
+                                ? "Pending ⏳"
+                                : registeredEvents.get(event.id) === "WAITLIST"
+                                ? "Waitlist ✓"
+                                : "Registered ✓"
+                              : event.status === "past"
+                              ? "Ended"
+                              : !registrationOpen
+                              ? "Closed"
+                              : isFull && event.validation !== "auto"
+                              ? "Full"
+                              : isFull
+                              ? "Join Waitlist"
+                              : "Register"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "16px", marginTop: "32px" }}>
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      background: "var(--surface)",
+                      color: page === 1 ? "var(--text-dim)" : "var(--text)",
+                      fontSize: "13px",
+                      cursor: page === 1 ? "not-allowed" : "pointer",
+                      transition: "var(--transition)",
+                    }}
+                  >
+                    <ChevronLeft size={14} /> Prev
+                  </button>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-muted)" }}>
+                    {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      background: "var(--surface)",
+                      color: page === totalPages ? "var(--text-dim)" : "var(--text)",
+                      fontSize: "13px",
+                      cursor: page === totalPages ? "not-allowed" : "pointer",
+                      transition: "var(--transition)",
+                    }}
+                  >
+                    Next <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
+
+    {/* Access Restricted Modal */}
+    {showAccessModal && (
+      <div
+        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+        onClick={() => setShowAccessModal(false)}
+      >
+        <div
+          style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: "20px", padding: "48px 40px", maxWidth: "400px", width: "100%", textAlign: "center" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ width: "64px", height: "64px", background: "rgba(245,196,0,0.12)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+            <Lock size={28} color="#f5c400" />
+          </div>
+          <h2 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "12px" }}>Access Restricted</h2>
+          <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: "1.6" }}>
+            You must be logged in to register for scientific events.
+          </p>
+          <button className="btn btn-primary" style={{ width: "100%", marginBottom: "12px", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/login")}>
+            Sign In to Account
+          </button>
+          <button className="btn btn-secondary" style={{ width: "100%", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/register")}>
+            Create New Identity
+          </button>
+          {pendingEventId && (
+            <button onClick={() => { setShowAccessModal(false); navigate(`/events/${pendingEventId}`); }} style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", marginTop: "20px", cursor: "pointer" }}>
+              -- View event details instead
+            </button>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
