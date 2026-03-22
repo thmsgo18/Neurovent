@@ -160,7 +160,7 @@ export default function ForgotPassword() {
                 type="email"
                 className="input"
                 style={{ height: "48px" }}
-                placeholder="name@university.edu"
+                placeholder="researcher@institution.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

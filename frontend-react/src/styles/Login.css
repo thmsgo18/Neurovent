@@ -2,47 +2,55 @@
 
 .login-page {
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--bg-deep);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
+  position: relative;
 }
 
 .login-mode-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: 100%;
-  max-width: 400px;
-  margin-bottom: 24px;
-  border-radius: 12px;
+  max-width: 420px;
+  margin-bottom: 20px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--border);
+  animation: fadeUp 0.45s ease both;
 }
 
 .login-mode-btn {
-  padding: 14px;
+  padding: 13px;
   border: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   transition: var(--transition);
-  font-family: var(--font-main);
 }
 
 .login-card {
   width: 100%;
   max-width: 400px;
-  border-radius: 16px;
-  padding: 36px;
+  border-radius: var(--radius-md);
+  padding: 28px 32px;
+  animation: fadeUp 0.5s 0.05s ease both;
 }
 
 .login-back-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   color: var(--text-dim);
   text-decoration: none;
   margin-bottom: 28px;
@@ -51,36 +59,40 @@
 .login-back-link:hover { color: var(--text-muted); }
 
 .login-title {
-  font-size: 22px;
+  font-size: 1.4rem;
   font-weight: 800;
   margin-bottom: 6px;
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  line-height: 1.0;
 }
 
 .login-subtitle {
-  font-size: 13px;
-  color: var(--text-muted);
+  font-size: 15px;
+  color: var(--text-secondary);
   margin-bottom: 28px;
-  line-height: 1.5;
+  line-height: 1.65;
+  font-weight: 400;
 }
 
 .login-error {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: rgba(255, 77, 77, 0.08);
-  border: 1px solid rgba(255, 77, 77, 0.2);
+  background: var(--error-dim);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: var(--error);
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  margin-bottom: 24px;
+  padding: 13px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 20px;
   line-height: 1.5;
 }
 
 .login-footer {
   margin-top: 24px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dim);
 }
 
@@ -91,17 +103,37 @@
 }
 .login-footer a:hover { text-decoration: underline; }
 
-/* Lab mode info box */
+/* Lab mode info box — amber */
 .login-lab-info {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: rgba(168, 85, 247, 0.06);
-  border: 1px solid rgba(168, 85, 247, 0.2);
-  border-radius: 10px;
-  padding: 14px;
+  background: var(--secondary-dim);
+  border: 1px solid rgba(255, 200, 80, 0.25);
+  border-radius: 8px;
+  padding: 13px;
   margin-bottom: 24px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.6;
+  line-height: 1.65;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .login-page { padding: 20px 14px; }
+
+  .login-mode-selector { max-width: 100%; border-radius: 8px; }
+
+  .login-card { padding: 22px 18px; border-radius: 12px; }
+
+  .login-title { font-size: 1.2rem; }
+
+  .login-subtitle { font-size: 13px; }
+}
+
+/* iPhone 14 Pro Max (430px) */
+@media (max-width: 430px) {
+  .login-page { padding: 16px 12px; }
+  .login-card { padding: 20px 14px; }
+  .login-title { font-size: 1.1rem; }
 }

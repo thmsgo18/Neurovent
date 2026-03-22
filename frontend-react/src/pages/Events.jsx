@@ -255,7 +255,7 @@ export default function Events() {
             <input
               type="text"
               className="input"
-              placeholder="Search by topic, lab, city..."
+              placeholder="Search by keyword, organization, location…"
               style={{ paddingLeft: "42px", height: "40px", background: "var(--surface)", fontSize: "13px" }}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}

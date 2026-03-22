@@ -2,25 +2,38 @@
 
 .register-page {
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--bg-deep);
   display: flex;
 }
 
 /* Left panel */
 .register-left {
-  width: 420px;
-  min-width: 420px;
-  background: var(--surface);
+  width: 380px;
+  min-width: 380px;
+  background: var(--bg-surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 48px 40px;
+  padding: 36px 32px;
+  animation: slideInLeft 0.5s ease both;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle mesh on left panel */
+.register-left::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 400px 300px at 0% 30%, rgba(0,240,200,0.06) 0%, transparent 70%);
 }
 
 .register-left-logo {
   text-decoration: none;
   display: inline-block;
-  margin-bottom: 48px;
+  margin-bottom: 52px;
+  position: relative;
 }
 
 .register-left-tag {
@@ -28,46 +41,54 @@
   font-size: 10px;
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.18em;
   margin-bottom: 16px;
+  font-weight: 700;
+  position: relative;
 }
 
 .register-left-title {
-  font-size: clamp(28px, 3vw, 40px);
-  font-weight: 900;
-  line-height: 1;
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 800;
+  line-height: 1.0;
   margin-bottom: 20px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
+  font-family: var(--font-display);
+  position: relative;
 }
 
 .register-left-desc {
-  font-size: 14px;
-  color: var(--text-muted);
-  line-height: 1.7;
-  margin-bottom: 40px;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.75;
+  margin-bottom: 44px;
+  font-weight: 400;
+  position: relative;
 }
 
 .register-left-features {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   margin-top: auto;
+  position: relative;
 }
 
 .register-left-feature {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--text-muted);
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .register-left-feature-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--accent);
   flex-shrink: 0;
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* Right panel */
@@ -77,13 +98,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 40px;
+  padding: 36px 32px;
   overflow-y: auto;
+  animation: fadeUp 0.5s 0.1s ease both;
 }
 
 .register-form-wrap {
   width: 100%;
-  max-width: 440px;
+  max-width: 460px;
 }
 
 /* Tabs */
@@ -104,18 +126,23 @@
   transition: var(--transition);
   font-family: var(--font-main);
   margin-bottom: -1px;
+  letter-spacing: 0.01em;
 }
 
 .register-title {
-  font-size: 22px;
+  font-size: 1.6rem;
   font-weight: 800;
   margin-bottom: 6px;
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  line-height: 1.0;
 }
 
 .register-subtitle {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dim);
   margin-bottom: 28px;
+  font-weight: 400;
 }
 
 .register-form-row {
@@ -128,12 +155,12 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: rgba(255, 77, 77, 0.08);
-  border: 1px solid rgba(255, 77, 77, 0.2);
+  background: var(--error-dim);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   color: var(--error);
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 13px;
+  padding: 13px;
+  border-radius: 8px;
+  font-size: 14px;
   margin-bottom: 20px;
   line-height: 1.5;
 }
@@ -141,7 +168,7 @@
 .register-footer {
   margin-top: 20px;
   text-align: center;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-dim);
 }
 
@@ -152,6 +179,48 @@
 }
 .register-footer a:hover { text-decoration: underline; }
 
+/* Password strength checker */
+.pw-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  animation: fadeUp 0.2s ease both;
+}
+
+.pw-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.03em;
+  transition: color 0.2s ease;
+}
+
+.pw-rule-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pw-rule--ok   { color: var(--success); }
+.pw-rule--fail { color: var(--text-dim); }
+
+.pw-rule--ok   .pw-rule-icon { background: rgba(16,185,129,0.15); color: var(--success); }
+.pw-rule--fail .pw-rule-icon { background: rgba(255,255,255,0.04); color: var(--text-dim); }
+
 /* Password field */
 .register-password-wrap {
   position: relative;
@@ -159,7 +228,7 @@
 
 .register-password-toggle {
   position: absolute;
-  right: 14px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
@@ -169,12 +238,14 @@
   padding: 0;
   display: flex;
   align-items: center;
+  transition: var(--transition);
 }
+.register-password-toggle:hover { color: var(--text-muted); }
 
 /* Success screen */
 .register-success {
   min-height: 100vh;
-  background: var(--bg);
+  background: var(--bg-deep);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,21 +254,61 @@
 
 .register-success-card {
   text-align: center;
-  max-width: 380px;
+  max-width: 400px;
   width: 100%;
-  padding: 48px 40px;
-  background: var(--surface);
+  padding: 52px 44px;
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
+  animation: fadeUp 0.5s ease both;
 }
 
 .register-success-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(0, 255, 149, 0.1);
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  background: var(--success-dim);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 24px;
+  margin: 0 auto 26px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .register-page { flex-direction: column; }
+
+  .register-left {
+    width: 100%;
+    min-width: 0;
+    padding: 24px 20px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    animation: none;
+  }
+
+  .register-left-features { display: none; }
+  .register-left-logo { margin-bottom: 20px; }
+  .register-left-desc { margin-bottom: 0; font-size: 13px; }
+  .register-left-title { font-size: 1.4rem; }
+
+  .register-right {
+    padding: 24px 20px;
+    justify-content: flex-start;
+  }
+
+  .register-form-wrap { max-width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .register-form-row { grid-template-columns: 1fr; }
+}
+
+/* iPhone 14 Pro Max (430px) */
+@media (max-width: 430px) {
+  .register-left { padding: 16px 14px; }
+  .register-right { padding: 20px 14px; }
+  .register-left-title { font-size: 1.2rem; }
+  .register-title { font-size: 1.15rem; }
 }

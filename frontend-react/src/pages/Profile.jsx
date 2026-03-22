@@ -619,30 +619,30 @@ function OrgProfile() {
         {/* Links */}
         <div className="form-field">
           <label className="form-label">Website</label>
-          <input type="url" className="input" style={{ height: "44px" }} placeholder="https://yourlab.edu" value={form.website_url} onChange={(e) => set("website_url", e.target.value)} />
+          <input type="url" className="input" style={{ height: "44px" }} placeholder="https://lab.institution.edu" value={form.website_url} onChange={(e) => set("website_url", e.target.value)} />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">LinkedIn</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://linkedin.com/..." value={form.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} />
+            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://linkedin.com/company/lab" value={form.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">YouTube</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://youtube.com/..." value={form.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} />
+            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://youtube.com/@your-channel" value={form.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} />
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginTop: "20px" }}>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">Twitter / X</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://x.com/..." value={form.twitter_url} onChange={(e) => set("twitter_url", e.target.value)} />
+            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://x.com/your-handle" value={form.twitter_url} onChange={(e) => set("twitter_url", e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">Instagram</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://instagram.com/..." value={form.instagram_url} onChange={(e) => set("instagram_url", e.target.value)} />
+            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://instagram.com/your-page" value={form.instagram_url} onChange={(e) => set("instagram_url", e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">Facebook</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://facebook.com/..." value={form.facebook_url} onChange={(e) => set("facebook_url", e.target.value)} />
+            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://facebook.com/your-page" value={form.facebook_url} onChange={(e) => set("facebook_url", e.target.value)} />
           </div>
         </div>
 

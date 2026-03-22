@@ -189,11 +189,7 @@ function UserDashboard() {
       onNav={handleNav}
       bottomSlot={bottomSlot}
       topTitle="Researcher Dashboard"
-      topAction={
-        <button className="btn btn-primary" style={{ fontSize: "11px", padding: "6px 14px" }} onClick={() => navigate("/events")}>
-          + Browse Events
-        </button>
-      }
+      topAction={null}
     >
       {/* Welcome + stats */}
       <div style={{ marginBottom: "28px" }}>
@@ -214,9 +210,6 @@ function UserDashboard() {
               <p style={{ fontSize: "22px", fontWeight: "800", color: s.color, lineHeight: 1 }}>{s.value}</p>
             </div>
           ))}
-          <button className="btn btn-primary" style={{ marginLeft: "auto", alignSelf: "center", padding: "10px 20px", fontSize: "13px" }} onClick={() => navigate("/events")}>
-            Explore Events
-          </button>
         </div>
       </div>
 

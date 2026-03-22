@@ -4,6 +4,7 @@ import { AlertCircle, X } from "lucide-react";
 import { createEvent } from "../api/events";
 import { getTags, getTagsSync } from "../api/tags";
 import { getCompanyName, getDisplayName } from "../store/authStore";
+import DateInput from "../components/DateInput";
 import "../styles/CreateEvent.css";
 
 const STEPS = [
@@ -261,7 +262,7 @@ export default function CreateEvent() {
                   type="text"
                   className="input"
                   style={{ height: "48px" }}
-                  placeholder="Workshop on Federated Learning & Privacy"
+                  placeholder="e.g. International Workshop on Neural Signal Processing"
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
                   required
@@ -315,7 +316,7 @@ export default function CreateEvent() {
                     type="text"
                     className="input"
                     style={{ height: "40px", flex: 1 }}
-                    placeholder={availableTags.length ? "Ajouter un tag..." : "Tags non disponibles"}
+                    placeholder={availableTags.length ? "Add a tag…" : "No tags available"}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTagByName(); } }}
@@ -443,9 +444,7 @@ export default function CreateEvent() {
                   <label className="form-label">
                     Start Date <span style={{ color: "var(--error)" }}>*</span>
                   </label>
-                  <input
-                    type="date"
-                    className="input"
+                  <DateInput
                     style={{ height: "48px" }}
                     value={form.date}
                     onChange={(e) => set("date", e.target.value)}
@@ -487,7 +486,7 @@ export default function CreateEvent() {
                         type="text"
                         className="input"
                         style={{ height: "48px" }}
-                        placeholder="Paris"
+                        placeholder="e.g. Paris"
                         value={form.city}
                         onChange={(e) => set("city", e.target.value)}
                       />
@@ -498,7 +497,7 @@ export default function CreateEvent() {
                         type="text"
                         className="input"
                         style={{ height: "48px" }}
-                        placeholder="France"
+                        placeholder="e.g. France"
                         value={form.country}
                         onChange={(e) => set("country", e.target.value)}
                       />
@@ -510,7 +509,7 @@ export default function CreateEvent() {
                       type="text"
                       className="input"
                       style={{ height: "48px" }}
-                      placeholder="INRIA Paris Lab, 2 rue Simone Iff, 75012 Paris"
+                      placeholder="Full venue address including building and postal code"
                       value={form.address_full}
                       onChange={(e) => set("address_full", e.target.value)}
                     />
@@ -528,7 +527,7 @@ export default function CreateEvent() {
                       type="text"
                       className="input"
                       style={{ height: "48px" }}
-                      placeholder="Zoom, YouTube Live, Teams..."
+                      placeholder="e.g. Zoom, Teams, Google Meet"
                       value={form.online_platform}
                       onChange={(e) => set("online_platform", e.target.value)}
                       required
@@ -540,7 +539,7 @@ export default function CreateEvent() {
                       type="url"
                       className="input"
                       style={{ height: "48px" }}
-                      placeholder="https://zoom.us/j/..."
+                      placeholder="https://meeting-platform.com/your-link"
                       value={form.online_link}
                       onChange={(e) => set("online_link", e.target.value)}
                     />
@@ -599,9 +598,7 @@ export default function CreateEvent() {
               <div className="form-field">
                 <label className="form-label">Registration Deadline <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <input
-                    type="date"
-                    className="input"
+                  <DateInput
                     style={{ height: "48px" }}
                     value={form.registration_deadline_date}
                     onChange={(e) => set("registration_deadline_date", e.target.value)}
@@ -624,7 +621,7 @@ export default function CreateEvent() {
                 <textarea
                   className="input"
                   style={{ height: "120px", resize: "vertical" }}
-                  placeholder="Describe the event, its goals, agenda, and who should attend..."
+                  placeholder="Describe the scientific scope, agenda structure, and target audience…"
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
                 />

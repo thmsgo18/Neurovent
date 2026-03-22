@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Zap, Users, BarChart2, Lock } from "lucide-react";
 import { isAuthed } from "../store/authStore";
@@ -27,12 +28,58 @@ const FOR_LABS = [
 export default function Home() {
   const navigate = useNavigate();
   const authed = isAuthed();
+  const navRef = useRef(null);
+  const statsRef = useRef(null);
+
+  // Navbar: add blur+bg on scroll
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const onScroll = () => {
+      nav.classList.toggle("home-nav--scrolled", window.scrollY > 20);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Stats: counter animation on scroll into view
+  useEffect(() => {
+    const container = statsRef.current;
+    if (!container) return;
+    const items = container.querySelectorAll(".home-stat-value");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          const raw = el.dataset.target || "";
+          const num = parseFloat(raw.replace(/[^0-9.]/g, ""));
+          const suffix = raw.replace(/[0-9.]/g, "");
+          if (isNaN(num)) return;
+          let start = 0;
+          const duration = 1200;
+          const step = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = Math.min((timestamp - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = (Math.floor(eased * num)).toLocaleString() + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+          observer.unobserve(el);
+        });
+      },
+      { threshold: 0.5 }
+    );
+    items.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="home-page">
 
       {/* Nav */}
-      <nav className="home-nav">
+      <nav className="home-nav" ref={navRef}>
         <Link to="/" style={{ textDecoration: "none", flexShrink: 0 }}>
           <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "20px", color: "var(--text)" }}>
             Neuro<span style={{ color: "var(--accent)" }}>vent</span>
@@ -40,17 +87,9 @@ export default function Home() {
         </Link>
 
         <div className="home-nav-links">
-          <Link to="/events" style={{ fontSize: "14px", color: "var(--text-muted)", textDecoration: "none", fontWeight: "500" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>
-            Events
-          </Link>
+          <Link to="/events" className="home-nav-link">Events</Link>
           {authed && (
-            <Link to="/dashboard" style={{ fontSize: "14px", color: "var(--text-muted)", textDecoration: "none", fontWeight: "500" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>
-              Dashboard
-            </Link>
+            <Link to="/dashboard" className="home-nav-link">Dashboard</Link>
           )}
         </div>
 
@@ -59,11 +98,11 @@ export default function Home() {
             <NavUserMenu />
           ) : (
             <>
-              <Link to="/login" className="btn btn-ghost" style={{ fontSize: "14px", border: "1px solid var(--border-strong)", padding: "10px 20px" }}>
-                Log In
+              <Link to="/register" className="btn btn-ghost" style={{ border: "1px solid var(--border-strong)" }}>
+                Register
               </Link>
-              <Link to="/register" className="btn btn-primary" style={{ padding: "10px 24px", fontSize: "14px" }}>
-                Join Platform
+              <Link to="/login" className="btn btn-primary">
+                Sign In
               </Link>
             </>
           )}
@@ -85,12 +124,12 @@ export default function Home() {
           <p className="home-subtitle">
             Connect with global scientists. Host and join world-class conferences in AI, ML and Neuroscience.
           </p>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            <button className="btn btn-primary" onClick={() => navigate("/events")} style={{ padding: "14px 32px", fontSize: "15px" }}>
+          <div className="home-hero-cta">
+            <button className="btn btn-primary" onClick={() => navigate("/events")}>
               Explore Events
             </button>
             {!authed && (
-              <button className="btn btn-ghost" onClick={() => navigate("/register")} style={{ padding: "14px 32px", fontSize: "15px", border: "1px solid var(--border-strong)" }}>
+              <button className="btn btn-ghost" onClick={() => navigate("/register")} style={{ border: "1px solid var(--border-strong)" }}>
                 Create Account
               </button>
             )}
@@ -100,10 +139,10 @@ export default function Home() {
       </main>
 
       {/* Stats bar */}
-      <div className="home-stats">
+      <div className="home-stats" ref={statsRef}>
         {STATS.map((s) => (
           <div key={s.label} className="home-stat-item">
-            <p className="home-stat-value">{s.value}</p>
+            <p className="home-stat-value" data-target={s.value}>{s.value}</p>
             <p className="home-stat-label">{s.label}</p>
           </div>
         ))}
@@ -170,10 +209,10 @@ export default function Home() {
               Register as a researcher to discover and attend events,<br />or create a lab account to publish your own.
             </p>
             <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
-              <Link to="/register" className="btn btn-primary" style={{ padding: "14px 36px", fontSize: "15px" }}>
+              <Link to="/register" className="btn btn-primary">
                 Register as Researcher
               </Link>
-              <Link to="/login" className="btn btn-ghost" style={{ padding: "14px 36px", fontSize: "15px", border: "1px solid var(--border-strong)" }}>
+              <Link to="/login" className="btn btn-ghost" style={{ border: "1px solid var(--border-strong)" }}>
                 Lab Sign In
               </Link>
             </div>

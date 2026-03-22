@@ -185,7 +185,7 @@ export default function Login() {
               type="text"
               className="input"
               style={{ height: "48px" }}
-              placeholder={isLab ? "braincorp2026" : "name@university.edu"}
+              placeholder={isLab ? "your-lab-identifier" : "researcher@institution.edu"}
               value={form.credential}
               onChange={(e) => setForm({ ...form, credential: e.target.value })}
               required

@@ -1,0 +1,58 @@
+/* ===== DATE INPUT COMPONENT ===== */
+
+.date-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.date-input-field {
+  width: 100%;
+  padding-right: 44px; /* room for the icon */
+}
+
+/* Hide the native calendar picker indicator on Webkit */
+.date-input-field::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44px;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Firefox / others — just make sure the field looks clean */
+.date-input-field::-moz-calendar-picker-indicator {
+  display: none;
+}
+
+/* The custom calendar button */
+.date-input-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: var(--transition);
+  z-index: 1;
+}
+
+.date-input-icon:hover {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* When the input is focused, highlight the icon too */
+.date-input-field:focus ~ .date-input-icon,
+.date-input-wrap:focus-within .date-input-icon {
+  color: var(--accent);
+}

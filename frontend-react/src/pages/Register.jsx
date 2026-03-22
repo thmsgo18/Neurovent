@@ -4,6 +4,30 @@ import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import "../styles/Register.css";
 import { registerParticipantApi, registerCompanyApi } from "../api/auth";
 
+const PW_RULES = [
+  { key: "len",     label: "At least 8 characters",         test: (p) => p.length >= 8 },
+  { key: "upper",   label: "One uppercase letter (A–Z)",     test: (p) => /[A-Z]/.test(p) },
+  { key: "digit",   label: "One number (0–9)",               test: (p) => /[0-9]/.test(p) },
+  { key: "special", label: "One special character (!@#…)",   test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
+function PasswordRules({ password }) {
+  if (!password) return null;
+  return (
+    <div className="pw-rules">
+      {PW_RULES.map(({ key, label, test }) => {
+        const ok = test(password);
+        return (
+          <div key={key} className={`pw-rule pw-rule--${ok ? "ok" : "fail"}`}>
+            <span className="pw-rule-icon">{ok ? "✓" : "·"}</span>
+            {label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Register() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("participant");
@@ -33,6 +57,7 @@ export default function Register() {
     form.confirmPassword !== "" && form.password === form.confirmPassword;
   const passwordsMismatch =
     form.confirmPassword !== "" && form.password !== form.confirmPassword;
+  const passwordValid = PW_RULES.every(({ test }) => test(form.password));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -278,7 +303,7 @@ export default function Register() {
                       type="text"
                       className="input"
                       style={{ height: "48px" }}
-                      placeholder="Noureddine"
+                      placeholder="Given name"
                       value={form.firstName}
                       onChange={(e) => set("firstName", e.target.value)}
                       required
@@ -292,7 +317,7 @@ export default function Register() {
                       type="text"
                       className="input"
                       style={{ height: "48px" }}
-                      placeholder="Bouziane"
+                      placeholder="Family name"
                       value={form.lastName}
                       onChange={(e) => set("lastName", e.target.value)}
                       required
@@ -308,7 +333,7 @@ export default function Register() {
                     type="email"
                     className="input"
                     style={{ height: "48px" }}
-                    placeholder="user@u-paris.fr"
+                    placeholder="researcher@institution.edu"
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
                     required
@@ -324,7 +349,7 @@ export default function Register() {
                     type="text"
                     className="input"
                     style={{ height: "48px" }}
-                    placeholder="Université Paris Cité"
+                    placeholder="e.g. Sorbonne Université, CNRS"
                     value={form.institution}
                     onChange={(e) => set("institution", e.target.value)}
                   />
@@ -339,7 +364,7 @@ export default function Register() {
                     type="text"
                     className="input"
                     style={{ height: "48px" }}
-                    placeholder="Votre entreprise"
+                    placeholder="e.g. Neuralink, DeepMind"
                     value={form.company}
                     onChange={(e) => set("company", e.target.value)}
                   />
@@ -355,7 +380,7 @@ export default function Register() {
                     type="text"
                     className="input"
                     style={{ height: "48px" }}
-                    placeholder="INRIA Paris"
+                    placeholder="e.g. INRIA Paris, NeuroSpin Lab"
                     value={form.orgName}
                     onChange={(e) => set("orgName", e.target.value)}
                     required
@@ -370,7 +395,7 @@ export default function Register() {
                     type="email"
                     className="input"
                     style={{ height: "48px" }}
-                    placeholder="backup@inria.fr"
+                    placeholder="backup@organization.edu"
                     value={form.recoveryEmail}
                     onChange={(e) => set("recoveryEmail", e.target.value)}
                     required
@@ -385,7 +410,7 @@ export default function Register() {
                     type="text"
                     className="input"
                     style={{ height: "48px" }}
-                    placeholder="admin_inria_01"
+                    placeholder="e.g. neurocog-lab-paris"
                     value={form.identifier}
                     onChange={(e) => set("identifier", e.target.value)}
                     required
@@ -427,6 +452,7 @@ export default function Register() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              <PasswordRules password={form.password} />
             </div>
 
             {/* Confirm password */}
@@ -501,7 +527,7 @@ export default function Register() {
                 borderRadius: "12px",
                 fontSize: "15px",
               }}
-              disabled={loading || passwordsMismatch}
+              disabled={loading || passwordsMismatch || !passwordValid}
             >
               {loading
                 ? "Processing..."

@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { AlertCircle, X } from "lucide-react";
 import { getEvent, updateEvent } from "../api/events";
 import { getTags, getTagsSync } from "../api/tags";
+import DateInput from "../components/DateInput";
 import "../styles/CreateEvent.css";
 
 export default function EditEvent() {
@@ -225,7 +226,7 @@ export default function EditEvent() {
                 type="text"
                 className="input"
                 style={{ height: "40px", flex: 1 }}
-                placeholder="Ajouter un tag..."
+                placeholder="Add a tag…"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTagByName(); } }}
@@ -266,7 +267,7 @@ export default function EditEvent() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div className="form-field">
               <label className="form-label">Start Date</label>
-              <input type="date" className="input" style={{ height: "48px" }} value={form.date} onChange={(e) => set("date", e.target.value)} />
+              <DateInput style={{ height: "48px" }} value={form.date} onChange={(e) => set("date", e.target.value)} />
             </div>
             <div className="form-field">
               <label className="form-label">Start Time</label>
@@ -303,11 +304,11 @@ export default function EditEvent() {
             <>
               <div className="form-field">
                 <label className="form-label">Platform <span style={{ color: "var(--error)" }}>*</span></label>
-                <input type="text" className="input" style={{ height: "48px" }} placeholder="Zoom, YouTube Live, Teams..." value={form.online_platform} onChange={(e) => set("online_platform", e.target.value)} required />
+                <input type="text" className="input" style={{ height: "48px" }} placeholder="e.g. Zoom, Teams, Google Meet" value={form.online_platform} onChange={(e) => set("online_platform", e.target.value)} required />
               </div>
               <div className="form-field">
                 <label className="form-label">Online Link</label>
-                <input type="url" className="input" style={{ height: "48px" }} placeholder="https://zoom.us/j/..." value={form.online_link} onChange={(e) => set("online_link", e.target.value)} />
+                <input type="url" className="input" style={{ height: "48px" }} placeholder="https://meeting-platform.com/your-link" value={form.online_link} onChange={(e) => set("online_link", e.target.value)} />
               </div>
             </>
           )}
@@ -339,7 +340,7 @@ export default function EditEvent() {
           <div className="form-field">
             <label className="form-label">Registration Deadline <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <input type="date" className="input" style={{ height: "48px" }} value={form.registration_deadline_date} onChange={(e) => set("registration_deadline_date", e.target.value)} />
+              <DateInput style={{ height: "48px" }} value={form.registration_deadline_date} onChange={(e) => set("registration_deadline_date", e.target.value)} />
               <input type="time" className="input" style={{ height: "48px" }} value={form.registration_deadline_time} onChange={(e) => set("registration_deadline_time", e.target.value)} />
             </div>
             <p style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "4px" }}>If empty, registrations close at event start.</p>
