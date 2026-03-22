@@ -62,6 +62,7 @@ class RegisterToEventView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         event = serializer.validated_data['event']
+        user = self.request.user
 
         # L'event doit être publié
         if event.status != 'PUBLISHED':
@@ -80,20 +81,39 @@ class RegisterToEventView(generics.CreateAPIView):
         confirmed_count = event.registrations.filter(status=RegistrationStatus.CONFIRMED).count()
         is_full = confirmed_count >= event.capacity
 
+        # Déterminer le statut cible
         if is_full:
             if event.registration_mode == 'AUTO':
-                # Event complet en mode AUTO → liste d'attente
-                serializer.save(participant=self.request.user, status=RegistrationStatus.WAITLIST)
+                new_status = RegistrationStatus.WAITLIST
             else:
-                # Event complet en mode VALIDATION → refus
                 raise ValidationError("Cet événement est complet.")
         else:
-            # Places disponibles → AUTO=CONFIRMED, VALIDATION=PENDING
-            initial_status = RegistrationStatus.CONFIRMED if event.registration_mode == 'AUTO' else RegistrationStatus.PENDING
-            registration = serializer.save(participant=self.request.user, status=initial_status)
-            # Notifier le participant si confirmation immédiate (mode AUTO)
-            if initial_status == RegistrationStatus.CONFIRMED:
-                send_registration_confirmed(registration)
+            new_status = RegistrationStatus.CONFIRMED if event.registration_mode == 'AUTO' else RegistrationStatus.PENDING
+
+        # Réactiver une inscription CANCELLED ou REJECTED si elle existe déjà
+        # (évite le crash IntegrityError sur la contrainte unique_together)
+        existing = Registration.objects.filter(
+            participant=user,
+            event=event,
+            status__in=[RegistrationStatus.CANCELLED, RegistrationStatus.REJECTED],
+        ).first()
+
+        if existing:
+            existing.status = new_status
+            existing.accessibility_needs = serializer.validated_data.get(
+                'accessibility_needs', existing.accessibility_needs
+            )
+            existing.company_comment = ''
+            existing.save()
+            registration = existing
+            # Indiquer au serializer quelle instance retourner dans la réponse
+            serializer.instance = existing
+        else:
+            registration = serializer.save(participant=user, status=new_status)
+
+        # Notifier le participant si confirmation immédiate (mode AUTO)
+        if new_status == RegistrationStatus.CONFIRMED:
+            send_registration_confirmed(registration)
 
 
 class MyRegistrationsView(generics.ListAPIView):

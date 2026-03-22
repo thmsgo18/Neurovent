@@ -82,11 +82,32 @@ class AutoRegistrationTest(TestCase):
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r.data['status'], RegistrationStatus.WAITLIST)
 
-    def test_cannot_register_twice(self):
-        """Un participant ne peut pas s'inscrire deux fois au même event"""
+    def test_cannot_register_twice_if_active(self):
+        """Un participant ne peut pas s'inscrire deux fois si une inscription active existe"""
         self.client.post('/api/registrations/', {'event': self.event.id})
         r = self.client.post('/api/registrations/', {'event': self.event.id})
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_can_reregister_after_cancellation(self):
+        """Un participant peut se réinscrire après avoir annulé son inscription"""
+        # Première inscription → CONFIRMED
+        r1 = self.client.post('/api/registrations/', {'event': self.event.id})
+        self.assertEqual(r1.status_code, status.HTTP_201_CREATED)
+        reg_id = r1.data['id']
+
+        # Annulation
+        self.client.patch(f'/api/registrations/{reg_id}/cancel/')
+
+        # Réinscription → doit réactiver l'inscription existante, pas en créer une nouvelle
+        r2 = self.client.post('/api/registrations/', {'event': self.event.id})
+        self.assertEqual(r2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r2.data['status'], RegistrationStatus.CONFIRMED)
+
+        # Vérifier qu'il n'y a toujours qu'UNE SEULE ligne en base (réactivée, pas dupliquée)
+        count = Registration.objects.filter(
+            participant=self.participant, event=self.event
+        ).count()
+        self.assertEqual(count, 1)
 
     def test_cannot_register_to_unpublished_event(self):
         """Inscription refusée si l'event n'est pas PUBLISHED"""

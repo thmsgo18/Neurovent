@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Registration
+from .models import Registration, RegistrationStatus
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -25,7 +25,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         user = self.context['request'].user
         event = attrs.get('event')
-        if event and Registration.objects.filter(participant=user, event=event).exists():
+        # Bloquer uniquement si une inscription ACTIVE existe (pas CANCELLED ni REJECTED)
+        active_statuses = [
+            RegistrationStatus.PENDING,
+            RegistrationStatus.CONFIRMED,
+            RegistrationStatus.WAITLIST,
+        ]
+        if event and Registration.objects.filter(
+            participant=user, event=event, status__in=active_statuses
+        ).exists():
             raise serializers.ValidationError(
                 {"event": "Vous êtes déjà inscrit à cet événement."}
             )
