@@ -90,9 +90,18 @@ class EventDetailView(generics.RetrieveAPIView):
 # --- Vues Company ---
 
 class EventCreateView(generics.CreateAPIView):
-    """Créer un event — Company uniquement"""
+    """Créer un event — Company vérifiée uniquement"""
     serializer_class = EventCreateUpdateSerializer
     permission_classes = [IsCompany]
+
+    def perform_create(self, serializer):
+        from users.models import VerificationStatus
+        if self.request.user.verification_status != VerificationStatus.VERIFIED:
+            raise PermissionDenied(
+                "Votre compte entreprise n'est pas encore vérifié. "
+                "Vous pourrez créer des événements une fois votre compte validé."
+            )
+        serializer.save(company=self.request.user)
 
 
 class EventUpdateView(generics.UpdateAPIView):

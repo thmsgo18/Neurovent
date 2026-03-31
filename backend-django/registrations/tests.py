@@ -25,6 +25,7 @@ def create_company(identifier='braincorp', password='Test1234!', company_name='B
         role=UserRole.COMPANY, email=None, company_identifier=identifier,
         password=password, company_name=company_name,
         recovery_email=f'contact@{identifier}.com',
+        verification_status='VERIFIED',  # VERIFIED par défaut dans les tests
     )
 
 

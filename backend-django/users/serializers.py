@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import CustomUser, UserRole
+from .models import CustomUser, UserRole, VerificationStatus
 from tags.serializers import TagSerializer
 
 
@@ -32,7 +32,18 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['company_identifier', 'password', 'password_confirm', 'company_name', 'recovery_email']
+        fields = [
+            'company_identifier', 'password', 'password_confirm',
+            'company_name', 'recovery_email',
+            'siret', 'legal_representative',
+        ]
+
+    def validate_siret(self, value):
+        import re
+        cleaned = re.sub(r'[\s\-]', '', value)
+        if not re.fullmatch(r'\d{14}', cleaned):
+            raise serializers.ValidationError("Le SIRET doit contenir exactement 14 chiffres.")
+        return cleaned
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -41,11 +52,16 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'company_name': "Le nom de l'entreprise est requis"})
         if not attrs.get('company_identifier'):
             raise serializers.ValidationError({'company_identifier': "L'identifiant est requis"})
+        if not attrs.get('siret'):
+            raise serializers.ValidationError({'siret': "Le numéro SIRET est requis."})
+        if not attrs.get('legal_representative'):
+            raise serializers.ValidationError({'legal_representative': "Le nom du représentant légal est requis."})
         return attrs
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
         # Les companies n'ont pas d'email de connexion
+        # verification_status = PENDING par défaut (défini dans le modèle)
         return CustomUser.objects.create_user(role=UserRole.COMPANY, email=None, **validated_data)
 
 
@@ -101,9 +117,14 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
             'website_url', 'youtube_url', 'linkedin_url',
             'twitter_url', 'instagram_url', 'facebook_url',
             'tags', 'tag_ids',
+            'siret', 'legal_representative',
+            'verification_status', 'verified_at',
             'date_joined',
         ]
-        read_only_fields = ['id', 'company_identifier', 'role', 'date_joined']
+        read_only_fields = [
+            'id', 'company_identifier', 'role', 'date_joined',
+            'verification_status', 'verified_at',
+        ]
 
     def update(self, instance, validated_data):
         # ManyToMany doit être géré manuellement avec .set()
@@ -177,7 +198,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'role', 'email', 'name', 'is_active', 'date_joined']
+        fields = ['id', 'role', 'email', 'name', 'is_active', 'date_joined', 'verification_status']
 
     def get_name(self, obj):
         if obj.role == UserRole.PARTICIPANT:
@@ -185,6 +206,37 @@ class UserListSerializer(serializers.ModelSerializer):
         if obj.role == UserRole.COMPANY:
             return obj.company_name
         return ''
+
+
+class AdminCompanyVerificationSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la révision admin d'un compte entreprise.
+    L'admin peut changer le statut de vérification et laisser une note.
+    """
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id', 'company_name', 'siret', 'legal_representative',
+            'verification_status', 'verification_source',
+            'verification_document', 'review_note', 'verified_at',
+            'recovery_email', 'date_joined',
+        ]
+        read_only_fields = [
+            'id', 'company_name', 'siret', 'legal_representative',
+            'verification_source', 'verified_at', 'recovery_email', 'date_joined',
+        ]
+
+    def validate_verification_status(self, value):
+        allowed = [
+            VerificationStatus.VERIFIED,
+            VerificationStatus.REJECTED,
+            VerificationStatus.NEEDS_REVIEW,
+        ]
+        if value not in allowed:
+            raise serializers.ValidationError(
+                f"Valeur invalide. Choisir parmi : {', '.join(allowed)}"
+            )
+        return value
 
 
 # ─────────────────────────────────────────

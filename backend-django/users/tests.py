@@ -67,8 +67,13 @@ class CompanyRegistrationTest(TestCase):
             'company_identifier': 'neuro-lab', 'password': 'Test1234!',
             'password_confirm': 'Test1234!', 'company_name': 'NeuroLab',
             'recovery_email': 'contact@neurolab.com',
+            'siret': '73282932000074',
+            'legal_representative': 'Jean Dupont',
         })
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        # Le statut est NEEDS_REVIEW en test (API SIRENE inaccessible en environnement de test)
+        company = CustomUser.objects.get(company_identifier='neuro-lab')
+        self.assertIn(company.verification_status, ['VERIFIED', 'NEEDS_REVIEW', 'REJECTED'])
 
     def test_register_invalid_identifier_special_chars(self):
         """Espaces et caractères spéciaux refusés"""

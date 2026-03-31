@@ -11,6 +11,9 @@ from .views import (
     LogoutView,
     ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView,
+    AdminPendingCompaniesView,
+    AdminCompanyVerifyView,
+    CompanyUploadDocumentView,
 )
 from .tokens import CustomTokenObtainPairView
 
@@ -45,4 +48,11 @@ urlpatterns = [
     path('admin/users/<int:pk>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('admin/users/<int:pk>/suspend/', AdminSuspendUserView.as_view(), name='admin-suspend-user'),
     path('admin/users/<int:pk>/activate/', AdminActivateUserView.as_view(), name='admin-activate-user'),
+
+    # Vérification entreprises (admin)
+    path('admin/companies/pending/', AdminPendingCompaniesView.as_view(), name='admin-companies-pending'),
+    path('admin/companies/<int:pk>/verify/', AdminCompanyVerifyView.as_view(), name='admin-company-verify'),
+
+    # Upload justificatif (company)
+    path('me/verification/document/', CompanyUploadDocumentView.as_view(), name='company-upload-document'),
 ]

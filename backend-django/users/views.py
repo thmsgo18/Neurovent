@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
-from .models import CustomUser, UserRole
+from .models import CustomUser, UserRole, VerificationStatus
 from .serializers import (
     RegisterParticipantSerializer,
     RegisterCompanySerializer,
@@ -19,11 +19,12 @@ from .serializers import (
     CompanyPublicSerializer,
     UserProfileSerializer,
     UserListSerializer,
+    AdminCompanyVerificationSerializer,
     ChangePasswordSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
-from emails import send_password_reset
+from emails import send_password_reset, send_company_verification_result
 
 
 # ─────────────────────────────────────────
@@ -38,10 +39,33 @@ class RegisterParticipantView(generics.CreateAPIView):
 
 
 class RegisterCompanyView(generics.CreateAPIView):
-    """Inscription d'une entreprise organisatrice"""
+    """
+    Inscription d'une entreprise organisatrice.
+    Déclenche automatiquement la vérification SIRENE après création du compte.
+    """
     queryset = CustomUser.objects.all()
     serializer_class = RegisterCompanySerializer
     permission_classes = [permissions.AllowAny]
+
+    def perform_create(self, serializer):
+        from .sirene import verify_siret
+
+        company = serializer.save()
+
+        # Vérification automatique via l'API SIRENE
+        if company.siret:
+            ver_status, _ = verify_siret(company.siret, company.company_name)
+        else:
+            ver_status = VerificationStatus.NEEDS_REVIEW
+
+        company.verification_status = ver_status
+        if ver_status == VerificationStatus.VERIFIED:
+            company.verified_at = timezone.now()
+            company.verification_source = 'AUTO'
+        company.save(update_fields=['verification_status', 'verified_at', 'verification_source'])
+
+        # Notifier la company du résultat
+        send_company_verification_result(company)
 
 
 # ─────────────────────────────────────────
@@ -440,6 +464,95 @@ class AdminActivateUserView(APIView):
         user.is_active = True
         user.save(update_fields=['is_active'])
         return Response({'message': f'Compte {user} réactivé avec succès.'})
+
+
+# ─────────────────────────────────────────
+#  VÉRIFICATION ENTREPRISES (admin)
+# ─────────────────────────────────────────
+
+class AdminPendingCompaniesView(generics.ListAPIView):
+    """
+    Liste les companies en attente de vérification — GET /api/auth/admin/companies/pending/
+    Filtre optionnel : ?status=NEEDS_REVIEW | PENDING | VERIFIED | REJECTED
+    """
+    serializer_class = AdminCompanyVerificationSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        status_filter = self.request.query_params.get('status', VerificationStatus.PENDING)
+        return (
+            CustomUser.objects
+            .filter(role=UserRole.COMPANY, verification_status=status_filter)
+            .order_by('date_joined')
+        )
+
+
+class AdminCompanyVerifyView(APIView):
+    """
+    Valide ou refuse manuellement une company — PATCH /api/auth/admin/companies/<id>/verify/
+    Body : { "verification_status": "VERIFIED"|"REJECTED"|"NEEDS_REVIEW", "review_note": "..." }
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def patch(self, request, pk):
+        try:
+            company = CustomUser.objects.get(pk=pk, role=UserRole.COMPANY)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Entreprise introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminCompanyVerificationSerializer(company, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        new_status = serializer.validated_data.get('verification_status')
+        company = serializer.save()
+
+        # Mettre à jour la source et la date si vérification manuelle
+        if new_status == VerificationStatus.VERIFIED:
+            company.verified_at = timezone.now()
+            company.verification_source = 'MANUAL'
+            company.save(update_fields=['verified_at', 'verification_source'])
+        elif new_status in [VerificationStatus.REJECTED, VerificationStatus.NEEDS_REVIEW]:
+            company.verified_at = None
+            company.save(update_fields=['verified_at'])
+
+        # Notifier la company
+        send_company_verification_result(company)
+
+        return Response(AdminCompanyVerificationSerializer(company).data)
+
+
+class CompanyUploadDocumentView(APIView):
+    """
+    Upload d'un justificatif (Kbis / RNE) — PATCH /api/auth/me/verification/document/
+    Réservé aux companies. Passe le statut en NEEDS_REVIEW pour déclencher une révision manuelle.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        if user.role != UserRole.COMPANY:
+            return Response(
+                {'error': 'Réservé aux comptes entreprise.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if 'verification_document' not in request.FILES:
+            return Response(
+                {'error': 'Aucun fichier fourni. Champ attendu : "verification_document".'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.verification_document = request.FILES['verification_document']
+        # Si le compte était REJECTED ou PENDING, le repasser en NEEDS_REVIEW
+        if user.verification_status in [VerificationStatus.REJECTED, VerificationStatus.PENDING]:
+            user.verification_status = VerificationStatus.NEEDS_REVIEW
+        user.save(update_fields=['verification_document', 'verification_status'])
+
+        return Response({
+            'message': 'Document reçu. Votre dossier est en cours de révision.',
+            'verification_status': user.verification_status,
+        })
 
 
 # ─────────────────────────────────────────

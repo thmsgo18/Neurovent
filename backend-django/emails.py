@@ -14,6 +14,7 @@ Fonctions disponibles :
   - send_registration_rejected(registration)
   - send_event_cancelled(event)
   - send_password_reset(email, reset_link)
+  - send_company_verification_result(company)
 """
 
 from django.core.mail import EmailMultiAlternatives
@@ -195,6 +196,57 @@ def send_event_cancelled(event):
 # ─────────────────────────────────────────
 #  Authentification
 # ─────────────────────────────────────────
+
+def send_company_verification_result(company):
+    """
+    Notifie la company du résultat de la vérification SIRENE.
+    Envoyé à recovery_email (seul email disponible pour les companies).
+      - VERIFIED      → confirmation immédiate, accès complet
+      - NEEDS_REVIEW  → en attente de révision manuelle
+      - REJECTED      → demande refusée avec explication
+    """
+    email = company.recovery_email
+    name = company.company_name
+    status = company.verification_status
+
+    if status == 'VERIFIED':
+        subject = "Compte entreprise vérifié — Neurovent"
+        body = (
+            f"Bonjour,\n\n"
+            f"Bonne nouvelle ! Le compte entreprise \"{name}\" a été vérifié automatiquement "
+            f"via le répertoire SIRENE.\n\n"
+            f"Vous pouvez dès maintenant créer et publier des événements sur Neurovent.\n\n"
+            f"— L'équipe Neurovent"
+        )
+    elif status == 'NEEDS_REVIEW':
+        subject = "Vérification de votre compte entreprise en cours — Neurovent"
+        body = (
+            f"Bonjour,\n\n"
+            f"Votre demande de compte entreprise \"{name}\" est en cours de révision manuelle "
+            f"par notre équipe.\n\n"
+            f"Ce processus prend généralement 1 à 2 jours ouvrés. Vous recevrez un email "
+            f"dès qu'une décision sera prise.\n\n"
+            f"Si votre dossier est incomplet, vous pourrez nous transmettre un justificatif "
+            f"(Kbis ou extrait RNE) via votre espace compte.\n\n"
+            f"— L'équipe Neurovent"
+        )
+    elif status == 'REJECTED':
+        subject = "Demande de compte entreprise refusée — Neurovent"
+        body = (
+            f"Bonjour,\n\n"
+            f"Nous n'avons pas pu vérifier votre compte entreprise \"{name}\".\n\n"
+            f"Raisons possibles :\n"
+            f"  - SIRET introuvable ou invalide dans le répertoire SIRENE\n"
+            f"  - Établissement fermé ou radié\n\n"
+            f"Si vous pensez qu'il s'agit d'une erreur, contactez-nous en répondant à cet email "
+            f"avec un justificatif officiel (Kbis ou extrait RNE).\n\n"
+            f"— L'équipe Neurovent"
+        )
+    else:
+        return  # PENDING ou statut inconnu — pas d'email
+
+    _send(subject=subject, text_message=body, recipient_email=email)
+
 
 def send_password_reset(recipient_email, reset_link):
     """

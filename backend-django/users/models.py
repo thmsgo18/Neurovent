@@ -15,6 +15,13 @@ class UserRole(models.TextChoices):
     ADMIN = 'ADMIN', 'Admin'
 
 
+class VerificationStatus(models.TextChoices):
+    PENDING = 'PENDING', 'En attente'
+    VERIFIED = 'VERIFIED', 'Vérifié'
+    REJECTED = 'REJECTED', 'Refusé'
+    NEEDS_REVIEW = 'NEEDS_REVIEW', 'Révision manuelle'
+
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email=None, password=None, **extra_fields):
         if email:
@@ -74,6 +81,21 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     twitter_url = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True)
     facebook_url = models.URLField(blank=True)
+
+    # === VÉRIFICATION COMPANY (SIRENE) ===
+    siret = models.CharField(max_length=14, blank=True)
+    legal_representative = models.CharField(max_length=200, blank=True)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.PENDING,
+    )
+    verification_source = models.CharField(max_length=20, blank=True)  # 'AUTO' ou 'MANUAL'
+    verification_document = models.FileField(
+        upload_to='verification_docs/', null=True, blank=True
+    )
+    review_note = models.TextField(blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
 
     objects = CustomUserManager()
 
