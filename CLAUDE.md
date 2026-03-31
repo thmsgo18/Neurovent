@@ -106,6 +106,15 @@ linkedin_url       → URLField
 twitter_url        → URLField
 instagram_url      → URLField
 facebook_url       → URLField
+
+# Vérification SIRENE
+siret                  → CharField (14 chiffres, obligatoire à l'inscription)
+legal_representative   → CharField (nom du représentant légal, obligatoire)
+verification_status    → PENDING | VERIFIED | REJECTED | NEEDS_REVIEW (défaut: PENDING)
+verification_source    → CharField ('AUTO' ou 'MANUAL', renseigné après vérification)
+verification_document  → FileField (upload_to='verification_docs/', Kbis ou RNE)
+review_note            → TextField (note admin lors de la révision manuelle)
+verified_at            → DateTimeField (date de validation, null si pas encore vérifié)
 ```
 
 **Important** : `USERNAME_FIELD = 'email'` mais les companies se connectent via
@@ -211,7 +220,7 @@ s'y associer via ManyToMany mais ne peuvent pas créer de tags.
 | Méthode | URL | Accès | Body |
 |---------|-----|-------|------|
 | POST | `/api/auth/register/participant/` | Public | `email, password, password_confirm, first_name, last_name` |
-| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email` |
+| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email, siret, legal_representative` |
 | POST | `/api/auth/login/participant/` | Public | `email, password` |
 | POST | `/api/auth/login/company/` | Public | `identifier, password` |
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
@@ -224,6 +233,9 @@ s'y associer via ManyToMany mais ne peuvent pas créer de tags.
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend le compte |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive le compte |
 | DELETE | `/api/auth/admin/users/<id>/delete/` | Admin | — Suppression RGPD forcée (impossible sur un autre admin) |
+| GET | `/api/auth/admin/companies/pending/` | Admin | `?status=PENDING\|NEEDS_REVIEW\|VERIFIED\|REJECTED` |
+| PATCH | `/api/auth/admin/companies/<id>/verify/` | Admin | `{"verification_status": "VERIFIED\|REJECTED", "review_note": "..."}` |
+| PATCH | `/api/auth/me/verification/document/` | Company | Upload Kbis/RNE — passe en NEEDS_REVIEW si PENDING/REJECTED |
 | PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
 | POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien signé par email |
 | POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
@@ -377,9 +389,14 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 - [x] `emails.py` centralisé — architecture prête pour le HTML
 - [x] Gmail SMTP configuré via `python-decouple` + `.env`
 - [x] `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` passent par `.env` (prêt pour le déploiement)
+- [x] Vérification entreprise SIRENE (SIRET obligatoire + API INSEE auto + fallback Kbis)
+- [x] Restriction création d'events aux companies `VERIFIED` uniquement
+- [x] Endpoints admin vérification (`GET /admin/companies/pending/`, `PATCH /admin/companies/<id>/verify/`)
+- [x] Upload justificatif Kbis/RNE (`PATCH /api/auth/me/verification/document/`)
+- [x] Notifications email vérification (VERIFIED / NEEDS_REVIEW / REJECTED)
 
 **Tests :**
-- [x] 95 tests Django (users: 28, events: 28, registrations: 28+1, tags: 10)
+- [x] 96 tests Django (users: 28+, events: 28, registrations: 28+1, tags: 10)
 - [x] Tous les fichiers `tests.py` des 4 apps remplis
 
 **Bugs corrigés :**
@@ -388,6 +405,7 @@ curl -X PATCH /api/events/1/update/ -H "Authorization: Bearer TOKEN" -F "banner=
 - [x] `UpdateRegistrationStatusView` : permission `IsCompanyOrAdmin` + queryset adaptatif (admin voit tout)
 - [x] `EventRegistrationsView` : `get_object_or_404` (évite crash 500 si event_id inexistant)
 - [x] `ExportEventRegistrationsView` : retourne 404 (plus 400) pour event introuvable
+- [x] Réinscription après annulation : réactive l'inscription existante au lieu de créer un doublon (évite IntegrityError 500)
 
 ### 🔲 Frontend (Noureddine) — En cours
 - [ ] Pages Login/Register (participant + company)
@@ -525,3 +543,8 @@ pip install -r requirements.txt
 - **`GET /api/events/<id>/` retourne 404 pour un DRAFT** : `EventDetailView` filtre sur `status=PUBLISHED`. Une company qui veut voir le détail de son brouillon doit passer par `GET /api/events/my-events/`. Noureddine ne doit pas s'attendre à avoir le détail d'un DRAFT via l'endpoint public.
 - **Doublon inscription** : tenter de s'inscrire deux fois au même event retourne une erreur 400 propre (validation dans `RegistrationSerializer.validate()`). Ne pas confondre avec l'ancienne IntegrityError qui causait un crash.
 - **`SECRET_KEY` en dev** : la clé par défaut contient le préfixe `django-insecure-` — Django lui-même prévient que c'est insecure. En prod, toujours générer une vraie clé avec `get_random_secret_key()`.
+- **Réinscription après annulation** : ne pas utiliser `serializer.save()` directement — `perform_create` détecte d'abord une inscription CANCELLED/REJECTED existante et la réactive. `serializer.instance` est mis à jour manuellement pour que la réponse 201 soit correcte.
+- **SIRENE API en tests** : l'API INSEE est inaccessible en environnement de test (réseau coupé). Le statut résultant est `NEEDS_REVIEW`. Les `create_company()` dans les tests utilisent `verification_status='VERIFIED'` directement en base pour contourner ça.
+- **Company non vérifiée → 403 sur création d'event** : `EventCreateView.perform_create()` vérifie `verification_status == VERIFIED`. Une company PENDING ou NEEDS_REVIEW reçoit un 403 avec un message explicite.
+- **SIRET format** : 14 chiffres exacts, espaces et tirets acceptés à la saisie (nettoyés par `_clean_siret()`). Un SIRET de 9 chiffres (SIREN seul) est refusé.
+- **Emails vérification** : envoyés à `recovery_email` (seul email d'une company). Si `recovery_email` est vide → email silencieusement ignoré.

@@ -176,7 +176,7 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | Méthode | URL | Accès | Body |
 |---------|-----|-------|------|
 | POST | `/api/auth/register/participant/` | Public | `email, password, password_confirm, first_name, last_name` |
-| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email` |
+| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email, siret, legal_representative` |
 | POST | `/api/auth/login/participant/` | Public | `email, password` |
 | POST | `/api/auth/login/company/` | Public | `identifier, password` |
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
@@ -192,6 +192,9 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — Suspend un compte |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — Réactive un compte |
 | DELETE | `/api/auth/admin/users/<id>/delete/` | Admin | — Suppression RGPD forcée (impossible sur un autre admin) |
+| GET | `/api/auth/admin/companies/pending/` | Admin | `?status=PENDING\|NEEDS_REVIEW\|VERIFIED\|REJECTED` |
+| PATCH | `/api/auth/admin/companies/<id>/verify/` | Admin | `{"verification_status": "VERIFIED\|REJECTED", "review_note": "..."}` |
+| PATCH | `/api/auth/me/verification/document/` | Company | Upload Kbis/RNE — passe en NEEDS_REVIEW si PENDING/REJECTED |
 
 > **Upload logo company** : utiliser `multipart/form-data` (pas JSON)
 > ```bash
@@ -204,7 +207,7 @@ Les tokens access expirent après **2 heures**. Utiliser `/api/auth/token/refres
 |---------|-----|-------|-------|
 | GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
 | GET | `/api/events/<id>/` | Public | Détail d'un event **PUBLISHED** (404 si DRAFT) |
-| POST | `/api/events/create/` | Company | Créer un event |
+| POST | `/api/events/create/` | Company **VERIFIED** | Créer un event (403 si non vérifiée) |
 | PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifier son event |
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts, y compris DRAFT) |
@@ -399,7 +402,42 @@ Champ visuel : `banner` (image uploadée, stockée dans `media/banners/`)
 - `company_comment` — commentaire de l'organisateur (renseigné lors de la validation)
 - `waitlist_position` — calculé dynamiquement, `null` si pas en WAITLIST
 
-Un participant ne peut avoir qu'une seule inscription par événement (contrainte `unique_together`). Tenter de s'inscrire deux fois retourne une erreur 400.
+Un participant ne peut avoir qu'une seule inscription par événement (contrainte `unique_together`). Tenter de se réinscrire alors qu'une inscription active (PENDING/CONFIRMED/WAITLIST) existe retourne une erreur 400. En revanche, si l'inscription était CANCELLED ou REJECTED, elle est **réactivée** avec le bon statut (pas de doublon en base).
+
+---
+
+## Vérification entreprise (SIRENE)
+
+À l'inscription, le SIRET est contrôlé automatiquement via l'API officielle :
+```
+https://api.annuaire-entreprises.data.gouv.fr/etablissement/{siret}
+```
+Gratuite, sans authentification requise, données INSEE en temps réel.
+
+### Logique de décision automatique
+
+| Condition | Statut attribué |
+|-----------|----------------|
+| SIRET invalide (pas 14 chiffres) | `REJECTED` |
+| SIRET introuvable dans SIRENE | `REJECTED` |
+| Établissement fermé ou radié | `REJECTED` |
+| SIRET valide + actif + nom similaire ≥ 70% | `VERIFIED` ✅ |
+| SIRET valide + actif + nom trop différent | `NEEDS_REVIEW` |
+| Erreur réseau / API indisponible | `NEEDS_REVIEW` |
+
+### Flow complet
+1. Company s'inscrit avec `siret` + `legal_representative` (désormais obligatoires)
+2. Backend appelle l'API SIRENE automatiquement après création du compte
+3. Email envoyé à `recovery_email` avec le résultat (VERIFIED / NEEDS_REVIEW / REJECTED)
+4. Si `NEEDS_REVIEW` ou `REJECTED` → upload d'un justificatif possible :
+```bash
+curl -X PATCH /api/auth/me/verification/document/ \
+  -H "Authorization: Bearer <TOKEN>" \
+  -F "verification_document=@kbis.pdf"
+```
+5. L'admin examine et valide/rejette via `PATCH /api/auth/admin/companies/<id>/verify/`
+
+> **Restriction importante** : seules les companies `VERIFIED` peuvent créer des événements. Une company `PENDING` ou `NEEDS_REVIEW` reçoit un 403.
 
 ---
 

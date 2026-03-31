@@ -66,16 +66,24 @@ Utilisateur inscrit souhaitant assister à des événements.
 ### Company (Organisateur)
 Entreprise ou organisation qui crée et gère des événements.
 
-**Informations de compte :** identifiant unique (login), email de récupération, nom d'entreprise, mot de passe
-> L'identifiant permet à plusieurs membres d'une même entreprise de partager le compte.
+**Informations de compte :** identifiant unique (login), email de récupération, nom d'entreprise, SIRET, représentant légal, mot de passe
+
+**Vérification entreprise :** à l'inscription, le SIRET est contrôlé automatiquement via l'API officielle INSEE/SIRENE. Statuts possibles :
+| Statut | Description |
+|--------|-------------|
+| `PENDING` | Vérification en cours |
+| `VERIFIED` | Entreprise validée — peut créer des événements |
+| `NEEDS_REVIEW` | Révision manuelle requise — envoyer un Kbis ou RNE |
+| `REJECTED` | SIRET invalide ou établissement fermé |
 
 **Peut :**
-- Créer, modifier et supprimer ses événements
+- Créer, modifier et supprimer ses événements (**uniquement si VERIFIED**)
 - Choisir le mode d'inscription (automatique ou avec validation)
 - Voir la liste des inscrits à ses événements
 - Confirmer ou rejeter des inscriptions (mode VALIDATION), avec un commentaire
 - Gérer son profil (logo, description, liens réseaux sociaux, tags)
 - Exporter la liste des inscrits en CSV
+- Uploader un justificatif Kbis/RNE si la vérification auto a échoué
 
 ### Admin
 Administrateur de la plateforme, accès via Django Admin (`/admin/`) et API.
@@ -202,7 +210,7 @@ npm run dev
 | Méthode | URL | Accès | Body |
 |---------|-----|-------|------|
 | POST | `/api/auth/register/participant/` | Public | `email, password, password_confirm, first_name, last_name` |
-| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email` |
+| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email, siret, legal_representative` |
 | POST | `/api/auth/login/participant/` | Public | `email, password` |
 | POST | `/api/auth/login/company/` | Public | `identifier, password` |
 | POST | `/api/auth/token/refresh/` | Public | `refresh` |
@@ -218,6 +226,9 @@ npm run dev
 | PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — |
 | PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — |
 | DELETE | `/api/auth/admin/users/<id>/delete/` | Admin | — Impossible sur un autre admin |
+| GET | `/api/auth/admin/companies/pending/` | Admin | `?status=PENDING\|NEEDS_REVIEW\|VERIFIED\|REJECTED` |
+| PATCH | `/api/auth/admin/companies/<id>/verify/` | Admin | `{"verification_status": "VERIFIED\|REJECTED", "review_note": "..."}` |
+| PATCH | `/api/auth/me/verification/document/` | Company | Upload Kbis/RNE (`multipart/form-data`, champ `verification_document`) |
 
 > **Note tags :** pour lire → champ `tags` retourne `[{id, name}]`. Pour écrire → envoyer `tag_ids: [1, 2]`
 
@@ -227,7 +238,7 @@ npm run dev
 |---------|-----|-------|-------|
 | GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
 | GET | `/api/events/<id>/` | Public | Détail d'un event PUBLISHED (404 si DRAFT) |
-| POST | `/api/events/create/` | Company | Créer un event |
+| POST | `/api/events/create/` | Company **VERIFIED** | Créer un event |
 | PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifier son event |
 | DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
 | GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
