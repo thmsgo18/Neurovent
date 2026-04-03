@@ -16,42 +16,24 @@ function ProfileShell({ navItems, activeKey, onNav, topTitle, children }) {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
-      <aside
-        style={{
-          width: "180px",
-          minWidth: "180px",
-          background: "var(--surface)",
-          borderRight: "1px solid var(--border)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "16px",
-        }}
-      >
-        <Link to="/" style={{ textDecoration: "none", marginBottom: "28px", display: "block" }}>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "16px", color: "var(--text)" }}>
+    <div className="profile-page">
+      <aside className="profile-sidebar">
+        <Link to="/" className="profile-sidebar-logo">
+          <span className="profile-sidebar-brand">
             Neuro<span style={{ color: "var(--accent)" }}>vent</span>
           </span>
         </Link>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
+        <nav className="profile-nav">
           {navItems.map((item) => (
             <button
               key={item.key}
               onClick={() => onNav(item.key)}
+              className="profile-nav-btn"
               style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "9px 12px",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "12px",
                 fontWeight: activeKey === item.key ? "700" : "500",
-                cursor: "pointer",
                 background: activeKey === item.key ? "rgba(0,229,255,0.1)" : "transparent",
                 color: activeKey === item.key ? "var(--accent)" : "var(--text-dim)",
-                transition: "var(--transition)",
               }}
             >
               {item.label}
@@ -61,48 +43,18 @@ function ProfileShell({ navItems, activeKey, onNav, topTitle, children }) {
 
         <button
           onClick={handleLogout}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            background: "none",
-            border: "none",
-            color: "var(--text-dim)",
-            cursor: "pointer",
-            fontSize: "11px",
-            padding: "8px 12px",
-            borderRadius: "8px",
-            transition: "var(--transition)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "var(--error)";
-            e.currentTarget.style.background = "rgba(255,77,77,0.06)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "var(--text-dim)";
-            e.currentTarget.style.background = "none";
-          }}
+          className="profile-logout-btn"
         >
           <LogOut size={13} />
           Log out
         </button>
       </aside>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div
-          style={{
-            height: "52px",
-            borderBottom: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 32px",
-            flexShrink: 0,
-            background: "rgba(12,12,20,0.8)",
-          }}
-        >
-          <h3 style={{ fontSize: "14px", fontWeight: "700" }}>{topTitle}</h3>
+      <div className="profile-main">
+        <div className="profile-topbar">
+          <h3>{topTitle}</h3>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "32px" }}>
+        <div className="profile-content">
           {children}
         </div>
       </div>
@@ -210,49 +162,25 @@ function UserProfile() {
       onNav={handleNav}
       topTitle="Profile Information"
     >
-      <form onSubmit={handleSave} style={{ maxWidth: "560px" }}>
-        {/* Avatar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "24px",
-            marginBottom: "36px",
-          }}
-        >
-          <div
-            style={{
-              width: "80px",
-              height: "80px",
-              borderRadius: "50%",
-              background: "var(--accent)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "28px",
-              fontWeight: "800",
-              color: "#000",
-              flexShrink: 0,
-            }}
-          >
+      <form onSubmit={handleSave} className="profile-form profile-card">
+        <div className="profile-avatar-row">
+          <div className="profile-avatar profile-avatar-circle">
             {initials}
           </div>
           <div>
-            <h2 style={{ fontSize: "20px", fontWeight: "800", marginBottom: "4px" }}>
+            <h2 className="profile-name">
               {form.firstName} {form.lastName}
             </h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>{form.email}</p>
+            <p className="profile-email">{form.email}</p>
           </div>
         </div>
 
-        {/* Fields */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+        <div className="profile-form-row">
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">First Name</label>
             <input
               type="text"
               className="input"
-              style={{ height: "44px" }}
               value={form.firstName}
               onChange={(e) => set("firstName", e.target.value)}
             />
@@ -262,20 +190,18 @@ function UserProfile() {
             <input
               type="text"
               className="input"
-              style={{ height: "44px" }}
               value={form.lastName}
               onChange={(e) => set("lastName", e.target.value)}
             />
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+        <div className="profile-form-row">
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">University</label>
             <input
               type="text"
               className="input"
-              style={{ height: "44px" }}
               value={form.university}
               onChange={(e) => set("university", e.target.value)}
             />
@@ -285,7 +211,6 @@ function UserProfile() {
             <input
               type="text"
               className="input"
-              style={{ height: "44px" }}
               value={form.field}
               onChange={(e) => set("field", e.target.value)}
             />
@@ -295,7 +220,7 @@ function UserProfile() {
         {/* Research interests */}
         <div style={{ marginBottom: "32px" }}>
           <label className="form-label">Research Interests</label>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+          <div className="profile-tags-wrap">
             {allTags.map((tag) => {
               const selected = selectedTagIds.includes(tag.id);
               return (
@@ -307,17 +232,11 @@ function UserProfile() {
                       selected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
                     )
                   }
+                  className="profile-tag-btn"
                   style={{
-                    padding: "5px 14px",
-                    borderRadius: "100px",
                     border: selected ? "1px solid var(--accent)" : "1px solid var(--border)",
                     background: selected ? "rgba(0,229,255,0.1)" : "transparent",
                     color: selected ? "var(--accent)" : "var(--text-dim)",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-mono)",
-                    transition: "var(--transition)",
                   }}
                 >
                   {tag.name} {selected ? "✓" : ""}
@@ -330,57 +249,22 @@ function UserProfile() {
         <button
           type="submit"
           className="btn btn-primary"
-          style={{ padding: "12px 28px", fontSize: "14px" }}
         >
           {saved ? "Saved ✓" : "Save Academic Profile"}
         </button>
       </form>
 
-      {/* Password change */}
-      <div
-        style={{
-          maxWidth: "560px",
-          marginTop: "40px",
-          paddingTop: "32px",
-          borderTop: "1px solid var(--border)",
-        }}
-      >
-        <h3 style={{ fontSize: "15px", fontWeight: "700", marginBottom: "20px" }}>Change Password</h3>
+      <div className="profile-danger-zone" style={{ borderTopColor: "var(--border)" }}>
+        <h3 className="profile-danger-title" style={{ color: "var(--text)" }}>Change Password</h3>
         <form onSubmit={handlePasswordChange}>
           {pwStatus === "ok" && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "rgba(0,255,149,0.08)",
-                border: "1px solid rgba(0,255,149,0.2)",
-                color: "var(--success)",
-                padding: "12px 14px",
-                borderRadius: "10px",
-                fontSize: "13px",
-                marginBottom: "16px",
-              }}
-            >
+            <div className="profile-feedback profile-feedback--success">
               <CheckCircle size={15} />
               Password updated successfully.
             </div>
           )}
           {pwStatus && pwStatus !== "ok" && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "rgba(255,77,77,0.08)",
-                border: "1px solid rgba(255,77,77,0.2)",
-                color: "var(--error)",
-                padding: "12px 14px",
-                borderRadius: "10px",
-                fontSize: "13px",
-                marginBottom: "16px",
-              }}
-            >
+            <div className="profile-feedback profile-feedback--error">
               <AlertCircle size={15} />
               {pwStatus}
             </div>
@@ -390,20 +274,18 @@ function UserProfile() {
             <input
               type="password"
               className="input"
-              style={{ height: "44px" }}
               placeholder="••••••••"
               value={pwForm.old}
               onChange={(e) => setPwForm((f) => ({ ...f, old: e.target.value }))}
               required
             />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div className="profile-form-row">
             <div className="form-field" style={{ marginBottom: 0 }}>
               <label className="form-label">New Password</label>
               <input
                 type="password"
                 className="input"
-                style={{ height: "44px" }}
                 placeholder="••••••••"
                 value={pwForm.new}
                 onChange={(e) => setPwForm((f) => ({ ...f, new: e.target.value }))}
@@ -415,7 +297,6 @@ function UserProfile() {
               <input
                 type="password"
                 className="input"
-                style={{ height: "44px" }}
                 placeholder="••••••••"
                 value={pwForm.confirm}
                 onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))}
@@ -426,31 +307,33 @@ function UserProfile() {
           <button
             type="submit"
             className="btn btn-secondary"
-            style={{ marginTop: "20px", padding: "10px 24px", fontSize: "13px" }}
+            style={{ marginTop: "20px" }}
           >
             Update Password
           </button>
         </form>
       </div>
 
-      {/* Danger zone */}
-      <div style={{ maxWidth: "560px", marginTop: "40px", paddingTop: "32px", borderTop: "1px solid rgba(255,77,77,0.2)" }}>
-        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "var(--error)", marginBottom: "8px" }}>Danger Zone</h3>
-        <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px", lineHeight: "1.5" }}>
+      <div className="profile-danger-zone">
+        <h3 className="profile-danger-title">Danger Zone</h3>
+        <p className="profile-danger-copy">
           Permanently delete your account and all associated data. This action cannot be undone.
         </p>
-        <button
-          onClick={handleDeleteAccount}
-          disabled={deleteLoading}
-          style={{ padding: "10px 20px", borderRadius: "8px", border: "1px solid rgba(255,77,77,0.4)", background: deleteConfirm ? "rgba(255,77,77,0.15)" : "rgba(255,77,77,0.06)", color: "var(--error)", fontSize: "13px", fontWeight: "600", cursor: deleteLoading ? "not-allowed" : "pointer" }}
-        >
-          {deleteLoading ? "Deleting..." : deleteConfirm ? "Confirm — delete my account" : "Delete My Account"}
-        </button>
-        {deleteConfirm && (
-          <button onClick={() => setDeleteConfirm(false)} style={{ marginLeft: "12px", background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer" }}>
-            Cancel
+        <div className="profile-danger-actions">
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deleteLoading}
+            className="profile-danger-btn"
+            style={{ background: deleteConfirm ? "rgba(255,77,77,0.15)" : "rgba(255,77,77,0.06)", cursor: deleteLoading ? "not-allowed" : "pointer" }}
+          >
+            {deleteLoading ? "Deleting..." : deleteConfirm ? "Confirm — delete my account" : "Delete My Account"}
           </button>
-        )}
+          {deleteConfirm && (
+            <button onClick={() => setDeleteConfirm(false)} className="profile-cancel-btn">
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </ProfileShell>
   );
@@ -551,36 +434,14 @@ function OrgProfile() {
       onNav={handleNav}
       topTitle="Organization Settings"
     >
-      <form onSubmit={handleSave} style={{ maxWidth: "560px" }}>
-        {/* Org logo */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "24px",
-            marginBottom: "36px",
-          }}
-        >
-          <div
-            style={{
-              width: "80px",
-              height: "80px",
-              borderRadius: "16px",
-              background: "var(--accent)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "26px",
-              fontWeight: "800",
-              color: "#000",
-              flexShrink: 0,
-            }}
-          >
+      <form onSubmit={handleSave} className="profile-form profile-card">
+        <div className="profile-avatar-row">
+          <div className="profile-avatar profile-avatar-square">
             {initials}
           </div>
           <div>
-            <h2 style={{ fontSize: "20px", fontWeight: "800", marginBottom: "4px" }}>{form.name}</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>{form.email}</p>
+            <h2 className="profile-name">{form.name}</h2>
+            <p className="profile-email">{form.email}</p>
           </div>
         </div>
 
@@ -589,7 +450,6 @@ function OrgProfile() {
           <input
             type="text"
             className="input"
-            style={{ height: "44px" }}
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
           />
@@ -600,7 +460,6 @@ function OrgProfile() {
           <input
             type="email"
             className="input"
-            style={{ height: "44px" }}
             value={form.email}
             onChange={(e) => set("email", e.target.value)}
           />
@@ -610,7 +469,7 @@ function OrgProfile() {
           <label className="form-label">Lab Description</label>
           <textarea
             className="input"
-            style={{ height: "90px", resize: "vertical" }}
+            style={{ minHeight: "110px", resize: "vertical" }}
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
           />
@@ -619,35 +478,35 @@ function OrgProfile() {
         {/* Links */}
         <div className="form-field">
           <label className="form-label">Website</label>
-          <input type="url" className="input" style={{ height: "44px" }} placeholder="https://lab.institution.edu" value={form.website_url} onChange={(e) => set("website_url", e.target.value)} />
+          <input type="url" className="input" placeholder="https://lab.institution.edu" value={form.website_url} onChange={(e) => set("website_url", e.target.value)} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <div className="profile-form-row">
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">LinkedIn</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://linkedin.com/company/lab" value={form.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} />
+            <input type="url" className="input" placeholder="https://linkedin.com/company/lab" value={form.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">YouTube</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://youtube.com/@your-channel" value={form.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} />
+            <input type="url" className="input" placeholder="https://youtube.com/@your-channel" value={form.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} />
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginTop: "20px" }}>
+        <div className="profile-form-row profile-form-row--triple" style={{ marginTop: "20px" }}>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">Twitter / X</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://x.com/your-handle" value={form.twitter_url} onChange={(e) => set("twitter_url", e.target.value)} />
+            <input type="url" className="input" placeholder="https://x.com/your-handle" value={form.twitter_url} onChange={(e) => set("twitter_url", e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">Instagram</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://instagram.com/your-page" value={form.instagram_url} onChange={(e) => set("instagram_url", e.target.value)} />
+            <input type="url" className="input" placeholder="https://instagram.com/your-page" value={form.instagram_url} onChange={(e) => set("instagram_url", e.target.value)} />
           </div>
           <div className="form-field" style={{ marginBottom: 0 }}>
             <label className="form-label">Facebook</label>
-            <input type="url" className="input" style={{ height: "44px" }} placeholder="https://facebook.com/your-page" value={form.facebook_url} onChange={(e) => set("facebook_url", e.target.value)} />
+            <input type="url" className="input" placeholder="https://facebook.com/your-page" value={form.facebook_url} onChange={(e) => set("facebook_url", e.target.value)} />
           </div>
         </div>
 
         {saveError && (
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,77,77,0.08)", border: "1px solid rgba(255,77,77,0.2)", color: "var(--error)", padding: "12px 14px", borderRadius: "10px", fontSize: "13px", marginTop: "20px" }}>
+          <div className="profile-feedback profile-feedback--error" style={{ marginTop: "20px" }}>
             <AlertCircle size={15} />
             {saveError}
           </div>
@@ -656,7 +515,7 @@ function OrgProfile() {
         {/* Research domains */}
         <div style={{ marginBottom: "32px" }}>
           <label className="form-label">Managed Research Domains</label>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "8px" }}>
+          <div className="profile-tags-wrap">
             {allTags.map((tag) => {
               const selected = selectedTagIds.includes(tag.id);
               return (
@@ -668,16 +527,11 @@ function OrgProfile() {
                       selected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
                     )
                   }
+                  className="profile-tag-btn"
                   style={{
-                    padding: "5px 14px",
-                    borderRadius: "100px",
                     border: selected ? "1px solid var(--accent)" : "1px solid var(--border)",
                     background: selected ? "rgba(0,229,255,0.1)" : "transparent",
                     color: selected ? "var(--accent)" : "var(--text-dim)",
-                    fontSize: "12px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    transition: "var(--transition)",
                   }}
                 >
                   {tag.name} {selected ? "✓" : ""}
@@ -690,30 +544,31 @@ function OrgProfile() {
         <button
           type="submit"
           className="btn btn-primary"
-          style={{ padding: "12px 28px", fontSize: "14px" }}
         >
           {saved ? "Saved!" : "Update Lab Identity"}
         </button>
       </form>
 
-      {/* Danger zone */}
-      <div style={{ maxWidth: "560px", marginTop: "40px", paddingTop: "32px", borderTop: "1px solid rgba(255,77,77,0.2)" }}>
-        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "var(--error)", marginBottom: "8px" }}>Danger Zone</h3>
-        <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "16px", lineHeight: "1.5" }}>
+      <div className="profile-danger-zone">
+        <h3 className="profile-danger-title">Danger Zone</h3>
+        <p className="profile-danger-copy">
           Permanently delete this organization account. This action cannot be undone.
         </p>
-        <button
-          onClick={handleDeleteAccount}
-          disabled={deleteLoading}
-          style={{ padding: "10px 20px", borderRadius: "8px", border: "1px solid rgba(255,77,77,0.4)", background: deleteConfirm ? "rgba(255,77,77,0.15)" : "rgba(255,77,77,0.06)", color: "var(--error)", fontSize: "13px", fontWeight: "600", cursor: deleteLoading ? "not-allowed" : "pointer" }}
-        >
-          {deleteLoading ? "Deleting..." : deleteConfirm ? "Confirm — delete this account" : "Delete Organization Account"}
-        </button>
-        {deleteConfirm && (
-          <button onClick={() => setDeleteConfirm(false)} style={{ marginLeft: "12px", background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer" }}>
-            Cancel
+        <div className="profile-danger-actions">
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deleteLoading}
+            className="profile-danger-btn"
+            style={{ background: deleteConfirm ? "rgba(255,77,77,0.15)" : "rgba(255,77,77,0.06)", cursor: deleteLoading ? "not-allowed" : "pointer" }}
+          >
+            {deleteLoading ? "Deleting..." : deleteConfirm ? "Confirm — delete this account" : "Delete Organization Account"}
           </button>
-        )}
+          {deleteConfirm && (
+            <button onClick={() => setDeleteConfirm(false)} className="profile-cancel-btn">
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </ProfileShell>
   );

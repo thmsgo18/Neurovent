@@ -6,6 +6,7 @@ from .views import (
     EventRegistrationsView,
     UpdateRegistrationStatusView,
     ExportEventRegistrationsView,
+    RemoveRegistrationView,
 )
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     path('event/<int:event_id>/', EventRegistrationsView.as_view(), name='event-registrations'),                  # GET  /api/registrations/event/1/
     path('event/<int:event_id>/export/', ExportEventRegistrationsView.as_view(), name='export-registrations'),    # GET  /api/registrations/event/1/export/
     path('<int:pk>/status/', UpdateRegistrationStatusView.as_view(), name='update-registration-status'),          # PATCH /api/registrations/1/status/
+    path('<int:pk>/remove/', RemoveRegistrationView.as_view(), name='remove-registration'),                       # PATCH /api/registrations/1/remove/
 ]

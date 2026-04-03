@@ -9,7 +9,11 @@ from .models import Registration, RegistrationStatus
 from .serializers import RegistrationSerializer, RegistrationStatusUpdateSerializer
 from events.models import Event
 from users.models import UserRole
-from emails import send_registration_confirmed, send_registration_rejected
+from emails import (
+    send_registration_confirmed,
+    send_registration_rejected,
+    send_registration_removed_by_organizer,
+)
 
 
 def _promote_from_waitlist(event):
@@ -169,6 +173,7 @@ class EventRegistrationsView(generics.ListAPIView):
         return (
             Registration.objects
             .filter(event=event)
+            .exclude(status=RegistrationStatus.CANCELLED)
             .select_related('participant', 'event')
         )
 
@@ -196,6 +201,39 @@ class UpdateRegistrationStatusView(generics.UpdateAPIView):
         elif instance.status == RegistrationStatus.REJECTED:
             send_registration_rejected(instance)
             _promote_from_waitlist(instance.event)
+
+
+class RemoveRegistrationView(APIView):
+    """La company retire manuellement une inscription active à son event."""
+    permission_classes = [IsCompanyOrAdmin]
+
+    def patch(self, request, pk):
+        if request.user.is_staff:
+            registration = get_object_or_404(
+                Registration.objects.select_related('event', 'participant', 'event__company'),
+                pk=pk,
+            )
+        else:
+            registration = get_object_or_404(
+                Registration.objects.select_related('event', 'participant', 'event__company'),
+                pk=pk,
+                event__company=request.user,
+            )
+
+        if registration.status == RegistrationStatus.CANCELLED:
+            raise ValidationError("Cette inscription a déjà été retirée.")
+
+        registration.status = RegistrationStatus.CANCELLED
+        registration.company_comment = (
+            request.data.get('company_comment')
+            or "Registration removed by the organizer."
+        )
+        registration.save(update_fields=['status', 'company_comment', 'updated_at'])
+
+        send_registration_removed_by_organizer(registration)
+        _promote_from_waitlist(registration.event)
+
+        return HttpResponse(status=204)
 
 
 class ExportEventRegistrationsView(APIView):

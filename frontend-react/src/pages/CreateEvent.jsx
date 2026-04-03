@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { AlertCircle, X } from "lucide-react";
 import { createEvent } from "../api/events";
 import { getTags, getTagsSync } from "../api/tags";
@@ -13,6 +13,136 @@ const STEPS = [
   { id: 3, label: "Preview" },
 ];
 
+const INITIAL_FORM = {
+  title: "",
+  format: "presential",
+  date: "",
+  time: "09:00",
+  ends_next_day: false,
+  end_date: "",
+  end_time: "18:00",
+  duration_minutes: 540,
+  capacity: 50,
+  registration_mode: "VALIDATION",
+  city: "",
+  country: "",
+  address_full: "",
+  address_share_later: false,
+  address_share_offset_hours: 24,
+  online_platform: "",
+  online_link: "",
+  online_share_later: false,
+  online_share_offset_hours: 24,
+  registration_deadline_date: "",
+  registration_deadline_time: "",
+  description: "",
+  tagIds: [],
+};
+
+const MIN_DURATION_MINUTES = 15;
+const SAME_DAY_STEP_MINUTES = 15;
+const LAST_SAME_DAY_MINUTE = (23 * 60) + 59;
+
+const combineDateAndTime = (date, time) => {
+  if (!date || !time) return null;
+  return new Date(`${date}T${time}:00`);
+};
+
+const clampDuration = (minutes, startTime = "00:00") => {
+  const value = Number.parseInt(minutes, 10);
+  if (Number.isNaN(value)) return MIN_DURATION_MINUTES;
+
+  const [hours = "0", mins = "0"] = startTime.split(":");
+  const startMinutes = Number.parseInt(hours, 10) * 60 + Number.parseInt(mins, 10);
+  const rawMaxDuration = Math.max(MIN_DURATION_MINUTES, LAST_SAME_DAY_MINUTE - startMinutes);
+  const maxSameDayDuration = Math.max(
+    MIN_DURATION_MINUTES,
+    Math.floor(rawMaxDuration / SAME_DAY_STEP_MINUTES) * SAME_DAY_STEP_MINUTES,
+  );
+
+  return Math.min(Math.max(value, MIN_DURATION_MINUTES), maxSameDayDuration);
+};
+
+const formatTimeForInput = (dateValue) => {
+  if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) return "09:00";
+  const hours = String(dateValue.getHours()).padStart(2, "0");
+  const minutes = String(dateValue.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+const formatDateForInput = (dateValue) => {
+  if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) return "";
+  const year = dateValue.getFullYear();
+  const month = String(dateValue.getMonth() + 1).padStart(2, "0");
+  const day = String(dateValue.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatSchedulePreview = (startDate, startTime, endDate, endTime) => {
+  if (!startDate || !startTime) return "TBD";
+  const start = combineDateAndTime(startDate, startTime);
+  const end = combineDateAndTime(endDate, endTime);
+  if (!start || !end) return `${startDate} ${startTime}`;
+
+  const sameDay = formatDateForInput(start) === formatDateForInput(end);
+  const startLabel = start.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const startTimeLabel = start.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const endTimeLabel = end.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  if (sameDay) return `${startLabel} • ${startTimeLabel} - ${endTimeLabel}`;
+
+  const endLabel = end.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return `${startLabel} ${startTimeLabel} → ${endLabel} ${endTimeLabel}`;
+};
+
+const formatDurationLabel = (minutes, includeDays = false) => {
+  const total = Math.max(0, Number.parseInt(minutes, 10) || 0);
+  const days = Math.floor(total / (24 * 60));
+  const hours = Math.floor((total % (24 * 60)) / 60);
+  const remainingMinutes = total % 60;
+  const parts = [];
+
+  if (includeDays && days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (remainingMinutes || parts.length === 0) parts.push(`${remainingMinutes}m`);
+
+  return parts.join(" ");
+};
+
+const getSuggestedSameDayEndTime = (startDate, startTime) => {
+  const start = combineDateAndTime(startDate, startTime);
+  if (!start) return "18:00";
+
+  const safeDuration = clampDuration(60, startTime);
+  const end = new Date(start.getTime() + safeDuration * 60 * 1000);
+  return formatTimeForInput(end);
+};
+
+const detectPlatformFromLink = (url) => {
+  if (!url || !url.trim()) return "";
+
+  const normalizedUrl = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+
+  try {
+    const hostname = new URL(normalizedUrl).hostname.toLowerCase();
+
+    if (hostname.includes("zoom")) return "Zoom";
+    if (hostname.includes("teams.microsoft")) return "Microsoft Teams";
+    if (hostname.includes("meet.google")) return "Google Meet";
+    if (hostname.includes("webex")) return "Webex";
+    if (hostname.includes("gotomeeting")) return "GoTo Meeting";
+    if (hostname.includes("jitsi")) return "Jitsi Meet";
+    if (hostname.includes("discord")) return "Discord";
+    if (hostname.includes("youtube")) return "YouTube Live";
+    if (hostname.includes("livestorm")) return "Livestorm";
+    if (hostname.includes("hopin")) return "Hopin";
+  } catch {
+    return "";
+  }
+
+  return "";
+};
+
 export default function CreateEvent() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -23,25 +153,14 @@ export default function CreateEvent() {
   const [availableTags, setAvailableTags] = useState(cached || []);
   const [tagsLoading, setTagsLoading] = useState(!cached || cached.length === 0);
   const [tagInput, setTagInput] = useState("");
-
-  const [form, setForm] = useState({
-    title: "",
-    format: "presential",
-    date: "",
-    time: "09:00",
-    end_time: "18:00",
-    capacity: 50,
-    registration_mode: "VALIDATION",
-    city: "",
-    country: "",
-    address_full: "",
-    online_platform: "",
-    online_link: "",
-    registration_deadline_date: "",
-    registration_deadline_time: "",
-    description: "",
-    tagIds: [],
-  });
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [capacityInput, setCapacityInput] = useState(String(INITIAL_FORM.capacity));
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [stepErrorMessage, setStepErrorMessage] = useState("");
+  const hasUnsavedChanges = !published && JSON.stringify(form) !== JSON.stringify(INITIAL_FORM);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  const allowNavigationRef = useRef(false);
+  const autoDetectedPlatformRef = useRef("");
 
   useEffect(() => {
     if (!cached || cached.length === 0) {
@@ -51,7 +170,69 @@ export default function CreateEvent() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined;
+
+    const handleDocumentClick = (event) => {
+      if (allowNavigationRef.current) return;
+      if (event.defaultPrevented) return;
+      if (event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      const anchor = event.target.closest("a[href]");
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+
+      const targetUrl = new URL(anchor.href, window.location.origin);
+      if (targetUrl.origin !== window.location.origin) return;
+      if (targetUrl.pathname === window.location.pathname && targetUrl.search === window.location.search) return;
+
+      event.preventDefault();
+      setPendingNavigation(() => () => {
+        allowNavigationRef.current = true;
+        navigate(`${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`);
+      });
+    };
+
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => document.removeEventListener("click", handleDocumentClick, true);
+  }, [hasUnsavedChanges, navigate]);
+
+  const clearFieldError = (field) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const set = (k, v) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    clearFieldError(k);
+    if (stepErrorMessage) setStepErrorMessage("");
+  };
+
+  const setCapacity = (value) => {
+    const parsed = Number.parseInt(value, 10);
+    const safeValue = Number.isNaN(parsed) ? 0 : Math.max(0, parsed);
+    setCapacityInput(String(safeValue));
+    set("capacity", safeValue);
+  };
 
   const toggleTag = (id) => {
     set("tagIds", form.tagIds.includes(id) ? form.tagIds.filter((t) => t !== id) : [...form.tagIds, id]);
@@ -74,7 +255,124 @@ export default function CreateEvent() {
     return /^https?:\/\//i.test(u) ? u : `https://${u}`;
   };
 
+  const handleOnlineLinkChange = (rawLink) => {
+    const detectedPlatform = detectPlatformFromLink(rawLink);
+
+    setForm((prev) => {
+      const shouldAutofillPlatform =
+        !prev.online_platform.trim() ||
+        (autoDetectedPlatformRef.current && prev.online_platform === autoDetectedPlatformRef.current);
+
+      const nextPlatform = detectedPlatform && shouldAutofillPlatform
+        ? detectedPlatform
+        : prev.online_platform;
+
+      autoDetectedPlatformRef.current = detectedPlatform || "";
+
+      return {
+        ...prev,
+        online_link: rawLink,
+        online_platform: nextPlatform,
+      };
+    });
+
+    clearFieldError("online_link");
+    clearFieldError("online_platform");
+    if (stepErrorMessage) setStepErrorMessage("");
+  };
+
+  const getFieldErrorClass = (field) => (fieldErrors[field] ? " create-event-input--error" : "");
+
+  const validateStep = (stepId) => {
+    const nextErrors = {};
+    const hasEqualMultiDayDates =
+      form.ends_next_day &&
+      Boolean(form.date) &&
+      Boolean(form.end_date) &&
+      form.date === form.end_date;
+    const hasPastStartDate = Boolean(form.date) && form.date < todayInputValue;
+    const hasEndDateBeforeStartDate =
+      form.ends_next_day &&
+      Boolean(form.date) &&
+      Boolean(form.end_date) &&
+      form.end_date < form.date;
+
+    if (stepId === 1) {
+      if (!form.title.trim()) nextErrors.title = true;
+    }
+
+    if (stepId === 2) {
+      if (!form.date) nextErrors.date = true;
+      if (hasPastStartDate) nextErrors.date = true;
+      if (!form.time) nextErrors.time = true;
+      if (!form.end_time) nextErrors.end_time = true;
+      if (hasInvalidSameDayEndTime) nextErrors.end_time = true;
+      if (!form.capacity || Number.parseInt(form.capacity, 10) <= 1) nextErrors.capacity = true;
+      if (!form.description.trim()) nextErrors.description = true;
+      if (form.ends_next_day && !form.end_date) nextErrors.end_date = true;
+      if (hasEqualMultiDayDates) nextErrors.end_date = true;
+      if (hasEndDateBeforeStartDate) nextErrors.end_date = true;
+
+      const start = combineDateAndTime(form.date, form.time);
+      const end = combineDateAndTime(effectiveEndDate, form.end_time);
+      if (start && end && end <= start) nextErrors.end_time = true;
+
+      if ((form.format === "presential" || form.format === "hybrid") && !form.city.trim()) nextErrors.city = true;
+      if ((form.format === "presential" || form.format === "hybrid") && !form.country.trim()) nextErrors.country = true;
+      if ((form.format === "presential" || form.format === "hybrid") && !form.address_full.trim()) nextErrors.address_full = true;
+      if ((form.format === "online" || form.format === "hybrid") && !form.online_platform.trim()) nextErrors.online_platform = true;
+    }
+
+    setFieldErrors(nextErrors);
+    setStepErrorMessage(
+      hasPastStartDate
+        ? "The event start date cannot be earlier than today."
+        : hasEqualMultiDayDates
+        ? "The end date must be different from the start date when “ends on another day” is enabled. If the event ends the same day, uncheck this option."
+        : hasEndDateBeforeStartDate
+          ? "The end date cannot be before the start date. Choose a later end date or disable the multi-day option."
+          : hasInvalidSameDayEndTime
+            ? "For a same-day event, the end time must be after the start time. If the event continues overnight, enable “Ends on another day”."
+        : Object.keys(nextErrors).length > 0
+          ? "Some required information is missing. Please complete the highlighted fields to continue."
+          : "",
+    );
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const todayInputValue = formatDateForInput(new Date());
+  const effectiveEndDate = form.ends_next_day ? form.end_date : form.date;
+  const scheduleStart = combineDateAndTime(form.date, form.time);
+  const scheduleEnd = combineDateAndTime(effectiveEndDate, form.end_time);
+  const durationMinutes =
+    scheduleStart && scheduleEnd ? Math.max(0, Math.round((scheduleEnd.getTime() - scheduleStart.getTime()) / (60 * 1000))) : 0;
+  const computedDurationLabel = formatDurationLabel(durationMinutes, Boolean(form.ends_next_day));
+  const hasEqualMultiDayDates =
+    form.ends_next_day &&
+    Boolean(form.date) &&
+    Boolean(form.end_date) &&
+    form.date === form.end_date;
+  const hasEndDateBeforeStartDate =
+    form.ends_next_day &&
+    Boolean(form.date) &&
+    Boolean(form.end_date) &&
+    form.end_date < form.date;
+  const hasPastStartDate = Boolean(form.date) && form.date < todayInputValue;
+  const hasInvalidSameDayEndTime =
+    !form.ends_next_day &&
+    Boolean(form.date) &&
+    Boolean(form.time) &&
+    Boolean(form.end_time) &&
+    scheduleStart &&
+    scheduleEnd &&
+    scheduleEnd <= scheduleStart;
+
   const handlePublish = async () => {
+    if (!validateStep(1) || !validateStep(2)) {
+      setStep(2);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -84,11 +382,12 @@ export default function CreateEvent() {
         return;
       }
       const formatMap = { presential: "ONSITE", online: "ONLINE", hybrid: "HYBRID" };
+      const effectiveEndDate = form.ends_next_day ? form.end_date : form.date;
       const payload = {
         title: form.title,
         description: form.description,
         date_start: `${form.date}T${form.time}:00`,
-        date_end: `${form.date}T${form.end_time}:00`,
+        date_end: `${effectiveEndDate}T${form.end_time}:00`,
         format: formatMap[form.format] || "ONSITE",
         capacity: parseInt(form.capacity) || 50,
         registration_mode: form.registration_mode,
@@ -99,10 +398,26 @@ export default function CreateEvent() {
         payload.address_city = form.city;
         payload.address_country = form.country;
         payload.address_full = form.address_full;
+        payload.address_visibility = form.address_share_later ? "PARTIAL" : "FULL";
+        if (form.address_share_later) {
+          const startDate = combineDateAndTime(form.date, form.time);
+          if (startDate) {
+            const revealDate = new Date(startDate.getTime() - form.address_share_offset_hours * 60 * 60 * 1000);
+            payload.address_reveal_date = `${formatDateForInput(revealDate)}T${formatTimeForInput(revealDate)}:00`;
+          }
+        }
       }
       if (form.format === "online" || form.format === "hybrid") {
         payload.online_platform = form.online_platform;
         if (form.online_link.trim()) payload.online_link = normalizeUrl(form.online_link);
+        payload.online_visibility = form.online_share_later ? "PARTIAL" : "FULL";
+        if (form.online_share_later) {
+          const startDate = combineDateAndTime(form.date, form.time);
+          if (startDate) {
+            const revealDate = new Date(startDate.getTime() - form.online_share_offset_hours * 60 * 60 * 1000);
+            payload.online_reveal_date = `${formatDateForInput(revealDate)}T${formatTimeForInput(revealDate)}:00`;
+          }
+        }
       }
       if (form.registration_deadline_date) {
         const t = form.registration_deadline_time || "23:59";
@@ -118,36 +433,31 @@ export default function CreateEvent() {
   };
 
   const organizer = getCompanyName() || getDisplayName() || "Lab";
+  const currentStep = STEPS.find((item) => item.id === step) || STEPS[0];
+
+  const requestNavigation = (target) => {
+    if (!hasUnsavedChanges) {
+      navigate(target);
+      return;
+    }
+
+    setPendingNavigation(() => () => {
+      allowNavigationRef.current = true;
+      navigate(target);
+    });
+  };
 
   if (published) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "var(--bg)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px",
-        }}
-      >
-        <div
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--success)",
-            borderRadius: "24px",
-            padding: "56px 48px",
-            maxWidth: "480px",
-            width: "100%",
-            textAlign: "center",
-          }}
-        >
+      <div className="create-event-page">
+        <div className="create-event-success-shell">
+          <div className="create-event-success-card">
           <div style={{ fontSize: "48px", marginBottom: "24px", color: "var(--success)" }}>✓</div>
           <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>Event Published!</h2>
           <p style={{ color: "var(--text-muted)", fontSize: "15px", marginBottom: "36px", lineHeight: "1.6" }}>
             Your event is now live and visible to the research community on Neurovent.
           </p>
-          <div style={{ display: "flex", gap: "12px" }}>
+          <div className="create-event-inline-actions">
             <button
               className="btn btn-primary"
               style={{ flex: 1, height: "48px" }}
@@ -164,89 +474,50 @@ export default function CreateEvent() {
             </button>
           </div>
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
-      {/* Left sidebar — steps */}
-      <aside
-        style={{
-          width: "200px",
-          minWidth: "200px",
-          background: "var(--surface)",
-          borderRight: "1px solid var(--border)",
-          padding: "32px 20px",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Link to="/" style={{ textDecoration: "none", marginBottom: "48px", display: "block" }}>
-          <span
-            style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "18px", color: "var(--text)" }}
-          >
-            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </span>
-        </Link>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          {STEPS.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                padding: "10px 14px",
-                borderRadius: "8px",
-                fontSize: "13px",
-                fontWeight: step === s.id ? "700" : "500",
-                color: step === s.id ? "var(--accent)" : step > s.id ? "var(--text)" : "var(--text-dim)",
-                background: step === s.id ? "rgba(0,229,255,0.08)" : "transparent",
-                borderLeft: step === s.id ? "2px solid var(--accent)" : "2px solid transparent",
-                cursor: step > s.id ? "pointer" : "default",
-              }}
-              onClick={() => step > s.id && setStep(s.id)}
+    <div className="create-event-page">
+      <div className="create-event-shell">
+      <div className="create-event-content create-event-content--single">
+        <div className="create-event-main create-event-main--wide">
+          <div className="create-event-topbar">
+            <button
+              className="create-event-back-btn"
+              onClick={() => requestNavigation("/my-events")}
             >
-              {s.id}. {s.label}
-            </div>
-          ))}
-        </div>
+              ← Back to My Events
+            </button>
+          </div>
 
-        <div style={{ marginTop: "auto", paddingTop: "24px" }}>
-          <button
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--text-dim)",
-              fontSize: "12px",
-              cursor: "pointer",
-              padding: "8px 14px",
-              borderRadius: "8px",
-              transition: "var(--transition)",
-            }}
-            onClick={() => navigate("/dashboard")}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; }}
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-      </aside>
+          <div className="create-event-hero">
+            <p className="events-hero-eyebrow create-event-hero-eyebrow">Organizer Flow</p>
+            <h1 className="create-event-page-title">Create New Event</h1>
+            <p className="create-event-page-state">{currentStep.label}</p>
+          </div>
 
-      {/* Main content */}
-      <div style={{ flex: 1, padding: "48px 56px", overflowY: "auto" }}>
-        <div style={{ maxWidth: "600px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "40px",
-            }}
-          >
-            <h2 style={{ fontSize: "22px", fontWeight: "800" }}>
+          <div className="create-event-stepper">
+            {STEPS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`create-event-step${step === s.id ? " create-event-step--active" : ""}${step > s.id ? " create-event-step--clickable" : ""}`}
+                onClick={() => step > s.id && setStep(s.id)}
+              >
+                <span className="create-event-step-dot">{s.id}</span>
+                <span className="create-event-step-label">{s.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="create-event-section-header">
+            <h2 className="create-event-step-title">
               {step === 1 ? "Create New Event" : step === 2 ? "Schedule & Capacity" : "Final Review"}
             </h2>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-dim)" }}>
+            <span className="create-event-step-count">
               Step {step} / 3
             </span>
           </div>
@@ -254,14 +525,20 @@ export default function CreateEvent() {
           {/* ---- STEP 1 ---- */}
           {step === 1 && (
             <>
+              {stepErrorMessage && (
+                <div className="create-event-step-warning">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  {stepErrorMessage}
+                </div>
+              )}
               <div className="form-field">
                 <label className="form-label">
                   Event Title <span style={{ color: "var(--error)" }}>*</span>
                 </label>
                 <input
                   type="text"
-                  className="input"
-                  style={{ height: "48px" }}
+                  className={`input${getFieldErrorClass("title")}`}
+                  style={{ height: "58px" }}
                   placeholder="e.g. International Workshop on Neural Signal Processing"
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
@@ -275,20 +552,20 @@ export default function CreateEvent() {
 
                 {/* Tags sélectionnés */}
                 {form.tagIds.length > 0 && (
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px", marginTop: "8px" }}>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px", marginTop: "10px" }}>
                     {availableTags.filter((t) => form.tagIds.includes(t.id)).map((tag) => (
                       <span
                         key={tag.id}
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "5px",
-                          padding: "4px 10px 4px 12px",
+                          gap: "6px",
+                          padding: "6px 12px 6px 14px",
                           borderRadius: "100px",
                           background: "rgba(0,229,255,0.12)",
                           border: "1px solid rgba(0,229,255,0.3)",
                           color: "var(--accent)",
-                          fontSize: "12px",
+                          fontSize: "13px",
                           fontWeight: "600",
                           fontFamily: "var(--font-mono)",
                         }}
@@ -299,7 +576,7 @@ export default function CreateEvent() {
                           onClick={() => toggleTag(tag.id)}
                           style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
                         >
-                          <X size={12} />
+                          <X size={13} />
                         </button>
                       </span>
                     ))}
@@ -307,15 +584,15 @@ export default function CreateEvent() {
                 )}
 
                 {tagsLoading && (
-                  <p style={{ fontSize: "11px", color: "var(--text-dim)", margin: "0 0 8px" }}>Chargement des tags...</p>
+                  <p style={{ fontSize: "13px", color: "var(--text-dim)", margin: "0 0 10px" }}>Chargement des tags...</p>
                 )}
 
                 {/* Input + bouton Ajouter */}
-                <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+                <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
                   <input
                     type="text"
                     className="input"
-                    style={{ height: "40px", flex: 1 }}
+                    style={{ height: "48px", flex: 1 }}
                     placeholder={availableTags.length ? "Add a tag…" : "No tags available"}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
@@ -325,13 +602,13 @@ export default function CreateEvent() {
                     type="button"
                     onClick={addTagByName}
                     style={{
-                      height: "40px",
-                      padding: "0 16px",
-                      borderRadius: "8px",
+                      height: "48px",
+                      padding: "0 18px",
+                      borderRadius: "10px",
                       border: "1px solid var(--border)",
                       background: "var(--surface-high)",
                       color: "var(--text-muted)",
-                      fontSize: "12px",
+                      fontSize: "13px",
                       fontWeight: "700",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
@@ -340,7 +617,7 @@ export default function CreateEvent() {
                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
                   >
-                    Ajouter
+                    Add Tag
                   </button>
                 </div>
 
@@ -358,12 +635,12 @@ export default function CreateEvent() {
                           type="button"
                           onClick={() => { toggleTag(tag.id); setTagInput(""); }}
                           style={{
-                            padding: "5px 14px",
+                            padding: "7px 15px",
                             borderRadius: "100px",
                             border: "1px solid var(--border)",
                             background: "var(--surface-high)",
                             color: "var(--text-muted)",
-                            fontSize: "12px",
+                            fontSize: "13px",
                             fontWeight: "600",
                             cursor: "pointer",
                             fontFamily: "var(--font-mono)",
@@ -382,7 +659,7 @@ export default function CreateEvent() {
               {/* Format */}
               <div className="form-field">
                 <label className="form-label">Format</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                <div className="create-event-grid-3">
                   {[
                     { key: "presential", label: "In-Person", icon: "🏛" },
                     { key: "online", label: "Online", icon: "🌐" },
@@ -393,8 +670,8 @@ export default function CreateEvent() {
                       type="button"
                       onClick={() => set("format", f.key)}
                       style={{
-                        padding: "28px 20px",
-                        borderRadius: "12px",
+                        padding: "34px 22px",
+                        borderRadius: "14px",
                         border: form.format === f.key ? "1px solid var(--accent)" : "1px solid var(--border)",
                         background: form.format === f.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
                         cursor: "pointer",
@@ -404,8 +681,8 @@ export default function CreateEvent() {
                     >
                       <div
                         style={{
-                          fontSize: "24px",
-                          marginBottom: "10px",
+                          fontSize: "28px",
+                          marginBottom: "12px",
                           color: form.format === f.key ? "var(--accent)" : "var(--text-dim)",
                         }}
                       >
@@ -414,7 +691,7 @@ export default function CreateEvent() {
                       <p
                         style={{
                           fontWeight: "700",
-                          fontSize: "15px",
+                          fontSize: "17px",
                           color: form.format === f.key ? "var(--accent)" : "var(--text-muted)",
                         }}
                       >
@@ -426,12 +703,12 @@ export default function CreateEvent() {
               </div>
 
               <button
-                className="btn btn-primary"
-                style={{ width: "100%", height: "48px", fontSize: "15px", borderRadius: "10px", marginTop: "16px" }}
-                onClick={() => setStep(2)}
-                disabled={!form.title}
+                className="btn btn-primary create-event-primary-action"
+                onClick={() => {
+                  if (validateStep(1)) setStep(2);
+                }}
               >
-                Continue to Schedule ...
+                Continue to Schedule
               </button>
             </>
           )}
@@ -439,64 +716,177 @@ export default function CreateEvent() {
           {/* ---- STEP 2 ---- */}
           {step === 2 && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              {stepErrorMessage && (
+                <div className="create-event-step-warning">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  {stepErrorMessage}
+                </div>
+              )}
+              <div className="create-event-grid-2">
                 <div className="form-field">
                   <label className="form-label">
                     Start Date <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <DateInput
-                    style={{ height: "48px" }}
+                    className={`create-event-schedule-input${getFieldErrorClass("date")}`}
+                    style={{ height: "62px" }}
                     value={form.date}
+                    min={todayInputValue}
                     onChange={(e) => set("date", e.target.value)}
                     required
                   />
+                  <button
+                    type="button"
+                    className={`create-event-switch${form.ends_next_day ? " create-event-switch--active" : ""}`}
+                    onClick={() => {
+                      const checked = !form.ends_next_day;
+                      if (checked) {
+                        setForm((prev) => ({
+                          ...prev,
+                          ends_next_day: true,
+                          end_date: prev.end_date || prev.date,
+                        }));
+                      } else {
+                        setForm((prev) => ({
+                          ...prev,
+                          ends_next_day: false,
+                          end_date: prev.date,
+                          end_time: getSuggestedSameDayEndTime(prev.date, prev.time),
+                        }));
+                      }
+                      clearFieldError("end_date");
+                      clearFieldError("end_time");
+                      if (stepErrorMessage) setStepErrorMessage("");
+                    }}
+                  >
+                    <span className="create-event-switch-track">
+                      <span className="create-event-switch-thumb" />
+                    </span>
+                    <span className="create-event-switch-copy">
+                      <strong>Ends on another day</strong>
+                      <small>Enable this only for events that continue past midnight.</small>
+                    </span>
+                  </button>
                 </div>
                 <div className="form-field">
-                  <label className="form-label">Start Time</label>
+                  <label className="form-label">
+                    Start Time <span style={{ color: "var(--error)" }}>*</span>
+                  </label>
                   <input
                     type="time"
-                    className="input"
-                    style={{ height: "48px" }}
+                    className={`input create-event-schedule-input${getFieldErrorClass("time")}`}
+                    style={{ height: "62px" }}
                     value={form.time}
                     onChange={(e) => set("time", e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="form-field">
-                <label className="form-label">End Time</label>
-                <input
-                  type="time"
-                  className="input"
-                  style={{ height: "48px", maxWidth: "200px" }}
-                  value={form.end_time}
-                  onChange={(e) => set("end_time", e.target.value)}
-                />
-                <p style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "4px" }}>
-                  Same day as start date.
-                </p>
-              </div>
+              {form.ends_next_day ? (
+                <div className="create-event-grid-2">
+                  <div className="form-field">
+                    <label className="form-label">
+                      End Date <span style={{ color: "var(--error)" }}>*</span>
+                    </label>
+                    <DateInput
+                      className={`create-event-schedule-input${getFieldErrorClass("end_date")}`}
+                      style={{ height: "62px" }}
+                      value={form.end_date}
+                      min={form.date || undefined}
+                      onChange={(e) => set("end_date", e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">
+                      End Time <span style={{ color: "var(--error)" }}>*</span>
+                    </label>
+                    <input
+                      type="time"
+                      className={`input create-event-schedule-input${getFieldErrorClass("end_time")}`}
+                      style={{ height: "62px" }}
+                      value={form.end_time}
+                      onChange={(e) => set("end_time", e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="create-event-grid-2">
+                  <div className="form-field">
+                    <label className="form-label">
+                      End Time <span style={{ color: "var(--error)" }}>*</span>
+                    </label>
+                    <input
+                      type="time"
+                      className={`input create-event-schedule-input${getFieldErrorClass("end_time")}`}
+                      style={{ height: "62px" }}
+                      value={form.end_time}
+                      onChange={(e) => set("end_time", e.target.value)}
+                    />
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label">Calculated Duration</label>
+                    <div className="create-event-duration-display">
+                      {computedDurationLabel}
+                    </div>
+                    <p className="create-event-inline-help">
+                      Same-day events must end before midnight.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {hasEqualMultiDayDates && (
+                <div className="create-event-step-warning create-event-step-warning--sticky">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  The end date cannot be the same as the start date when this option is enabled. If the event ends the same day, uncheck “Ends on another day”.
+                </div>
+              )}
+
+              {hasEndDateBeforeStartDate && (
+                <div className="create-event-step-warning create-event-step-warning--sticky">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  The end date must be after the start date for a multi-day event. If the event ends the same day, turn this option off.
+                </div>
+              )}
+
+              {hasPastStartDate && (
+                <div className="create-event-step-warning create-event-step-warning--sticky">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  The start date cannot be earlier than today. Please choose today or a future date.
+                </div>
+              )}
+
+              {hasInvalidSameDayEndTime && (
+                <div className="create-event-step-warning create-event-step-warning--sticky">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  For a same-day event, the end time must be after the start time. If it continues overnight, enable “Ends on another day”.
+                </div>
+              )}
 
               {(form.format === "presential" || form.format === "hybrid") && (
                 <>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <div className="create-event-grid-2">
                     <div className="form-field">
-                      <label className="form-label">City</label>
+                      <label className="form-label">
+                        City <span style={{ color: "var(--error)" }}>*</span>
+                      </label>
                       <input
                         type="text"
-                        className="input"
-                        style={{ height: "48px" }}
+                        className={`input${getFieldErrorClass("city")}`}
+                        style={{ height: "58px" }}
                         placeholder="e.g. Paris"
                         value={form.city}
                         onChange={(e) => set("city", e.target.value)}
                       />
                     </div>
                     <div className="form-field">
-                      <label className="form-label">Country</label>
+                      <label className="form-label">
+                        Country <span style={{ color: "var(--error)" }}>*</span>
+                      </label>
                       <input
                         type="text"
-                        className="input"
-                        style={{ height: "48px" }}
+                        className={`input${getFieldErrorClass("country")}`}
+                        style={{ height: "58px" }}
                         placeholder="e.g. France"
                         value={form.country}
                         onChange={(e) => set("country", e.target.value)}
@@ -504,15 +894,49 @@ export default function CreateEvent() {
                     </div>
                   </div>
                   <div className="form-field">
-                    <label className="form-label">Full Address</label>
+                    <label className="form-label">
+                      Full Address <span style={{ color: "var(--error)" }}>*</span>
+                    </label>
                     <input
                       type="text"
-                      className="input"
-                      style={{ height: "48px" }}
+                      className={`input${getFieldErrorClass("address_full")}`}
+                      style={{ height: "58px" }}
                       placeholder="Full venue address including building and postal code"
                       value={form.address_full}
                       onChange={(e) => set("address_full", e.target.value)}
                     />
+                  </div>
+                  <div className="create-event-card create-event-card--soft">
+                    <button
+                      type="button"
+                      className={`create-event-switch${form.address_share_later ? " create-event-switch--active" : ""}`}
+                      onClick={() => set("address_share_later", !form.address_share_later)}
+                    >
+                      <span className="create-event-switch-track">
+                        <span className="create-event-switch-thumb" />
+                      </span>
+                      <span className="create-event-switch-copy">
+                        <strong>Share the full address later</strong>
+                        <small>Keep the exact venue private until shortly before the event starts.</small>
+                      </span>
+                    </button>
+                    <p className="create-event-inline-help">
+                      Useful if you want to reveal the exact venue shortly before the event by email.
+                    </p>
+                    {form.address_share_later && (
+                      <div className="create-event-inline-toggle">
+                        {[24, 48].map((hours) => (
+                          <button
+                            key={hours}
+                            type="button"
+                            className={`create-event-choice-chip${form.address_share_offset_hours === hours ? " create-event-choice-chip--active" : ""}`}
+                            onClick={() => set("address_share_offset_hours", hours)}
+                          >
+                            Reveal {hours}h before start
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -525,11 +949,14 @@ export default function CreateEvent() {
                     </label>
                     <input
                       type="text"
-                      className="input"
-                      style={{ height: "48px" }}
+                      className={`input${getFieldErrorClass("online_platform")}`}
+                      style={{ height: "58px" }}
                       placeholder="e.g. Zoom, Teams, Google Meet"
                       value={form.online_platform}
-                      onChange={(e) => set("online_platform", e.target.value)}
+                      onChange={(e) => {
+                        autoDetectedPlatformRef.current = "";
+                        set("online_platform", e.target.value);
+                      }}
                       required
                     />
                   </div>
@@ -538,31 +965,96 @@ export default function CreateEvent() {
                     <input
                       type="url"
                       className="input"
-                      style={{ height: "48px" }}
+                      style={{ height: "58px" }}
                       placeholder="https://meeting-platform.com/your-link"
                       value={form.online_link}
-                      onChange={(e) => set("online_link", e.target.value)}
+                      onChange={(e) => handleOnlineLinkChange(e.target.value)}
                     />
+                  </div>
+                  <div className="create-event-card create-event-card--soft">
+                    <button
+                      type="button"
+                      className={`create-event-switch${form.online_share_later ? " create-event-switch--active" : ""}`}
+                      onClick={() => set("online_share_later", !form.online_share_later)}
+                    >
+                      <span className="create-event-switch-track">
+                        <span className="create-event-switch-thumb" />
+                      </span>
+                      <span className="create-event-switch-copy">
+                        <strong>Share the meeting link later</strong>
+                        <small>Show only the platform at publication, then reveal the full access link shortly before the event.</small>
+                      </span>
+                    </button>
+                    <p className="create-event-inline-help">
+                      Useful if you want to send the exact meeting link closer to the session start.
+                    </p>
+                    {form.online_share_later && (
+                      <div className="create-event-inline-toggle">
+                        {[24, 48].map((hours) => (
+                          <button
+                            key={hours}
+                            type="button"
+                            className={`create-event-choice-chip${form.online_share_offset_hours === hours ? " create-event-choice-chip--active" : ""}`}
+                            onClick={() => set("online_share_offset_hours", hours)}
+                          >
+                            Reveal {hours}h before start
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
 
               <div className="form-field">
-                <label className="form-label">Max Participants</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  className="input"
-                  style={{ height: "48px", maxWidth: "200px" }}
-                  value={form.capacity}
-                  onChange={(e) => set("capacity", e.target.value)}
-                />
+                <label className="form-label">
+                  Max Participants <span style={{ color: "var(--error)" }}>*</span>
+                </label>
+                <div className={`create-event-counter${getFieldErrorClass("capacity")}`}>
+                  <button type="button" className="create-event-counter-btn" onClick={() => setCapacity(Number(form.capacity) - 1)}>
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="create-event-counter-input"
+                    value={capacityInput}
+                    onFocus={(e) => {
+                      if (e.target.value === "0" || e.target.value === "1") {
+                        setCapacityInput("");
+                      }
+                    }}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") {
+                        setCapacityInput("");
+                        setForm((prev) => ({ ...prev, capacity: 0 }));
+                        clearFieldError("capacity");
+                        return;
+                      }
+
+                      if (!/^\d+$/.test(raw)) return;
+                      const parsed = Number.parseInt(raw, 10);
+                      setCapacityInput(raw);
+                      set("capacity", parsed);
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value === "") {
+                        setCapacityInput("0");
+                        set("capacity", 0);
+                      }
+                    }}
+                  />
+                  <button type="button" className="create-event-counter-btn" onClick={() => setCapacity(Number(form.capacity) + 1)}>
+                    +
+                  </button>
+                </div>
               </div>
 
               <div className="form-field">
                 <label className="form-label">Registration Mode</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div className="create-event-grid-tight">
                   {[
                     { key: "VALIDATION", label: "Manual Review", desc: "You approve each registration" },
                     { key: "AUTO", label: "Auto-Confirm", desc: "Registrations confirmed instantly" },
@@ -572,8 +1064,8 @@ export default function CreateEvent() {
                       type="button"
                       onClick={() => set("registration_mode", m.key)}
                       style={{
-                        padding: "14px",
-                        borderRadius: "10px",
+                        padding: "18px",
+                        borderRadius: "12px",
                         border:
                           form.registration_mode === m.key
                             ? "1px solid var(--accent)"
@@ -581,37 +1073,38 @@ export default function CreateEvent() {
                         background:
                           form.registration_mode === m.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
                         color: form.registration_mode === m.key ? "var(--accent)" : "var(--text-muted)",
-                        fontSize: "13px",
+                        fontSize: "15px",
                         fontWeight: "600",
                         cursor: "pointer",
                         transition: "var(--transition)",
                         textAlign: "left",
                       }}
                     >
-                      <p style={{ fontWeight: "700", marginBottom: "4px" }}>{m.label}</p>
-                      <p style={{ fontSize: "11px", opacity: 0.7 }}>{m.desc}</p>
+                      <p style={{ fontWeight: "700", marginBottom: "6px" }}>{m.label}</p>
+                      <p style={{ fontSize: "13px", opacity: 0.7 }}>{m.desc}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="form-field">
-                <label className="form-label">Registration Deadline <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <label className="form-label">Registration Deadline <span style={{ fontSize: "13px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
+                <div className="create-event-grid-2">
                   <DateInput
-                    style={{ height: "48px" }}
+                    className="create-event-schedule-input"
+                    style={{ height: "62px" }}
                     value={form.registration_deadline_date}
                     onChange={(e) => set("registration_deadline_date", e.target.value)}
                   />
                   <input
                     type="time"
-                    className="input"
-                    style={{ height: "48px" }}
+                    className="input create-event-schedule-input"
+                    style={{ height: "62px" }}
                     value={form.registration_deadline_time}
                     onChange={(e) => set("registration_deadline_time", e.target.value)}
                   />
                 </div>
-                <p style={{ fontSize: "11px", color: "var(--text-dim)", marginTop: "4px" }}>
+                <p style={{ fontSize: "13px", color: "var(--text-dim)", marginTop: "6px" }}>
                   If empty, registrations close at event start.
                 </p>
               </div>
@@ -619,8 +1112,8 @@ export default function CreateEvent() {
               <div className="form-field">
                 <label className="form-label">Description <span style={{ color: "var(--error)" }}>*</span></label>
                 <textarea
-                  className="input"
-                  style={{ height: "120px", resize: "vertical" }}
+                  className={`input${getFieldErrorClass("description")}`}
+                  style={{ height: "180px", resize: "vertical" }}
                   placeholder="Describe the scientific scope, agenda structure, and target audience…"
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
@@ -628,12 +1121,12 @@ export default function CreateEvent() {
               </div>
 
               <button
-                className="btn btn-primary"
-                style={{ width: "100%", height: "48px", fontSize: "15px", borderRadius: "10px", marginTop: "8px" }}
-                onClick={() => setStep(3)}
-                disabled={!form.date || !form.description.trim() || ((form.format === "online" || form.format === "hybrid") && !form.online_platform)}
+                className="btn btn-primary create-event-primary-action"
+                onClick={() => {
+                  if (validateStep(2)) setStep(3);
+                }}
               >
-                Generate Preview ...
+                Generate Preview
               </button>
             </>
           )}
@@ -641,31 +1134,23 @@ export default function CreateEvent() {
           {/* ---- STEP 3 ---- */}
           {step === 3 && (
             <>
+              {stepErrorMessage && (
+                <div className="create-event-step-warning">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  {stepErrorMessage}
+                </div>
+              )}
               {error && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "10px",
-                    background: "rgba(255, 77, 77, 0.08)",
-                    border: "1px solid rgba(255, 77, 77, 0.2)",
-                    color: "var(--error)",
-                    padding: "14px",
-                    borderRadius: "10px",
-                    fontSize: "13px",
-                    marginBottom: "20px",
-                    lineHeight: "1.5",
-                  }}
-                >
-                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "1px" }} />
+                <div className="create-event-alert">
+                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
                   {error}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "28px" }}>
                 <button
                   className="btn btn-primary"
-                  style={{ padding: "10px 24px", fontSize: "14px" }}
+                  style={{ padding: "14px 28px", fontSize: "16px" }}
                   onClick={handlePublish}
                   disabled={loading}
                 >
@@ -674,25 +1159,18 @@ export default function CreateEvent() {
               </div>
 
               {/* Preview card */}
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-strong)",
-                  borderRadius: "16px",
-                  padding: "28px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
+              <div className="create-event-card">
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "22px" }}>
                   <div
                     style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
+                      width: "52px",
+                      height: "52px",
+                      borderRadius: "12px",
                       background: "var(--secondary)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "14px",
+                      fontSize: "15px",
                       fontWeight: "800",
                       color: "#fff",
                     }}
@@ -700,19 +1178,19 @@ export default function CreateEvent() {
                     {organizer.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 style={{ fontSize: "18px", fontWeight: "800", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "6px" }}>
                       {form.title || "Event Title"}
                     </h3>
-                    <p style={{ fontSize: "12px", color: "var(--accent)" }}>Organized by {organizer}</p>
+                    <p style={{ fontSize: "14px", color: "var(--accent)" }}>Organized by {organizer}</p>
                   </div>
                   <span
                     style={{
                       marginLeft: "auto",
-                      fontSize: "11px",
+                      fontSize: "12px",
                       fontFamily: "var(--font-mono)",
                       color: "var(--accent)",
                       background: "rgba(0,229,255,0.1)",
-                      padding: "4px 10px",
+                      padding: "6px 12px",
                       borderRadius: "100px",
                     }}
                   >
@@ -720,18 +1198,28 @@ export default function CreateEvent() {
                   </span>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+                <div className="create-event-preview-grid">
                   {[
-                    { label: "Date", value: form.date ? `${form.date} ${form.time}` : "TBD" },
+                    {
+                      label: "Schedule",
+                      value: formatSchedulePreview(
+                        form.date,
+                        form.time,
+                        form.ends_next_day ? form.end_date : form.date,
+                        form.end_time,
+                      ),
+                    },
                     {
                       label: "Location",
                       value:
                         form.format === "online"
-                          ? (form.online_platform || "Online")
+                          ? `${form.online_platform || "Online"}${form.online_share_later ? " • link later" : ""}`
                           : form.format === "hybrid"
-                          ? (form.city ? `${form.city} + ${form.online_platform || "Online"}` : "Hybrid")
+                          ? (form.city
+                              ? `${form.city}${form.address_share_later ? " • full address later" : ""} + ${form.online_platform || "Online"}${form.online_share_later ? " • link later" : ""}`
+                              : "Hybrid")
                           : form.city
-                          ? `${form.city}, ${form.country}`
+                          ? `${form.city}, ${form.country}${form.address_share_later ? " • full address later" : ""}`
                           : "TBD",
                     },
                     {
@@ -744,14 +1232,14 @@ export default function CreateEvent() {
                       style={{
                         background: "var(--surface-high)",
                         border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        padding: "12px",
+                        borderRadius: "10px",
+                        padding: "16px",
                       }}
                     >
-                      <p style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "4px" }}>{item.label}</p>
+                      <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{item.label}</p>
                       <p
                         style={{
-                          fontSize: "13px",
+                          fontSize: "15px",
                           fontWeight: "700",
                           color: item.label === "Registration" ? "var(--accent)" : "var(--text)",
                         }}
@@ -762,53 +1250,64 @@ export default function CreateEvent() {
                   ))}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
+                <div className="create-event-preview-grid create-event-preview-grid--compact">
                   <div
                     style={{
                       background: "var(--surface-high)",
                       border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      padding: "12px",
+                      borderRadius: "10px",
+                      padding: "16px",
                     }}
                   >
-                    <p style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "4px" }}>Capacity</p>
-                    <p style={{ fontSize: "13px", fontWeight: "700" }}>{form.capacity} participants</p>
+                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Capacity</p>
+                    <p style={{ fontSize: "15px", fontWeight: "700" }}>{form.capacity} participants</p>
                   </div>
                   <div
                     style={{
                       background: "var(--surface-high)",
                       border: "1px solid var(--border)",
-                      borderRadius: "8px",
-                      padding: "12px",
+                      borderRadius: "10px",
+                      padding: "16px",
                     }}
                   >
-                    <p style={{ fontSize: "11px", color: "var(--text-dim)", marginBottom: "4px" }}>Format</p>
-                    <p style={{ fontSize: "13px", fontWeight: "700", textTransform: "capitalize" }}>
+                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Format</p>
+                    <p style={{ fontSize: "15px", fontWeight: "700", textTransform: "capitalize" }}>
                       {form.format}
                     </p>
+                  </div>
+                  <div
+                    style={{
+                      background: "var(--surface-high)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "10px",
+                      padding: "16px",
+                    }}
+                  >
+                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Duration</p>
+                    <p style={{ fontSize: "15px", fontWeight: "700" }}>{computedDurationLabel}</p>
                   </div>
                 </div>
 
                 {form.description && (
-                  <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.6", marginBottom: "16px" }}>
-                    {form.description.substring(0, 160)}
-                    {form.description.length > 160 ? "..." : ""}
+                  <p style={{ fontSize: "15px", color: "var(--text-muted)", lineHeight: "1.7", marginBottom: "18px" }}>
+                    {form.description.substring(0, 220)}
+                    {form.description.length > 220 ? "..." : ""}
                   </p>
                 )}
 
                 {form.tagIds.length > 0 && (
-                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     {availableTags
                       .filter((t) => form.tagIds.includes(t.id))
                       .map((tag) => (
                         <span
                           key={tag.id}
                           style={{
-                            padding: "3px 10px",
+                            padding: "5px 12px",
                             borderRadius: "100px",
                             background: "rgba(0,229,255,0.08)",
                             border: "1px solid rgba(0,229,255,0.2)",
-                            fontSize: "11px",
+                            fontSize: "12px",
                             color: "var(--accent)",
                             fontFamily: "var(--font-mono)",
                           }}
@@ -822,7 +1321,7 @@ export default function CreateEvent() {
 
               <button
                 className="btn btn-ghost"
-                style={{ marginTop: "16px", fontSize: "13px" }}
+                style={{ marginTop: "18px", fontSize: "14px" }}
                 onClick={() => setStep(2)}
               >
                 ← Back to Schedule
@@ -831,6 +1330,34 @@ export default function CreateEvent() {
           )}
         </div>
       </div>
+      </div>
+
+      {pendingNavigation && (
+        <div className="create-event-leave-backdrop" onClick={() => setPendingNavigation(null)}>
+          <div className="create-event-leave-modal" onClick={(e) => e.stopPropagation()}>
+            <p className="create-event-leave-eyebrow">Unsaved event</p>
+            <h2 className="create-event-leave-title">This event is not saved yet</h2>
+            <p className="create-event-leave-copy">
+              If you leave this page now, your event draft will be lost.
+            </p>
+            <div className="create-event-leave-actions">
+              <button className="btn btn-secondary" onClick={() => setPendingNavigation(null)}>
+                Stay here
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  const proceed = pendingNavigation;
+                  setPendingNavigation(null);
+                  proceed?.();
+                }}
+              >
+                Leave without saving
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

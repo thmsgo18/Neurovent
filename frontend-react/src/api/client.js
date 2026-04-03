@@ -16,14 +16,14 @@ export function decodeJWT(token) {
   }
 }
 
-export async function apiFetch(path, { method = "GET", body } = {}) {
+export async function apiFetch(path, { method = "GET", body, auth = true } = {}) {
   const token = getToken();
 
   const res = await fetch(API_BASE + path, {
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(auth && token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });

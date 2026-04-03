@@ -82,3 +82,14 @@ export const updateRegistrationStatus = async (id, status) => {
   }
   return apiFetch(`/api/registrations/${id}/status/`, { method: "PATCH", body: { status } });
 };
+
+// Company : retirer une inscription de l'event
+export const removeEventRegistration = async (id) => {
+  if (USE_MOCK) {
+    await new Promise((r) => setTimeout(r, 400));
+    const reg = MOCK_REGISTRATIONS.find((r) => r.id === id);
+    if (reg) reg.status = "CANCELLED";
+    return null;
+  }
+  return apiFetch(`/api/registrations/${id}/remove/`, { method: "PATCH" });
+};

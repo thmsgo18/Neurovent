@@ -85,6 +85,8 @@ export const registerCompanyApi = async (data) => {
       company_identifier: data.identifier,
       company_name: data.companyName,
       recovery_email: data.recoveryEmail,
+      siret: data.siret,
+      legal_representative: data.legalRepresentative,
       password: data.password,
       password_confirm: data.passwordConfirm,
     },

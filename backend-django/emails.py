@@ -12,6 +12,7 @@ Architecture prête pour le HTML :
 Fonctions disponibles :
   - send_registration_confirmed(registration, from_waitlist=False)
   - send_registration_rejected(registration)
+  - send_registration_removed_by_organizer(registration)
   - send_event_cancelled(event)
   - send_password_reset(email, reset_link)
   - send_company_verification_result(company)
@@ -142,6 +143,31 @@ def send_registration_rejected(registration):
             f"à \"{event.title}\" (le {event.date_start.strftime('%d/%m/%Y')}) "
             f"n'a pas été retenue par l'organisateur.\n\n"
             f"Vous pouvez consulter d'autres événements disponibles sur Neurovent :\n"
+            f"{browse_link}\n\n"
+            f"— L'équipe Neurovent"
+        ),
+        recipient_email=participant.email,
+    )
+
+
+def send_registration_removed_by_organizer(registration):
+    """
+    Email envoyé au participant quand l'organisateur retire manuellement
+    son inscription à un événement.
+    """
+    participant = registration.participant
+    event = registration.event
+    browse_link = f"{settings.FRONTEND_URL}/events/"
+
+    _send(
+        subject=f"Inscription retirée par l'organisateur — {event.title}",
+        text_message=(
+            f"Bonjour {participant.first_name},\n\n"
+            f"L'organisateur a retiré votre inscription à \"{event.title}\" "
+            f"prévu le {event.date_start.strftime('%d/%m/%Y à %H:%M')}.\n\n"
+            f"Si vous pensez qu'il s'agit d'une erreur, nous vous invitons à contacter "
+            f"directement l'organisation de l'événement.\n\n"
+            f"Vous pouvez découvrir d'autres événements sur Neurovent :\n"
             f"{browse_link}\n\n"
             f"— L'équipe Neurovent"
         ),

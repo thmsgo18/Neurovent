@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Globe, Youtube, Linkedin } from "lucide-react";
-import NavUserMenu from "../components/NavUserMenu";
 import { getCompanyProfile } from "../api/companies";
 import { normalizeEvent } from "../api/events";
-import { isAuthed } from "../store/authStore";
 
 export default function CompanyProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const authed = isAuthed();
 
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,27 +39,11 @@ export default function CompanyProfile() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
-      {/* Top bar */}
-      <header style={{ height: "60px", display: "flex", alignItems: "center", padding: "0 32px", borderBottom: "1px solid var(--border)", background: "var(--bg)", position: "sticky", top: 0, zIndex: 50 }}>
-        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: 0 }}>
+      <main style={{ maxWidth: "900px", margin: "0 auto", width: "100%", padding: "48px 32px" }}>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: 0, marginBottom: "24px" }}>
           <ArrowLeft size={15} /> Back
         </button>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <Link to="/" style={{ textDecoration: "none" }}>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "18px", color: "var(--text)" }}>
-              Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-            </span>
-          </Link>
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", minWidth: "120px" }}>
-          {authed ? <NavUserMenu /> : (
-            <Link to="/login" className="btn btn-secondary" style={{ padding: "8px 20px", fontSize: "13px", border: "1px solid var(--border-strong)" }}>Log In</Link>
-          )}
-        </div>
-      </header>
 
-      {/* Content */}
-      <main style={{ maxWidth: "900px", margin: "0 auto", width: "100%", padding: "48px 32px" }}>
         {/* Company header */}
         <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "40px" }}>
           {company.company_logo ? (

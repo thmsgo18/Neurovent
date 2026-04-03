@@ -109,6 +109,7 @@ class EventListView(generics.ListAPIView):
     ordering = ['date_start']  # tri par défaut : les plus prochains en premier
 
     def get_queryset(self):
+        now = timezone.now()
         # Les admins voient tous les statuts (filtrables via ?status=)
         # Les autres (public, participants, companies) voient uniquement les PUBLISHED
         if self.request.user.is_authenticated and self.request.user.is_staff:
@@ -119,7 +120,7 @@ class EventListView(generics.ListAPIView):
             )
         return (
             Event.objects
-            .filter(status='PUBLISHED')
+            .filter(status='PUBLISHED', date_end__gt=now)
             .select_related('company')
             .prefetch_related('tags', 'registrations')
         )

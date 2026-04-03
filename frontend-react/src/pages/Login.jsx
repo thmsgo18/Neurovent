@@ -48,52 +48,32 @@ export default function Login() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "var(--bg)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 20px",
-      }}
-    >
-      {/* Mode selector above the card */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          width: "100%",
-          maxWidth: "460px",
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderRadius: "14px",
-          padding: "4px",
-          marginBottom: "20px",
-        }}
-      >
+    <div className="login-page">
+      <div className="login-top-brand">
+        <div className="app-header__inner login-top-brand__inner">
+          <Link to="/" className="app-header__brand login-brand">
+            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
+          </Link>
+          <div aria-hidden="true" />
+          <div aria-hidden="true" />
+        </div>
+      </div>
+
+      <div className="login-shell">
+      <div className="login-mode-selector">
+        <span
+          className={`login-mode-slider${isLab ? " login-mode-slider--lab" : ""}`}
+          aria-hidden="true"
+        />
         {[
-          { key: "researcher", label: "Researcher" },
-          { key: "lab", label: "Lab / Organization" },
+          { key: "researcher", label: "Participant" },
+          { key: "lab", label: "Organization" },
         ].map((m) => (
           <button
             key={m.key}
             onClick={() => { setMode(m.key); setError(""); }}
+            className="login-mode-btn"
             style={{
-              padding: "12px",
-              borderRadius: "11px",
-              border: "none",
-              fontSize: "13px",
-              fontWeight: "600",
-              cursor: "pointer",
-              transition: "var(--transition)",
-              background:
-                mode === m.key
-                  ? m.key === "lab"
-                    ? "var(--secondary)"
-                    : "var(--accent)"
-                  : "transparent",
               color: mode === m.key ? (m.key === "lab" ? "#fff" : "#000") : "var(--text-muted)",
             }}
           >
@@ -102,77 +82,27 @@ export default function Login() {
         ))}
       </div>
 
-      {/* Card */}
       <div
+        className="login-card"
         style={{
-          width: "100%",
-          maxWidth: "460px",
           background: "var(--surface)",
           border: `1px solid ${isLab ? "var(--secondary)" : "var(--border-strong)"}`,
-          borderRadius: "20px",
-          padding: "48px 40px",
           boxShadow: isLab
             ? "0 0 40px rgba(168,85,247,0.08)"
             : "0 0 40px rgba(0,0,0,0.4)",
         }}
       >
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <Link to="/" style={{ textDecoration: "none" }}>
-            <span
-              style={{
-                fontFamily: "var(--font-display)",
-                fontWeight: "800",
-                fontSize: "22px",
-                color: "var(--text)",
-              }}
-            >
-              Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-            </span>
-          </Link>
-        </div>
-
-        <h2
-          style={{
-            fontSize: "26px",
-            fontWeight: "800",
-            textAlign: "center",
-            marginBottom: "10px",
-            letterSpacing: "-0.03em",
-          }}
-        >
-          {isLab ? "Lab Console" : "Welcome Back"}
+        <h2 className="login-title" style={{ textAlign: "center", marginBottom: "10px" }}>
+          {isLab ? "Company Console" : "Welcome Back"}
         </h2>
-        <p
-          style={{
-            textAlign: "center",
-            color: "var(--text-muted)",
-            fontSize: "14px",
-            marginBottom: "36px",
-            lineHeight: "1.5",
-          }}
-        >
+        <p className="login-subtitle" style={{ textAlign: "center", marginBottom: "36px" }}>
           {isLab
-            ? "Manage your research events and community."
-            : "Enter your credentials to access the researcher console."}
+            ? "Manage your events, registrations and verification workflow."
+            : "Sign in to manage your event registrations and discover new opportunities."}
         </p>
 
         {error && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "10px",
-              background: "rgba(255, 77, 77, 0.08)",
-              border: "1px solid rgba(255, 77, 77, 0.2)",
-              color: "var(--error)",
-              padding: "14px",
-              borderRadius: "10px",
-              fontSize: "13px",
-              marginBottom: "24px",
-              lineHeight: "1.5",
-            }}
-          >
+          <div className="login-error">
             <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "1px" }} />
             {error}
           </div>
@@ -184,7 +114,7 @@ export default function Login() {
             <input
               type="text"
               className="input"
-              style={{ height: "48px" }}
+              style={{ height: "54px" }}
               placeholder={isLab ? "your-lab-identifier" : "researcher@institution.edu"}
               value={form.credential}
               onChange={(e) => setForm({ ...form, credential: e.target.value })}
@@ -193,14 +123,12 @@ export default function Login() {
           </div>
 
           <div className="form-field">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+            <div className="login-password-row">
               <label className="form-label" style={{ marginBottom: 0 }}>{isLab ? "Security Key" : "Password"}</label>
               {!isLab && (
                 <Link
                   to="/forgot-password"
-                  style={{ fontSize: "12px", color: "var(--text-dim)", textDecoration: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-dim)")}
+                  className="login-forgot-link"
                 >
                   Forgot password?
                 </Link>
@@ -210,7 +138,7 @@ export default function Login() {
               <input
                 type={showPassword ? "text" : "password"}
                 className="input"
-                style={{ height: "48px", paddingRight: "48px" }}
+                style={{ height: "54px", paddingRight: "48px" }}
                 placeholder="••••••••"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -243,10 +171,10 @@ export default function Login() {
             className="btn"
             style={{
               width: "100%",
-              height: "50px",
+              height: "54px",
               marginTop: "8px",
               borderRadius: "10px",
-              fontSize: "15px",
+              fontSize: "16px",
               fontWeight: "700",
               background: isLab ? "var(--secondary)" : "var(--accent)",
               color: isLab ? "#fff" : "#000",
@@ -265,40 +193,15 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Lab info box */}
-        {isLab && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "14px",
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "10px",
-              fontSize: "12px",
-              color: "var(--text-muted)",
-              lineHeight: "1.6",
-            }}
-          >
-            Lab accounts include validation tools, event analytics and participant management.
-          </div>
-        )}
-
-        <p
-          style={{
-            textAlign: "center",
-            fontSize: "13px",
-            color: "var(--text-dim)",
-            marginTop: "28px",
-          }}
-        >
+        <p className="login-footer">
           {isLab ? "Not a lab?" : "No account yet?"}{" "}
           <Link
             to="/register"
-            style={{ color: "var(--accent)", textDecoration: "none", fontWeight: "700" }}
           >
             {isLab ? "Researcher signup" : "Register now"}
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );

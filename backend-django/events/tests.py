@@ -64,6 +64,7 @@ class EventListTest(TestCase):
         self.pub1 = create_event(self.company, title='Event Publié 1')
         self.pub2 = create_event(self.company, title='Event Publié 2', fmt=EventFormat.ONLINE)
         self.draft = create_event(self.company, title='Brouillon', evt_status=EventStatus.DRAFT)
+        self.past = create_event(self.company, title='Event Passé', days_from_now=-2)
 
     def test_public_list_only_published(self):
         """Un visiteur non connecté ne voit que les events PUBLISHED"""
@@ -73,6 +74,13 @@ class EventListTest(TestCase):
         self.assertIn('Event Publié 1', titles)
         self.assertIn('Event Publié 2', titles)
         self.assertNotIn('Brouillon', titles)
+
+    def test_public_list_excludes_past_events(self):
+        """La liste publique ne montre que les events en cours ou à venir"""
+        r = self.client.get('/api/events/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        titles = [e['title'] for e in r.data['results']]
+        self.assertNotIn('Event Passé', titles)
 
     def test_list_is_paginated(self):
         """La réponse contient les champs de pagination"""

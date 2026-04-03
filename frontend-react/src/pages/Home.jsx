@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Zap, Users, BarChart2, Lock } from "lucide-react";
 import { isAuthed } from "../store/authStore";
-import NavUserMenu from "../components/NavUserMenu";
 import "../styles/Home.css";
 
 const STATS = [
@@ -28,19 +27,7 @@ const FOR_LABS = [
 export default function Home() {
   const navigate = useNavigate();
   const authed = isAuthed();
-  const navRef = useRef(null);
   const statsRef = useRef(null);
-
-  // Navbar: add blur+bg on scroll
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const onScroll = () => {
-      nav.classList.toggle("home-nav--scrolled", window.scrollY > 20);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   // Stats: counter animation on scroll into view
   useEffect(() => {
@@ -77,38 +64,6 @@ export default function Home() {
 
   return (
     <div className="home-page">
-
-      {/* Nav */}
-      <nav className="home-nav" ref={navRef}>
-        <Link to="/" style={{ textDecoration: "none", flexShrink: 0 }}>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "20px", color: "var(--text)" }}>
-            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </span>
-        </Link>
-
-        <div className="home-nav-links">
-          <Link to="/events" className="home-nav-link">Events</Link>
-          {authed && (
-            <Link to="/dashboard" className="home-nav-link">Dashboard</Link>
-          )}
-        </div>
-
-        <div className="home-nav-actions">
-          {authed ? (
-            <NavUserMenu />
-          ) : (
-            <>
-              <Link to="/register" className="btn btn-ghost" style={{ border: "1px solid var(--border-strong)" }}>
-                Register
-              </Link>
-              <Link to="/login" className="btn btn-primary">
-                Sign In
-              </Link>
-            </>
-          )}
-        </div>
-      </nav>
-
       {/* Hero */}
       <main className="home-hero">
         <div className="home-hero-text">
@@ -204,11 +159,13 @@ export default function Home() {
       {!authed && (
         <section className="home-cta">
           <div className="home-section-inner" style={{ textAlign: "center" }}>
-            <h2 className="home-section-title" style={{ marginBottom: "16px" }}>Ready to join the community?</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "16px", marginBottom: "36px", lineHeight: "1.6" }}>
+            <h2 className="home-section-title" style={{ marginBottom: "16px", maxWidth: "unset" }}>
+              Ready to join the community?
+            </h2>
+            <p className="home-cta-copy">
               Register as a researcher to discover and attend events,<br />or create a lab account to publish your own.
             </p>
-            <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+            <div className="home-cta-actions">
               <Link to="/register" className="btn btn-primary">
                 Register as Researcher
               </Link>
@@ -223,10 +180,10 @@ export default function Home() {
       {/* Footer */}
       <footer className="home-footer">
         <p>© 2026 Neurovent — Scientific Event Platform</p>
-        <div style={{ display: "flex", gap: "24px" }}>
-          <Link to="/events" style={{ color: "var(--text-dim)", textDecoration: "none", fontSize: "13px" }}>Events</Link>
-          <Link to="/login" style={{ color: "var(--text-dim)", textDecoration: "none", fontSize: "13px" }}>Sign In</Link>
-          <Link to="/register" style={{ color: "var(--text-dim)", textDecoration: "none", fontSize: "13px" }}>Register</Link>
+        <div className="home-footer-links">
+          <Link to="/events" className="home-footer-link">Events</Link>
+          <Link to="/login" className="home-footer-link">Sign In</Link>
+          <Link to="/register" className="home-footer-link">Register</Link>
         </div>
       </footer>
 

@@ -1,128 +1,50 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { LogOut, Calendar, MapPin, Plus, X } from "lucide-react";
-import { getRole, getDisplayName, getCompanyName, logout } from "../store/authStore";
-import { getMyEventsApi } from "../api/events";
+import { useNavigate } from "react-router-dom";
+import { Calendar, X } from "lucide-react";
+import { getRole, getDisplayName, getCompanyName } from "../store/authStore";
+import {
+  downloadCompanyPerformanceStats,
+  downloadCompanySummaryStats,
+  getCompanyDashboardStats,
+} from "../api/events";
 import { getMyRegistrations, cancelRegistration } from "../api/registrations";
 import "../styles/Dashboard.css";
 
-// ---- Shared sidebar shell ----
-function DashboardShell({ navItems, activeSection, onNav, bottomSlot, topTitle, topAction, children }) {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
+// ---- Shared shell ----
+function DashboardShell({
+  navItems,
+  activeSection,
+  onNav,
+  topTitle,
+  topAction,
+  children,
+  showTopbar = true,
+  contentClassName = "",
+}) {
   return (
-    <div style={{ display: "flex", height: "100vh", background: "var(--bg)", overflow: "hidden" }}>
-      {/* Sidebar */}
-      <aside
-        style={{
-          width: "180px",
-          minWidth: "180px",
-          background: "var(--surface)",
-          borderRight: "1px solid var(--border)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "16px",
-        }}
-      >
-        <Link to="/" style={{ textDecoration: "none", marginBottom: "28px", display: "block" }}>
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: "800",
-              fontSize: "16px",
-              color: "var(--text)",
-            }}
-          >
-            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </span>
-        </Link>
+    <div className="dashboard-page">
+      <div className="dashboard-main dashboard-main--full">
+        {showTopbar && (
+          <div className="dashboard-topbar dashboard-topbar--full">
+            <h3 className="dashboard-topbar-title">{topTitle}</h3>
+            <div className="dashboard-topbar-controls">
+              <div className="dashboard-topbar-nav">
+                {navItems.map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => onNav(item.key)}
+                    className={`dashboard-topbar-nav-btn${activeSection === item.key ? " dashboard-topbar-nav-btn--active" : ""}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              {topAction ? <div className="dashboard-topbar-action">{topAction}</div> : null}
+            </div>
+          </div>
+        )}
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => onNav(item.key)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                padding: "9px 12px",
-                borderRadius: "8px",
-                border: "none",
-                fontSize: "12px",
-                fontWeight: activeSection === item.key ? "700" : "500",
-                cursor: "pointer",
-                background:
-                  activeSection === item.key ? "rgba(0,229,255,0.1)" : "transparent",
-                color:
-                  activeSection === item.key ? "var(--accent)" : "var(--text-dim)",
-                transition: "var(--transition)",
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Bottom slot (user info or org badge) */}
-        {bottomSlot}
-
-        <button
-          onClick={handleLogout}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            background: "none",
-            border: "none",
-            color: "var(--text-dim)",
-            cursor: "pointer",
-            fontSize: "11px",
-            padding: "8px 12px",
-            borderRadius: "8px",
-            marginTop: "8px",
-            transition: "var(--transition)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "var(--error)";
-            e.currentTarget.style.background = "rgba(255,77,77,0.06)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "var(--text-dim)";
-            e.currentTarget.style.background = "none";
-          }}
-        >
-          <LogOut size={13} />
-          Log out
-        </button>
-      </aside>
-
-      {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Top nav */}
-        <div
-          style={{
-            height: "52px",
-            borderBottom: "1px solid var(--border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 24px",
-            flexShrink: 0,
-            background: "rgba(12,12,20,0.8)",
-          }}
-        >
-          <h3 style={{ fontSize: "14px", fontWeight: "700" }}>{topTitle}</h3>
-          {topAction}
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+        <div className={`dashboard-content ${contentClassName}`.trim()}>
           {children}
         </div>
       </div>
@@ -135,6 +57,16 @@ function UserDashboard() {
   const navigate = useNavigate();
   const [registrations, setRegistrations] = useState([]);
   const [cancelling, setCancelling] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  const formatShortDate = (value) => {
+    if (!value) return "";
+    return new Date(value).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   useEffect(() => {
     getMyRegistrations().then(setRegistrations).catch(console.error);
@@ -150,9 +82,9 @@ function UserDashboard() {
   };
 
   const displayName = getDisplayName() || "Researcher";
-  const initials = displayName.substring(0, 2).toUpperCase();
 
   const activeRegs = registrations.filter((r) => r.status !== "CANCELLED" && r.status !== "REJECTED");
+  const visibleRegs = activeRegs.filter((r) => statusFilter === "ALL" ? true : r.status === statusFilter);
   const confirmedCount = activeRegs.filter((r) => r.status === "CONFIRMED").length;
   const pendingCount = activeRegs.filter((r) => r.status === "PENDING").length;
   const waitlistCount = activeRegs.filter((r) => r.status === "WAITLIST").length;
@@ -170,317 +102,282 @@ function UserDashboard() {
     }
   };
 
-  const bottomSlot = (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", marginTop: "auto", marginBottom: "8px" }}>
-      <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: "800", color: "#000", flexShrink: 0 }}>
-        {initials}
-      </div>
-      <div style={{ overflow: "hidden" }}>
-        <p style={{ fontSize: "11px", fontWeight: "700", color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayName}</p>
-        <p style={{ fontSize: "10px", color: "var(--text-dim)" }}>Researcher</p>
-      </div>
-    </div>
-  );
-
   return (
     <DashboardShell
       navItems={navItems}
       activeSection="dashboard"
       onNav={handleNav}
-      bottomSlot={bottomSlot}
       topTitle="Researcher Dashboard"
       topAction={null}
+      showTopbar={false}
+      contentClassName="dashboard-content--fixed-shell"
     >
-      {/* Welcome + stats */}
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ fontSize: "clamp(28px, 3vw, 40px)", fontWeight: "900", lineHeight: "1", marginBottom: "8px", letterSpacing: "-0.03em" }}>
-          Welcome back, <span style={{ color: "var(--accent)" }}>{displayName.split(" ")[0]}</span>
-        </h1>
-        <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "20px" }}>
-          Explore upcoming scientific events and manage your registrations.
-        </p>
-        <div style={{ display: "flex", gap: "10px" }}>
+      <div className="dashboard-user-layout">
+        <div className="dashboard-user-static">
+          <div className="dashboard-welcome">
+            <h1 className="dashboard-welcome-title">
+              Welcome back, <span style={{ color: "var(--accent)" }}>{displayName.split(" ")[0]}</span>
+            </h1>
+            <p className="dashboard-welcome-copy">
+              Explore upcoming scientific events and manage your registrations.
+            </p>
+        <div className="dashboard-inline-stats">
           {[
-            { label: "Confirmed", value: confirmedCount, color: "var(--success)" },
-            { label: "Pending", value: pendingCount, color: "#f5c400" },
-            { label: "Waitlist", value: waitlistCount, color: "var(--accent)" },
+            { key: "CONFIRMED", label: "Confirmed", value: confirmedCount, color: "var(--success)" },
+            { key: "PENDING", label: "Pending", value: pendingCount, color: "#f5c400" },
+            { key: "WAITLIST", label: "Waitlist", value: waitlistCount, color: "var(--accent)" },
           ].map((s) => (
-            <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "12px 18px", minWidth: "80px" }}>
-              <p style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: "4px" }}>{s.label}</p>
-              <p style={{ fontSize: "22px", fontWeight: "800", color: s.color, lineHeight: 1 }}>{s.value}</p>
-            </div>
+            <button
+              key={s.label}
+              type="button"
+              className={`dashboard-inline-stat${statusFilter === s.key ? " dashboard-inline-stat--active" : ""}`}
+              onClick={() => setStatusFilter((prev) => prev === s.key ? "ALL" : s.key)}
+            >
+              <p className="dashboard-inline-stat-label">{s.label}</p>
+              <p className="dashboard-inline-stat-value" style={{ color: s.color }}>{s.value}</p>
+            </button>
           ))}
+          <button
+            type="button"
+            className={`dashboard-inline-stat dashboard-inline-stat--ghost${statusFilter === "ALL" ? " dashboard-inline-stat--active" : ""}`}
+            onClick={() => setStatusFilter("ALL")}
+          >
+            <p className="dashboard-inline-stat-label">View all</p>
+            <p className="dashboard-inline-stat-value">All</p>
+          </button>
         </div>
       </div>
 
-      {/* Registrations list */}
-      <h4 style={{ fontSize: "13px", fontWeight: "700", marginBottom: "12px" }}>
-        My Registrations ({activeRegs.length})
-      </h4>
-
-      {activeRegs.length === 0 ? (
-        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "32px", textAlign: "center" }}>
-          <p style={{ fontSize: "14px", color: "var(--text-muted)", marginBottom: "16px" }}>No active registrations.</p>
-          <button className="btn btn-primary" style={{ fontSize: "13px" }} onClick={() => navigate("/events")}>Browse Events</button>
+      <h4 className="dashboard-section-title">
+            My Registrations ({visibleRegs.length})
+          </h4>
         </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {activeRegs.map((reg) => {
-            const eventId = typeof reg.event === "object" ? reg.event.id : reg.event;
-            const title = reg.event_title || (typeof reg.event === "object" ? reg.event.title : null) || `Event #${eventId}`;
+
+        {visibleRegs.length === 0 ? (
+          <div className="dashboard-empty">
+            <p className="dashboard-empty-copy">No registrations match this filter.</p>
+            <button className="btn btn-primary" onClick={() => navigate("/events")}>Browse Events</button>
+          </div>
+        ) : (
+          <div className="dashboard-list-scroll">
+            <div className="dashboard-list">
+              {visibleRegs.map((reg) => {
+            const eventData = typeof reg.event === "object" ? reg.event : null;
+            const eventId = eventData ? eventData.id : reg.event;
+            const title = reg.event_title || eventData?.title || `Event #${eventId}`;
             const date = reg.event_date ? reg.event_date.split("T")[0] : "";
+            const organizer = reg.event_organizer || eventData?.organizer || "";
+            const format = eventData?.format;
+            const city = eventData?.city;
+            const country = eventData?.country;
+            const tags = (eventData?.tags || []).slice(0, 2).map((tag) => (typeof tag === "object" ? tag.name : tag));
+            const registrationDate = formatShortDate(reg.created_at);
             const statusColor =
               reg.status === "CONFIRMED" ? { bg: "rgba(0,255,149,0.1)", text: "var(--success)" }
               : reg.status === "WAITLIST" ? { bg: "rgba(168,85,247,0.1)", text: "var(--secondary)" }
               : { bg: "rgba(245,196,0,0.1)", text: "#f5c400" };
 
-            return (
-              <div
-                key={reg.id}
-                onClick={() => navigate(`/events/${eventId}`)}
-                style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", transition: "var(--transition)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-high)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface)")}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "13px", fontWeight: "700", marginBottom: "4px" }}>{title}</p>
-                  {date && (
-                    <p style={{ fontSize: "11px", color: "var(--text-dim)", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Calendar size={11} /> {date}
-                    </p>
-                  )}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, marginLeft: "12px" }}>
-                  <span style={{ fontSize: "10px", fontWeight: "700", fontFamily: "var(--font-mono)", padding: "3px 10px", borderRadius: "4px", background: statusColor.bg, color: statusColor.text }}>
-                    {reg.status === "CONFIRMED" ? "Confirmed" : reg.status === "WAITLIST" ? "Waitlist" : "Pending"}
-                  </span>
-                  <button
-                    onClick={(e) => handleCancel(e, reg.id)}
-                    disabled={cancelling === reg.id}
-                    title="Cancel registration"
-                    style={{ background: "none", border: "1px solid var(--border)", borderRadius: "6px", color: "var(--text-dim)", cursor: "pointer", padding: "4px 6px", display: "flex", alignItems: "center", transition: "var(--transition)", opacity: cancelling === reg.id ? 0.5 : 1 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--error)"; e.currentTarget.style.color = "var(--error)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                return (
+                  <div
+                    key={reg.id}
+                    onClick={() => navigate(`/events/${eventId}`)}
+                    className="dashboard-registration-item"
                   >
-                    <X size={12} />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                    <div className="dashboard-registration-info">
+                      <h3 className="dashboard-registration-title">{title}</h3>
+                      {organizer && (
+                        <p className="dashboard-registration-organizer">{organizer}</p>
+                      )}
+                      <div className="dashboard-registration-meta">
+                        {(format || city || date) && (
+                          <span className="dashboard-registration-meta-item">
+                            <span className="dashboard-registration-meta-bullet">•</span>
+                            {format === "online"
+                              ? "Online Session"
+                              : city
+                                ? `${city}${country ? `, ${country}` : ""}`
+                                : format === "hybrid"
+                                  ? "Hybrid Event"
+                                  : "In-Person Event"}
+                          </span>
+                        )}
+                        {date && (
+                          <span className="dashboard-registration-meta-item">
+                            <Calendar size={14} /> {date}
+                          </span>
+                        )}
+                        {tags.map((tag) => (
+                          <span key={tag} className="dashboard-registration-tag">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="dashboard-registration-submeta">
+                        {registrationDate && (
+                          <span className="dashboard-registration-submeta-item">
+                            Registered on {registrationDate}
+                          </span>
+                        )}
+                        {reg.status === "WAITLIST" && reg.waitlist_position ? (
+                          <span className="dashboard-registration-submeta-item">
+                            Waitlist position #{reg.waitlist_position}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="dashboard-registration-right">
+                      <span className="dashboard-status-badge" style={{ background: statusColor.bg, color: statusColor.text }}>
+                        {reg.status === "CONFIRMED" ? "Confirmed" : reg.status === "WAITLIST" ? "Waitlist" : "Pending"}
+                      </span>
+                      <button
+                        onClick={(e) => handleCancel(e, reg.id)}
+                        disabled={cancelling === reg.id}
+                        title="Cancel registration"
+                        className="dashboard-icon-btn"
+                        style={{ opacity: cancelling === reg.id ? 0.5 : 1 }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </DashboardShell>
   );
 }
 
 // ---- ORG DASHBOARD ----
 function OrgDashboard() {
-  const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState("events");
-
-  const navItems = [
-    { key: "events", label: "Events List" },
-    { key: "profile", label: "Lab Profile" },
-  ];
-
-  const handleNav = (key) => {
-    if (key === "profile") {
-      navigate("/profile");
-    } else {
-      setActiveSection(key);
-    }
-  };
+  const [dashboardStats, setDashboardStats] = useState({
+    total_views: 0,
+    total_registrations: 0,
+    pending_requests: 0,
+    confirmed_participants: 0,
+    waitlist_count: 0,
+    average_fill_rate: 0,
+    upcoming_events: 0,
+    past_events: 0,
+    cancellation_rate: 0,
+  });
 
   const orgName = getCompanyName() || getDisplayName() || "Lab";
+  useEffect(() => {
+    getCompanyDashboardStats().then(setDashboardStats).catch(console.error);
+  }, []);
 
-  const bottomSlot = (
-    <div
-      style={{
-        background: "rgba(0,229,255,0.06)",
-        border: "1px solid var(--border)",
-        borderRadius: "10px",
-        padding: "12px",
-        marginTop: "auto",
-        marginBottom: "8px",
-      }}
-    >
-      <p
-        style={{
-          fontSize: "11px",
-          fontWeight: "800",
-          color: "var(--accent)",
-          fontFamily: "var(--font-mono)",
-          textTransform: "uppercase",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {orgName}
-      </p>
-      <p style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px" }}>Lab Account</p>
-    </div>
-  );
+  const statCards = [
+    {
+      label: "Total views",
+      value: dashboardStats.total_views,
+      detail: "Combined views across your published event pages",
+      accent: "var(--accent)",
+    },
+    {
+      label: "Total registrations",
+      value: dashboardStats.total_registrations,
+      detail: "All participant registrations received so far",
+      accent: "var(--success)",
+    },
+    {
+      label: "Pending requests",
+      value: dashboardStats.pending_requests,
+      detail: "Registrations waiting for organization review",
+      accent: "#f5c400",
+    },
+    {
+      label: "Confirmed participants",
+      value: dashboardStats.confirmed_participants,
+      detail: "Participants already approved and confirmed",
+      accent: "var(--success)",
+    },
+    {
+      label: "Waitlist count",
+      value: dashboardStats.waitlist_count,
+      detail: "Participants currently waiting for a seat",
+      accent: "var(--secondary)",
+    },
+    {
+      label: "Average fill rate",
+      value: `${dashboardStats.average_fill_rate}%`,
+      detail: "Confirmed participants compared with total capacity",
+      accent: "var(--secondary)",
+    },
+    {
+      label: "Upcoming events",
+      value: dashboardStats.upcoming_events,
+      detail: "Published events that have not started yet",
+      accent: "var(--text)",
+    },
+    {
+      label: "Past events",
+      value: dashboardStats.past_events,
+      detail: "Events whose end date is already behind us",
+      accent: "var(--text-secondary)",
+    },
+    {
+      label: "Cancellation rate",
+      value: `${dashboardStats.cancellation_rate}%`,
+      detail: "Share of registrations cancelled after sign-up",
+      accent: "var(--secondary)",
+    },
+  ];
 
   return (
     <DashboardShell
-      navItems={navItems}
-      activeSection={activeSection}
-      onNav={handleNav}
-      bottomSlot={bottomSlot}
-      topTitle="Lab Console"
-      topAction={
-        <button
-          className="btn btn-primary"
-          style={{ fontSize: "11px", padding: "6px 14px", display: "flex", gap: "4px" }}
-          onClick={() => navigate("/events/create")}
-        >
-          <Plus size={13} />
-          Create New Event
-        </button>
-      }
+      navItems={[]}
+      activeSection=""
+      onNav={() => {}}
+      topTitle=""
+      topAction={null}
+      showTopbar={false}
+      contentClassName="dashboard-content--fixed-shell dashboard-content--org-fixed"
     >
-      {activeSection === "events" && (
-        <OrgEventsView navigate={navigate} />
-      )}
-    </DashboardShell>
-  );
-}
-
-function OrgEventsView({ navigate }) {
-  const [myEvents, setMyEvents] = useState([]);
-
-  useEffect(() => {
-    getMyEventsApi().then(setMyEvents).catch(console.error);
-  }, []);
-
-  const totalCapacity = myEvents.reduce((sum, e) => sum + (e.max_participants || 0), 0);
-  const totalRegistered = myEvents.reduce((sum, e) => sum + (e.registered_count || 0), 0);
-  const publishedCount = myEvents.filter((e) => e.status === "upcoming" || e.status === "PUBLISHED").length;
-
-  const stats = [
-    { label: "Total Events", value: String(myEvents.length).padStart(2, "0"), color: "var(--text)" },
-    { label: "Total Capacity", value: String(totalCapacity), color: "var(--text)" },
-    { label: "Registered", value: String(totalRegistered), color: "var(--accent)", highlight: true },
-    { label: "Published", value: String(publishedCount).padStart(2, "0"), color: "var(--success)" },
-  ];
-
-  return (
-    <>
-      {/* Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "12px",
-          marginBottom: "24px",
-        }}
-      >
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            style={{
-              background: "var(--surface)",
-              border: `1px solid ${s.highlight ? "var(--accent)" : "var(--border)"}`,
-              borderRadius: "10px",
-              padding: "14px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: "10px",
-                fontFamily: "var(--font-mono)",
-                color: "var(--text-dim)",
-                textTransform: "uppercase",
-                marginBottom: "6px",
-              }}
-            >
-              {s.label}
-            </p>
-            <p style={{ fontSize: "24px", fontWeight: "800", color: s.color, lineHeight: 1 }}>
-              {s.value}
+      <div className="dashboard-org-layout">
+        <section className="dashboard-org-hero">
+          <div className="dashboard-org-hero-copyblock">
+            <p className="dashboard-org-hero-eyebrow">Organization dashboard</p>
+            <h1 className="dashboard-org-hero-title">{orgName}</h1>
+            <p className="dashboard-org-hero-copy">
+              A global view of your event activity, registrations, and overall publishing performance.
             </p>
           </div>
-        ))}
-      </div>
+        </section>
 
-      {/* Quick tip for pending registrations */}
-      <div
-        style={{
-          background: "rgba(0,229,255,0.04)",
-          border: "1px solid rgba(0,229,255,0.15)",
-          borderRadius: "10px",
-          padding: "14px 18px",
-          marginBottom: "24px",
-          fontSize: "12px",
-          color: "var(--text-muted)",
-          lineHeight: "1.6",
-        }}
-      >
-        <span style={{ fontWeight: "700", color: "var(--accent)" }}>Manage registrations</span> — click on any event below to view and approve/reject registration requests.
-      </div>
-
-      {/* My events list */}
-      <h4 style={{ fontSize: "13px", fontWeight: "700", marginBottom: "12px" }}>My Events</h4>
-      {myEvents.length === 0 ? (
-        <p style={{ fontSize: "13px", color: "var(--text-dim)", padding: "16px 0" }}>
-          No events yet.{" "}
-          <span
-            style={{ color: "var(--accent)", cursor: "pointer", fontWeight: "600" }}
-            onClick={() => navigate("/events/create")}
-          >
-            Create your first event →
-          </span>
-        </p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {myEvents.map((ev) => (
-            <div
-              key={ev.id}
-              onClick={() => navigate(`/events/${ev.id}`)}
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: "10px",
-                padding: "12px 16px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                cursor: "pointer",
-                transition: "var(--transition)",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-high)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--surface)")}
-            >
-              <div>
-                <p style={{ fontSize: "13px", fontWeight: "600", marginBottom: "3px" }}>{ev.title}</p>
-                <p style={{ fontSize: "11px", color: "var(--text-dim)" }}>
-                  {ev.date} — {ev.registered_count || 0}/{ev.max_participants || 0} registered
-                </p>
-              </div>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontWeight: "700",
-                  fontFamily: "var(--font-mono)",
-                  padding: "3px 10px",
-                  borderRadius: "4px",
-                  background:
-                    ev.status === "live"
-                      ? "rgba(0,255,149,0.1)"
-                      : "rgba(0,229,255,0.1)",
-                  color: ev.status === "live" ? "var(--success)" : "var(--accent)",
-                  textTransform: "uppercase",
-                }}
-              >
-                {ev.status}
-              </span>
-            </div>
+        <section className="dashboard-org-stats-grid">
+          {statCards.map((stat) => (
+            <article key={stat.label} className="dashboard-org-stat-card">
+              <p className="dashboard-org-stat-label">{stat.label}</p>
+              <p className="dashboard-org-stat-value" style={{ color: stat.accent }}>
+                {stat.value}
+              </p>
+              <p className="dashboard-org-stat-detail">{stat.detail}</p>
+            </article>
           ))}
-        </div>
-      )}
-    </>
+        </section>
+
+        <section className="dashboard-org-exportbar">
+          <button
+            type="button"
+            className="btn btn-secondary dashboard-org-export-btn"
+            onClick={downloadCompanySummaryStats}
+          >
+            Download Summary CSV
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary dashboard-org-export-btn"
+            onClick={downloadCompanyPerformanceStats}
+          >
+            Download Performance CSV
+          </button>
+        </section>
+      </div>
+    </DashboardShell>
   );
 }
 

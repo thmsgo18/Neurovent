@@ -1,7 +1,30 @@
 import { apiFetch } from "./client";
-import { getUsername, getUserId } from "../store/authStore";
+import { getToken, getUsername } from "../store/authStore";
 
 export const USE_MOCK = false;
+
+function deriveEventStatus(rawStatus, dateStart, dateEnd) {
+  if (rawStatus === "CANCELLED") return "cancelled";
+  if (rawStatus === "DRAFT") return "draft";
+
+  const now = Date.now();
+  const startTimestamp = dateStart ? new Date(dateStart).getTime() : null;
+  const endTimestamp = dateEnd ? new Date(dateEnd).getTime() : startTimestamp;
+
+  if (!startTimestamp || Number.isNaN(startTimestamp)) return rawStatus?.toLowerCase() || "unknown";
+  if (now < startTimestamp) return "upcoming";
+  if (!endTimestamp || Number.isNaN(endTimestamp) || now <= endTimestamp) return "live";
+  return "past";
+}
+
+function getEventStatusLabel(status) {
+  if (status === "upcoming") return "Upcoming";
+  if (status === "live") return "Live";
+  if (status === "past") return "Ended";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "draft") return "Draft";
+  return status || "Unknown";
+}
 
 // ---- MOCK DATA ----
 // Les champs des mock utilisent les noms du backend Django
@@ -107,6 +130,8 @@ export function normalizeEvent(e) {
     location = addressFull || (addressCity ? `${addressCity}, ${addressCountry}` : null);
   }
 
+  const normalizedStatus = deriveEventStatus(e.status, e.date_start, e.date_end);
+
   return {
     ...e,
     // Dates
@@ -130,7 +155,8 @@ export function normalizeEvent(e) {
     // Normalisation des valeurs enum → UI
     format: e.format === "ONSITE" ? "presential" : e.format === "ONLINE" ? "online" : e.format === "HYBRID" ? "hybrid" : e.format?.toLowerCase(),
     validation: e.registration_mode === "VALIDATION" ? "manual" : "auto",
-    status: e.status === "PUBLISHED" ? "upcoming" : e.status === "CANCELLED" ? "cancelled" : e.status?.toLowerCase(),
+    status: normalizedStatus,
+    status_label: getEventStatusLabel(normalizedStatus),
     tags: (e.tags || []).map((t) => (typeof t === "object" ? t.name : t)),
     tag_ids: (e.tags || []).filter((t) => typeof t === "object").map((t) => t.id),
   };
@@ -157,7 +183,7 @@ export const getEvents = async (filters = {}) => {
   const tags = Array.isArray(filters.tags) ? filters.tags : filters.tags ? [filters.tags] : [];
   tags.forEach((t) => params.append("tags", t));
   const qs = params.toString();
-  const data = await apiFetch(`/api/events/${qs ? "?" + qs : ""}`);
+  const data = await apiFetch(`/api/events/${qs ? "?" + qs : ""}`, { auth: false });
   return {
     results: (data.results || data).map(normalizeEvent),
     count: data.count ?? (data.results || data).length,
@@ -173,7 +199,7 @@ export const getEvent = async (id) => {
     if (!event) throw new Error("Événement non trouvé");
     return normalizeEvent(event);
   }
-  const data = await apiFetch(`/api/events/${id}/`);
+  const data = await apiFetch(`/api/events/${id}/`, { auth: false });
   return normalizeEvent(data);
 };
 
@@ -231,3 +257,53 @@ export const getMyEventsApi = async () => {
   const data = await apiFetch("/api/events/my-events/");
   return (data.results || data).map(normalizeEvent);
 };
+
+export const getCompanyDashboardStats = async () => {
+  if (USE_MOCK) {
+    return {
+      total_views: 0,
+      total_registrations: 0,
+      pending_requests: 0,
+      confirmed_participants: 0,
+      waitlist_count: 0,
+      average_fill_rate: 0,
+      upcoming_events: 0,
+      past_events: 0,
+      cancellation_rate: 0,
+    };
+  }
+  return apiFetch("/api/events/dashboard-stats/");
+};
+
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+
+async function downloadProtectedCsv(path, fallbackFilename) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error("Unable to download stats right now.");
+  }
+
+  const blob = await res.blob();
+  const href = window.URL.createObjectURL(blob);
+  const contentDisposition = res.headers.get("content-disposition") || "";
+  const matchedFilename = contentDisposition.match(/filename="?([^"]+)"?/i)?.[1];
+  const filename = matchedFilename || fallbackFilename;
+
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(href);
+}
+
+export const downloadCompanySummaryStats = () =>
+  downloadProtectedCsv("/api/events/dashboard-stats/export-summary/", "dashboard_summary.csv");
+
+export const downloadCompanyPerformanceStats = () =>
+  downloadProtectedCsv("/api/events/dashboard-stats/export-performance/", "events_performance.csv");

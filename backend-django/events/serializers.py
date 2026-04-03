@@ -99,6 +99,10 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
         if event_format in ('ONSITE', 'HYBRID'):
             if not attrs.get('address_city') and not getattr(self.instance, 'address_city', None):
                 raise serializers.ValidationError({'address_city': 'La ville est requise pour un event en présentiel'})
+            if not attrs.get('address_country') and not getattr(self.instance, 'address_country', None):
+                raise serializers.ValidationError({'address_country': 'Le pays est requis pour un event en présentiel'})
+            if not attrs.get('address_full') and not getattr(self.instance, 'address_full', None):
+                raise serializers.ValidationError({'address_full': "L'adresse complète est requise pour un event en présentiel"})
         if event_format in ('ONLINE', 'HYBRID'):
             if not attrs.get('online_platform') and not getattr(self.instance, 'online_platform', None):
                 raise serializers.ValidationError({'online_platform': 'La plateforme est requise pour un event en ligne'})

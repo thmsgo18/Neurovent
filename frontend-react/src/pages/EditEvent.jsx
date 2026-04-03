@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { AlertCircle, X } from "lucide-react";
 import { getEvent, updateEvent } from "../api/events";
 import { getTags, getTagsSync } from "../api/tags";
@@ -138,28 +138,40 @@ export default function EditEvent() {
 
   if (fetchLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--text-dim)", fontSize: "12px", fontFamily: "var(--font-mono)" }}>{"// loading..."}</p>
+      <div className="create-event-page">
+        <div className="create-event-success-shell">
+          <p style={{ color: "var(--text-dim)", fontSize: "12px", fontFamily: "var(--font-mono)" }}>{"// loading..."}</p>
+        </div>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--success)", borderRadius: "24px", padding: "56px 48px", maxWidth: "480px", width: "100%", textAlign: "center" }}>
-          <div style={{ fontSize: "48px", marginBottom: "24px", color: "var(--success)" }}>✓</div>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>Changes Saved!</h2>
-          <p style={{ color: "var(--text-muted)", fontSize: "15px", marginBottom: "36px", lineHeight: "1.6" }}>
-            Your event has been updated successfully.
-          </p>
-          <div style={{ display: "flex", gap: "12px" }}>
-            <button className="btn btn-primary" style={{ flex: 1, height: "48px" }} onClick={() => navigate(`/events/${id}`)}>
-              View Event
-            </button>
-            <button className="btn btn-secondary" style={{ flex: 1, height: "48px" }} onClick={() => navigate("/dashboard")}>
-              Dashboard
-            </button>
+      <div className="create-event-page">
+        <div className="create-event-success-shell">
+          <div className="create-event-success-card">
+            <div style={{ fontSize: "48px", marginBottom: "24px", color: "var(--success)" }}>✓</div>
+            <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>Changes Saved!</h2>
+            <p style={{ color: "var(--text-muted)", fontSize: "15px", marginBottom: "36px", lineHeight: "1.6" }}>
+              Your event has been updated successfully.
+            </p>
+            <div className="create-event-inline-actions">
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1, height: "48px" }}
+                onClick={() => navigate(`/events/${id}`)}
+              >
+                View Event
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1, height: "48px" }}
+                onClick={() => navigate("/dashboard")}
+              >
+                Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -167,34 +179,29 @@ export default function EditEvent() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
-      {/* Left sidebar */}
-      <aside style={{ width: "200px", minWidth: "200px", background: "var(--surface)", borderRight: "1px solid var(--border)", padding: "32px 20px", display: "flex", flexDirection: "column" }}>
-        <Link to="/" style={{ textDecoration: "none", marginBottom: "48px", display: "block" }}>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "18px", color: "var(--text)" }}>
-            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </span>
-        </Link>
-        <p style={{ fontSize: "13px", fontWeight: "700", color: "var(--accent)", padding: "10px 14px", borderRadius: "8px", background: "rgba(0,229,255,0.08)", borderLeft: "2px solid var(--accent)" }}>
-          Edit Event
-        </p>
-        <div style={{ marginTop: "auto", paddingTop: "24px" }}>
-          <button
-            style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer", padding: "8px 14px", borderRadius: "8px" }}
-            onClick={() => navigate(`/events/${id}`)}
-          >
+    <div className="create-event-page">
+      <div className="create-event-shell">
+      <aside className="create-event-sidebar">
+        <div className="create-event-sidebar-title">
+          <p className="events-hero-eyebrow" style={{ marginBottom: "8px" }}>Organizer Flow</p>
+          <h2 className="create-event-step-title" style={{ marginBottom: 0 }}>Edit Event</h2>
+        </div>
+        <div className="create-event-sidebar-menu">
+          <p className="create-event-sidebar-item create-event-sidebar-item--active">Published Event</p>
+        </div>
+        <div className="create-event-sidebar-footer">
+          <button className="create-event-back-btn" onClick={() => navigate(`/events/${id}`)}>
             ← Back to Event
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div style={{ flex: 1, padding: "48px 56px", overflowY: "auto" }}>
-        <div style={{ maxWidth: "600px" }}>
+      <div className="create-event-content">
+        <div className="create-event-main">
           <h2 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "40px" }}>Edit Event</h2>
 
           {error && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", background: "rgba(255, 77, 77, 0.08)", border: "1px solid rgba(255, 77, 77, 0.2)", color: "var(--error)", padding: "14px", borderRadius: "10px", fontSize: "13px", marginBottom: "24px", lineHeight: "1.5" }}>
+            <div className="create-event-alert">
               <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "1px" }} />
               {error}
             </div>
@@ -252,7 +259,7 @@ export default function EditEvent() {
           {/* Format */}
           <div className="form-field">
             <label className="form-label">Format</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+            <div className="create-event-grid-3">
               {[{ key: "presential", label: "In-Person", icon: "🏛" }, { key: "online", label: "Online", icon: "🌐" }, { key: "hybrid", label: "Hybrid", icon: "🔀" }].map((f) => (
                 <button key={f.key} type="button" onClick={() => set("format", f.key)}
                   style={{ padding: "28px 20px", borderRadius: "12px", border: form.format === f.key ? "1px solid var(--accent)" : "1px solid var(--border)", background: form.format === f.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)", cursor: "pointer", textAlign: "center" }}>
@@ -264,7 +271,7 @@ export default function EditEvent() {
           </div>
 
           {/* Dates */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div className="create-event-grid-2">
             <div className="form-field">
               <label className="form-label">Start Date</label>
               <DateInput style={{ height: "48px" }} value={form.date} onChange={(e) => set("date", e.target.value)} />
@@ -282,7 +289,7 @@ export default function EditEvent() {
           {/* Location (presential / hybrid) */}
           {(form.format === "presential" || form.format === "hybrid") && (
             <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div className="create-event-grid-2">
                 <div className="form-field">
                   <label className="form-label">City</label>
                   <input type="text" className="input" style={{ height: "48px" }} value={form.city} onChange={(e) => set("city", e.target.value)} />
@@ -322,7 +329,7 @@ export default function EditEvent() {
           {/* Registration mode */}
           <div className="form-field">
             <label className="form-label">Registration Mode</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div className="create-event-grid-tight">
               {[
                 { key: "VALIDATION", label: "Manual Review", desc: "You approve each registration" },
                 { key: "AUTO", label: "Auto-Confirm", desc: "Registrations confirmed instantly" },
@@ -339,7 +346,7 @@ export default function EditEvent() {
           {/* Registration Deadline */}
           <div className="form-field">
             <label className="form-label">Registration Deadline <span style={{ fontSize: "11px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="create-event-grid-2">
               <DateInput style={{ height: "48px" }} value={form.registration_deadline_date} onChange={(e) => set("registration_deadline_date", e.target.value)} />
               <input type="time" className="input" style={{ height: "48px" }} value={form.registration_deadline_time} onChange={(e) => set("registration_deadline_time", e.target.value)} />
             </div>
@@ -352,7 +359,7 @@ export default function EditEvent() {
             <textarea className="input" style={{ height: "120px", resize: "vertical" }} value={form.description} onChange={(e) => set("description", e.target.value)} />
           </div>
 
-          <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+          <div className="create-event-inline-actions" style={{ marginTop: "8px" }}>
             <button
               className="btn btn-primary"
               style={{ flex: 1, height: "48px", fontSize: "15px", borderRadius: "10px" }}
@@ -370,6 +377,7 @@ export default function EditEvent() {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

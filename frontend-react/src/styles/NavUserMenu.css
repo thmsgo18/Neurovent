@@ -5,11 +5,14 @@
 .nav-user-pill {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
-  padding: 5px 12px 5px 6px;
-  border-radius: 8px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 999px;
   border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  user-select: none;
   transition: var(--transition);
 }
 
@@ -20,13 +23,13 @@
 }
 
 .nav-user-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #000;
   flex-shrink: 0;
@@ -36,8 +39,8 @@
 }
 
 .nav-user-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   font-family: var(--font-main);
@@ -45,9 +48,9 @@
 }
 
 .nav-user-chevron {
-  font-size: 9px;
+  font-size: 0.82rem;
   color: var(--text-dim);
-  margin-left: 2px;
+  margin-left: 4px;
   transition: var(--transition);
 }
 .nav-user-pill.open .nav-user-chevron { color: var(--text-muted); }
@@ -61,7 +64,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 6px;
-  min-width: 190px;
+  min-width: 220px;
   z-index: 200;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   -webkit-backdrop-filter: blur(16px);
@@ -74,13 +77,13 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 9px 12px;
+  padding: 11px 14px;
   background: none;
   border: none;
   border-radius: 6px;
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 600;
   cursor: pointer;
   text-align: left;
   transition: var(--transition);
@@ -107,7 +110,11 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
   .nav-user-label { display: none; }
-  .nav-user-pill { padding: 5px 8px 5px 6px; }
+  .nav-user-pill { padding: 7px 10px 7px 7px; }
+  .nav-user-avatar {
+    width: 34px;
+    height: 34px;
+  }
   .nav-user-dropdown {
     right: -8px;
     min-width: 172px;

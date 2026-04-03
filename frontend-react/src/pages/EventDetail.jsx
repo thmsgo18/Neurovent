@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, MapPin, Lock, Download, Check, X, Users } from "lucide-react";
-import NavUserMenu from "../components/NavUserMenu";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, MapPin, Lock, Download, Check, X, Users, Trash2 } from "lucide-react";
 import "../styles/EventDetail.css";
 import { getEvent, deleteEvent, getEventStats } from "../api/events";
-import { registerToEvent, cancelRegistration, getMyRegistrations, getEventRegistrations, updateRegistrationStatus, exportEventRegistrations } from "../api/registrations";
+import { registerToEvent, cancelRegistration, getMyRegistrations, getEventRegistrations, updateRegistrationStatus, exportEventRegistrations, removeEventRegistration } from "../api/registrations";
 import { isAuthed, isCompany, getCompanyName } from "../store/authStore";
 
 export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const authed = isAuthed();
+  const [nowTimestamp, setNowTimestamp] = useState(Date.now());
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +28,7 @@ export default function EventDetail() {
   const [stats, setStats] = useState(null);
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [removingRegistrationId, setRemovingRegistrationId] = useState(null);
 
   useEffect(() => {
     getEvent(id)
@@ -35,6 +36,14 @@ export default function EventDetail() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   // Vérifier si le participant est déjà inscrit
   useEffect(() => {
@@ -119,9 +128,11 @@ export default function EventDetail() {
   const loadRegistrations = () => {
     setRegsLoading(true);
     Promise.all([
+      getEvent(id),
       getEventRegistrations(id),
       getEventStats(id),
-    ]).then(([regs, s]) => {
+    ]).then(([freshEvent, regs, s]) => {
+      setEvent(freshEvent);
       setRegistrations(regs);
       setStats(s);
     }).catch(console.error)
@@ -137,11 +148,24 @@ export default function EventDetail() {
   const handleUpdateStatus = async (regId, status) => {
     try {
       await updateRegistrationStatus(regId, status);
-      setRegistrations((prev) => prev.map((r) => r.id === regId ? { ...r, status } : r));
-      // Recharger les stats pour refléter le nouveau décompte
-      getEventStats(id).then(setStats).catch(console.error);
+      loadRegistrations();
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleRemoveRegistration = async (regId) => {
+    const confirmed = window.confirm("Remove this participant from the event? They will receive an email notification.");
+    if (!confirmed) return;
+
+    setRemovingRegistrationId(regId);
+    try {
+      await removeEventRegistration(regId);
+      loadRegistrations();
+    } catch (err) {
+      alert(err.message || "Failed to remove this registration.");
+    } finally {
+      setRemovingRegistrationId(null);
     }
   };
 
@@ -166,31 +190,29 @@ export default function EventDetail() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p className="mono" style={{ color: "var(--text-dim)", fontSize: "12px" }}>{"// loading..."}</p>
-      </div>
-    );
-  }
-
-  if (!event) {
-    return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--text-muted)" }}>Event not found.</p>
-      </div>
-    );
-  }
-
-  // Le backend retourne company_name dans les events (pas d'ID numérique company exposé).
-  // On compare le company_name de l'event avec celui stocké au login.
   const myCompanyName = getCompanyName();
-  const isEventOwner = isCompany() && myCompanyName && event.company_name === myCompanyName;
-  const spotsLeft = event.spots_remaining ?? Math.max(0, (event.max_participants || 50) - (event.registered_count || 0));
-  const isFull = event.is_full ?? spotsLeft <= 0;
-  const registrationOpen = event.registration_open !== false;
-  const initials = (event.organizer || "NV").substring(0, 2).toUpperCase();
-  const isPast = event.status === "past" || event.status === "cancelled";
+  const isEventOwner = isCompany() && myCompanyName && event?.company_name === myCompanyName;
+
+  useEffect(() => {
+    if (!isEventOwner) return undefined;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior;
+    };
+  }, [isEventOwner]);
 
   const statusColor = {
     CONFIRMED: "var(--success)",
@@ -200,62 +222,125 @@ export default function EventDetail() {
     CANCELLED: "var(--text-dim)",
   };
 
-  return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
-      {/* Top bar */}
-      <header style={{ height: "60px", display: "flex", alignItems: "center", padding: "0 32px", borderBottom: "1px solid var(--border)", background: "var(--bg)", position: "sticky", top: 0, zIndex: 50 }}>
-        <button onClick={() => navigate("/events")} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: 0 }}>
-          <ArrowLeft size={15} />
-          Back to discovery
-        </button>
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <Link to="/" style={{ textDecoration: "none" }}>
-            <span style={{ fontFamily: "var(--font-display)", fontWeight: "800", fontSize: "18px", color: "var(--text)" }}>
-              Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-            </span>
-          </Link>
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", minWidth: "120px" }}>
-          {authed ? <NavUserMenu /> : (
-            <Link to="/login" className="btn btn-secondary" style={{ padding: "8px 20px", fontSize: "13px", border: "1px solid var(--border-strong)" }}>
-              Log In
-            </Link>
-          )}
-        </div>
-      </header>
+  const registrationBannerClass =
+    registrationStatus === "WAITLIST"
+      ? "event-detail-status-banner event-detail-status-banner--waitlist"
+      : registrationStatus === "PENDING"
+      ? "event-detail-status-banner event-detail-status-banner--pending"
+      : "event-detail-status-banner event-detail-status-banner--confirmed";
 
-      {/* Content */}
-      <main style={{ flex: 1, maxWidth: "1100px", margin: "0 auto", width: "100%", padding: "48px 32px", display: "flex", gap: "48px", alignItems: "flex-start" }}>
-        {/* Left column */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Title */}
-          <div style={{ display: "flex", gap: "20px", marginBottom: "32px", alignItems: "flex-start" }}>
-            <div style={{ width: "56px", height: "56px", borderRadius: "14px", background: "var(--secondary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: "17px", fontWeight: "800", color: "#fff", letterSpacing: "0.05em" }}>
+  const formatRemainingTime = (targetDate, prefix, endedLabel) => {
+    if (!targetDate) return null;
+
+    const targetTimestamp = new Date(targetDate).getTime();
+    const diff = targetTimestamp - nowTimestamp;
+
+    if (Number.isNaN(targetTimestamp)) return null;
+    if (diff <= 0) return endedLabel;
+
+    const totalMinutes = Math.floor(diff / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) {
+      return `${prefix} ${days} day${days > 1 ? "s" : ""}`;
+    }
+    if (hours > 0) {
+      return `${prefix} ${hours} hour${hours > 1 ? "s" : ""}`;
+    }
+    return `${prefix} ${Math.max(1, minutes)} minute${minutes > 1 ? "s" : ""}`;
+  };
+
+  if (loading) {
+    return (
+      <div className="event-detail-center">
+        <p className="mono event-detail-loading-copy">{"// loading..."}</p>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="event-detail-center">
+        <p style={{ color: "var(--text-muted)" }}>Event not found.</p>
+      </div>
+    );
+  }
+
+  // Le backend retourne company_name dans les events (pas d'ID numérique company exposé).
+  // On compare le company_name de l'event avec celui stocké au login.
+  const spotsLeft = event.spots_remaining ?? Math.max(0, (event.max_participants || 50) - (event.registered_count || 0));
+  const isFull = event.is_full ?? spotsLeft <= 0;
+  const registrationOpen = event.registration_open !== false;
+  const initials = (event.organizer || "NV").substring(0, 2).toUpperCase();
+  const isPast = event.status === "past" || event.status === "cancelled";
+  const eventCountdown = formatRemainingTime(event.date_start, "Starts in", "Event started");
+  const registrationCountdown = event.registration_deadline
+    ? formatRemainingTime(event.registration_deadline, "Registration closes in", "Registration closed")
+    : "No registration deadline";
+  const startDate = event.date_start ? new Date(event.date_start) : null;
+  const endDate = event.date_end ? new Date(event.date_end) : null;
+  const eventDateLabel = startDate
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(startDate)
+    : null;
+  const startTimeLabel = startDate
+    ? new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(startDate)
+    : null;
+  const endTimeLabel = endDate
+    ? new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(endDate)
+    : null;
+
+  return (
+    <div className={`event-detail-page${isEventOwner ? " event-detail-page--owner-fixed" : ""}`}>
+      <main className={`event-detail-main${isEventOwner ? " event-detail-main--owner" : ""}`}>
+        <div className={`event-detail-left${isEventOwner ? " event-detail-left--owner" : ""}`}>
+          <button onClick={() => navigate(isEventOwner ? "/my-events" : "/events")} className="event-detail-back-btn event-detail-back-btn--inline">
+            <ArrowLeft size={15} />
+            {isEventOwner ? "Back to my events" : "Back to discovery"}
+          </button>
+
+          <div className="event-detail-title-row">
+            <div className="event-detail-icon" style={{ background: "var(--secondary)" }}>
               {initials}
             </div>
             <div>
-              <h1 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: "800", lineHeight: "1.1", marginBottom: "8px" }}>
-                {event.title}
-              </h1>
-              <p style={{ fontSize: "14px", color: "var(--accent)", fontWeight: "600" }}>
-                {event.organizer || "Unknown"}
-              </p>
+              <h1 className="event-detail-title">{event.title}</h1>
+              <p className="event-detail-organizer">{event.organizer || "Unknown"}</p>
+              {eventDateLabel && (
+                <div className="event-detail-datetime">
+                  <span className="event-detail-datetime-pill">{eventDateLabel}</span>
+                  {startTimeLabel && (
+                    <span className="event-detail-datetime-pill event-detail-datetime-pill--secondary">
+                      {startTimeLabel}{endTimeLabel ? ` - ${endTimeLabel}` : ""}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Description */}
-          <p style={{ fontSize: "15px", color: "var(--text-muted)", lineHeight: "1.8", marginBottom: "32px" }}>
+          <p className="event-detail-description">
             {event.description || "No description available."}
           </p>
 
-          {/* Location */}
           {event.location && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", padding: "16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px", marginBottom: "28px" }}>
+            <div className="event-detail-location">
               <MapPin size={16} color="var(--accent)" style={{ marginTop: "2px", flexShrink: 0 }} />
               <div>
-                <p style={{ fontSize: "14px", color: "var(--text)", fontWeight: "600" }}>{event.location}</p>
+                <p className="event-detail-location-name">{event.location}</p>
                 {event.city && (
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "3px" }}>
+                  <p className="event-detail-location-meta">
                     {event.city}, {event.country}
                   </p>
                 )}
@@ -263,15 +348,14 @@ export default function EventDetail() {
             </div>
           )}
 
-          {/* Tags */}
           {(event.tags || []).length > 0 && (
-            <div>
-              <p style={{ fontSize: "11px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <div className="event-detail-tags-section">
+              <p className="event-detail-tags-label">
                 Tags
               </p>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div className="event-detail-tags">
                 {event.tags.map((tag) => (
-                  <span key={tag} style={{ padding: "6px 14px", borderRadius: "100px", background: "var(--surface)", border: "1px solid var(--border)", fontSize: "12px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                  <span key={tag} className="event-detail-tag">
                     #{tag}
                   </span>
                 ))}
@@ -279,14 +363,13 @@ export default function EventDetail() {
             </div>
           )}
 
-          {/* Inline registrations panel (company owner only) */}
           {isEventOwner && showRegistrations && (
-            <div style={{ marginTop: "40px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "700" }}>
+            <div className="event-detail-owner-panel">
+              <div className="event-detail-owner-header">
+                <h3 className="event-detail-owner-title">
                   Registrations
                   {stats && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-dim)", fontWeight: "400", marginLeft: "12px" }}>
+                    <span className="event-detail-owner-meta">
                       {stats.registrations?.confirmed || 0} confirmed · {stats.registrations?.pending || 0} pending · {stats.spots_remaining ?? 0} spots left
                     </span>
                   )}
@@ -294,92 +377,139 @@ export default function EventDetail() {
                 <button
                   onClick={handleExport}
                   disabled={exportLoading}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", padding: "7px 14px", borderRadius: "8px", border: "1px solid var(--border)", background: "var(--surface-high)", color: "var(--text-muted)", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}
+                  className="btn btn-secondary event-detail-owner-export-btn"
                 >
                   <Download size={13} />
                   {exportLoading ? "Exporting..." : "Export CSV"}
                 </button>
               </div>
-              {regsLoading ? (
-                <p style={{ fontSize: "12px", color: "var(--text-dim)" }}>Loading...</p>
-              ) : registrations.length === 0 ? (
-                <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>No registrations yet.</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {registrations.map((reg) => {
-                    const name = reg.participant_name || `#${reg.id}`;
-                    const regDate = reg.created_at ? new Date(reg.created_at).toLocaleDateString() : null;
-                    return (
-                      <div key={reg.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "12px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "10px" }}>
-                        <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: "14px", fontWeight: "600", color: "var(--text)" }}>{name}</p>
-                          {regDate && (
-                            <p style={{ fontSize: "12px", color: "var(--text-dim)" }}>Registered {regDate}</p>
+              <div className="event-detail-owner-scroll">
+                {regsLoading ? (
+                  <p className="event-detail-loading-copy">Loading...</p>
+                ) : registrations.length === 0 ? (
+                  <p className="event-detail-panel-note-copy">No registrations yet.</p>
+                ) : (
+                  <div className="event-detail-owner-list">
+                    {registrations.map((reg) => {
+                      const name = reg.participant_name || `#${reg.id}`;
+                      const regDate = reg.created_at ? new Date(reg.created_at).toLocaleDateString() : null;
+                      return (
+                        <div key={reg.id} className="event-detail-owner-item">
+                          <div className="event-detail-owner-item-info">
+                            <p className="event-detail-owner-item-name">{name}</p>
+                            {regDate && (
+                              <p className="event-detail-owner-item-date">Registered {regDate}</p>
+                            )}
+                          </div>
+                          <span className="event-detail-status-pill" style={{ color: statusColor[reg.status] || "var(--text-muted)", borderColor: statusColor[reg.status] || "var(--border)" }}>
+                            {reg.status}
+                          </span>
+                          {reg.status === "PENDING" && (
+                            <div className="event-detail-owner-actions">
+                              <button
+                                onClick={() => handleUpdateStatus(reg.id, "CONFIRMED")}
+                                className="event-detail-icon-btn"
+                                style={{ border: "1px solid var(--success)", background: "rgba(0,255,149,0.08)", color: "var(--success)" }}
+                              >
+                                <Check size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleUpdateStatus(reg.id, "REJECTED")}
+                                className="event-detail-icon-btn"
+                                style={{ border: "1px solid var(--error)", background: "rgba(255,77,77,0.08)", color: "var(--error)" }}
+                              >
+                                <X size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleRemoveRegistration(reg.id)}
+                                disabled={removingRegistrationId === reg.id}
+                                className="event-detail-icon-btn event-detail-icon-btn--danger"
+                                title="Remove registration"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                          {reg.status !== "PENDING" && (
+                            <div className="event-detail-owner-actions">
+                              <button
+                                onClick={() => handleRemoveRegistration(reg.id)}
+                                disabled={removingRegistrationId === reg.id}
+                                className="event-detail-icon-btn event-detail-icon-btn--danger"
+                                title="Remove registration"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           )}
                         </div>
-                        <span style={{ fontSize: "11px", fontWeight: "700", color: statusColor[reg.status] || "var(--text-muted)", fontFamily: "var(--font-mono)", padding: "3px 10px", borderRadius: "100px", border: `1px solid ${statusColor[reg.status] || "var(--border)"}`, background: "rgba(255,255,255,0.03)" }}>
-                          {reg.status}
-                        </span>
-                        {reg.status === "PENDING" && (
-                          <div style={{ display: "flex", gap: "6px" }}>
-                            <button
-                              onClick={() => handleUpdateStatus(reg.id, "CONFIRMED")}
-                              style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid var(--success)", background: "rgba(0,255,149,0.08)", color: "var(--success)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                            >
-                              <Check size={13} />
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus(reg.id, "REJECTED")}
-                              style={{ width: "28px", height: "28px", borderRadius: "6px", border: "1px solid var(--error)", background: "rgba(255,77,77,0.08)", color: "var(--error)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                            >
-                              <X size={13} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Right column — Registration / Management card */}
-        <div style={{ width: "300px", flexShrink: 0 }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "16px", padding: "28px", position: "sticky", top: "80px" }}>
-            <h3 style={{ fontSize: "19px", fontWeight: "800", marginBottom: "20px" }}>
+        <div className="event-detail-right">
+          {(eventCountdown || registrationCountdown) && (
+            <div className="event-detail-countdown-stack">
+              {eventCountdown && (
+                <div className="event-detail-countdown-pill">
+                  {eventCountdown}
+                </div>
+              )}
+              {registrationCountdown && (
+                <div className="event-detail-countdown-pill event-detail-countdown-pill--secondary">
+                  {registrationCountdown}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="event-detail-reg-card">
+            <h3>
               {isEventOwner ? "Management" : isCompany() ? "Event Info" : "Registration"}
             </h3>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "20px" }}>
-              <div style={{ background: "var(--surface-high)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px" }}>
-                <p style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginBottom: "6px", textTransform: "uppercase" }}>Status</p>
-                <p style={{ fontSize: "14px", fontWeight: "700", color: event.status === "upcoming" ? "var(--accent)" : event.status === "cancelled" ? "var(--error)" : "var(--text-dim)" }}>
-                  {event.status === "upcoming" ? "Upcoming" : event.status === "cancelled" ? "Cancelled" : event.status || "Unknown"}
+            <div className="event-detail-reg-grid">
+              <div className="event-detail-reg-stat">
+                <p className="event-detail-reg-stat-label">Status</p>
+                <p
+                  className="event-detail-reg-stat-value"
+                  style={{
+                    color:
+                      event.status === "live"
+                        ? "var(--success)"
+                        : event.status === "upcoming"
+                          ? "var(--accent)"
+                          : event.status === "cancelled"
+                            ? "var(--error)"
+                            : "var(--text-dim)",
+                  }}
+                >
+                  {event.status_label || event.status || "Unknown"}
                 </p>
               </div>
-              <div style={{ background: "var(--surface-high)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px" }}>
-                <p style={{ fontSize: "10px", fontFamily: "var(--font-mono)", color: "var(--text-dim)", marginBottom: "6px", textTransform: "uppercase" }}>Capacity</p>
-                <p style={{ fontSize: "14px", fontWeight: "700", color: "var(--text)" }}>
+              <div className="event-detail-reg-stat">
+                <p className="event-detail-reg-stat-label">Capacity</p>
+                <p className="event-detail-reg-stat-value" style={{ color: "var(--text)" }}>
                   {event.registered_count || 0} / {event.max_participants || 50}
                 </p>
               </div>
             </div>
 
             {isEventOwner ? (
-              /* ---- Company owner: manage buttons ---- */
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div className="event-detail-actions-stack">
                 <button
                   className="btn btn-primary"
-                  style={{ width: "100%", height: "44px", fontSize: "14px", borderRadius: "10px" }}
+                  style={{ width: "100%" }}
                   onClick={() => navigate(`/events/${id}/edit`)}
                 >
                   Edit Event
                 </button>
                 <button
-                  className="btn btn-secondary"
-                  style={{ width: "100%", height: "44px", fontSize: "14px", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                  className="btn btn-secondary event-detail-management-btn"
                   onClick={handleToggleRegistrations}
                 >
                   <Users size={14} />
@@ -387,17 +517,11 @@ export default function EventDetail() {
                 </button>
                 <button
                   onClick={handleCancelEvent}
+                  className="event-detail-delete-btn"
                   style={{
-                    width: "100%",
-                    height: "44px",
-                    fontSize: "14px",
-                    borderRadius: "10px",
                     background: cancelConfirm ? "rgba(255,77,77,0.2)" : "rgba(255,77,77,0.08)",
                     border: "1px solid rgba(255,77,77,0.25)",
                     color: "var(--error)",
-                    cursor: "pointer",
-                    fontWeight: "600",
-                    transition: "var(--transition)",
                   }}
                   onMouseEnter={(e) => { if (!cancelConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.15)"; }}
                   onMouseLeave={(e) => { if (!cancelConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
@@ -405,51 +529,33 @@ export default function EventDetail() {
                   {cancelConfirm ? "Click again to confirm" : "Delete Event"}
                 </button>
                 {cancelConfirm && (
-                  <button
-                    onClick={() => setCancelConfirm(false)}
-                    style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", cursor: "pointer", padding: "4px 0" }}
-                  >
+                  <button onClick={() => setCancelConfirm(false)} className="event-detail-cancel-text">
                     Cancel
                   </button>
                 )}
               </div>
             ) : isCompany() ? (
-              /* ---- Company non-owner ---- */
-              <div style={{ padding: "20px", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", borderRadius: "10px", textAlign: "center" }}>
-                <p style={{ fontSize: "12px", color: "var(--text-dim)", lineHeight: "1.6" }}>
+              <div className="event-detail-panel-note">
+                <p className="event-detail-panel-note-copy">
                   This event is managed by another organization.
                 </p>
               </div>
             ) : (
-              /* ---- Participant view ---- */
               <>
                 {event.validation === "manual" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", fontSize: "12px", color: "var(--text-muted)", padding: "10px", background: "rgba(255,255,255,0.03)", borderRadius: "8px", border: "1px solid var(--border)" }}>
+                  <div className="event-detail-manual-badge">
                     <Lock size={13} />
                     Manual validation required by organizer.
                   </div>
                 )}
                 {registerError && (
-                  <div style={{ fontSize: "12px", color: "var(--error)", background: "rgba(255,77,77,0.08)", border: "1px solid rgba(255,77,77,0.2)", borderRadius: "8px", padding: "10px 12px", marginBottom: "12px", lineHeight: "1.5" }}>
+                  <div className="event-detail-error">
                     {registerError}
                   </div>
                 )}
                 {registered ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <div style={{
-                      width: "100%",
-                      height: "48px",
-                      borderRadius: "10px",
-                      background: registrationStatus === "WAITLIST" ? "rgba(0,229,255,0.08)" : registrationStatus === "PENDING" ? "rgba(245,196,0,0.08)" : "rgba(0,255,149,0.1)",
-                      border: `1px solid ${registrationStatus === "WAITLIST" ? "var(--accent)" : registrationStatus === "PENDING" ? "#f5c400" : "var(--success)"}`,
-                      color: registrationStatus === "WAITLIST" ? "var(--accent)" : registrationStatus === "PENDING" ? "#f5c400" : "var(--success)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      fontWeight: "700",
-                      gap: "8px",
-                    }}>
+                  <div className="event-detail-actions-stack">
+                    <div className={registrationBannerClass}>
                       {registrationStatus === "WAITLIST" && "Waitlist position saved"}
                       {registrationStatus === "PENDING" && "Pending validation"}
                       {(registrationStatus === "CONFIRMED" || !registrationStatus) && "Registered ✓"}
@@ -457,18 +563,12 @@ export default function EventDetail() {
                     <button
                       onClick={handleCancelRegistration}
                       disabled={cancelLoading}
+                      className="event-detail-cancel-btn"
                       style={{
                         width: "100%",
-                        height: "38px",
-                        borderRadius: "10px",
                         background: "transparent",
-                        border: "1px solid rgba(255,77,77,0.3)",
-                        color: "var(--error)",
-                        fontSize: "13px",
-                        fontWeight: "600",
                         cursor: cancelLoading ? "not-allowed" : "pointer",
                         opacity: cancelLoading ? 0.6 : 1,
-                        transition: "var(--transition)",
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -480,7 +580,7 @@ export default function EventDetail() {
                   <button
                     className="btn btn-primary"
                     onClick={handleRegister}
-                    style={{ width: "100%", height: "48px", fontSize: "15px", borderRadius: "10px" }}
+                    style={{ width: "100%" }}
                     disabled={isPast || !registrationOpen || (isFull && event.validation === "manual")}
                   >
                     {isPast ? "Event Ended" : !registrationOpen ? "Registration Closed" : isFull && event.validation === "manual" ? "Full" : isFull ? "Join Waitlist" : "Register to Event"}
@@ -495,27 +595,24 @@ export default function EventDetail() {
       {/* Access Restricted Modal */}
       {showAccessModal && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
+          className="access-modal-overlay"
           onClick={() => setShowAccessModal(false)}
         >
-          <div
-            style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: "20px", padding: "48px 40px", maxWidth: "400px", width: "100%", textAlign: "center" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ width: "64px", height: "64px", background: "rgba(245,196,0,0.12)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+          <div className="access-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="access-modal-icon">
               <Lock size={28} color="#f5c400" />
             </div>
-            <h2 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "12px" }}>Access Restricted</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: "1.6" }}>
+            <h2 className="access-modal-title">Access Restricted</h2>
+            <p className="access-modal-text">
               You must be logged in to register for scientific events.
             </p>
-            <button className="btn btn-primary" style={{ width: "100%", marginBottom: "12px", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/login")}>
+            <button className="btn btn-primary" style={{ width: "100%", marginBottom: "12px" }} onClick={() => navigate("/login")}>
               Sign In to Account
             </button>
-            <button className="btn btn-secondary" style={{ width: "100%", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/register")}>
+            <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => navigate("/register")}>
               Create New Identity
             </button>
-            <button onClick={() => setShowAccessModal(false)} style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: "12px", marginTop: "20px", cursor: "pointer" }}>
+            <button onClick={() => setShowAccessModal(false)} className="access-modal-back-btn">
               -- Back to event description
             </button>
           </div>

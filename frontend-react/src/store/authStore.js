@@ -6,7 +6,35 @@ const DISPLAY_NAME_KEY = "display_name";
 const COMPANY_NAME_KEY = "company_name";
 const USER_ID_KEY = "user_id";
 
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
+const clearSessionStorage = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(USERNAME_KEY);
+  localStorage.removeItem(DISPLAY_NAME_KEY);
+  localStorage.removeItem(COMPANY_NAME_KEY);
+  localStorage.removeItem(USER_ID_KEY);
+};
+
+const isTokenExpired = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (!payload?.exp) return false;
+    return payload.exp <= Math.floor(Date.now() / 1000);
+  } catch {
+    return false;
+  }
+};
+
+export const getToken = () => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return null;
+  if (isTokenExpired(token)) {
+    clearSessionStorage();
+    return null;
+  }
+  return token;
+};
 export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
@@ -36,11 +64,5 @@ export const isAdmin = () => getRole() === "COMPANY" || getRole() === "ADMIN";
 export const isParticipant = () => getRole() === "PARTICIPANT";
 
 export const logout = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-  localStorage.removeItem(ROLE_KEY);
-  localStorage.removeItem(USERNAME_KEY);
-  localStorage.removeItem(DISPLAY_NAME_KEY);
-  localStorage.removeItem(COMPANY_NAME_KEY);
-  localStorage.removeItem(USER_ID_KEY);
+  clearSessionStorage();
 };

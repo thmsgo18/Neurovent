@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
 from .models import Registration, RegistrationStatus
 from events.models import Event, EventStatus, EventFormat, RegistrationMode
 from users.models import CustomUser, UserRole
@@ -273,6 +274,55 @@ class CancelAndPromoteTest(TestCase):
         """Un participant ne peut pas annuler l'inscription d'un autre"""
         self.client.force_authenticate(user=self.p2)
         r = self.client.patch(f'/api/registrations/{self.reg_p1.id}/cancel/')
+        self.assertIn(r.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
+
+
+class RemoveRegistrationByCompanyTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.company = create_company()
+        self.other_company = create_company(identifier='other-corp', company_name='OtherCorp')
+        self.event = create_event(self.company, capacity=1, registration_mode=RegistrationMode.AUTO)
+        self.participant = create_participant()
+        self.waiting_participant = create_participant(email='wait@test.com')
+        self.registration = Registration.objects.create(
+            participant=self.participant,
+            event=self.event,
+            status=RegistrationStatus.CONFIRMED,
+        )
+        self.waitlist_registration = Registration.objects.create(
+            participant=self.waiting_participant,
+            event=self.event,
+            status=RegistrationStatus.WAITLIST,
+        )
+
+    @patch('registrations.views.send_registration_removed_by_organizer')
+    @patch('registrations.views.send_registration_confirmed')
+    def test_company_can_remove_registration_and_promote_waitlist(self, mock_confirmed, mock_removed):
+        self.client.force_authenticate(user=self.company)
+        r = self.client.patch(f'/api/registrations/{self.registration.id}/remove/')
+        self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.registration.refresh_from_db()
+        self.waitlist_registration.refresh_from_db()
+        self.assertEqual(self.registration.status, RegistrationStatus.CANCELLED)
+        self.assertEqual(self.waitlist_registration.status, RegistrationStatus.CONFIRMED)
+        mock_removed.assert_called_once()
+        mock_confirmed.assert_called_once_with(self.waitlist_registration, from_waitlist=True)
+
+    def test_removed_registration_disappears_from_event_list(self):
+        self.client.force_authenticate(user=self.company)
+        self.client.patch(f'/api/registrations/{self.registration.id}/remove/')
+
+        r = self.client.get(f'/api/registrations/event/{self.event.id}/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        results = r.data.get('results', r.data)
+        ids = [item['id'] for item in results]
+        self.assertNotIn(self.registration.id, ids)
+
+    def test_other_company_cannot_remove_registration(self):
+        self.client.force_authenticate(user=self.other_company)
+        r = self.client.patch(f'/api/registrations/{self.registration.id}/remove/')
         self.assertIn(r.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
 
 
