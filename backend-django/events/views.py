@@ -1,16 +1,66 @@
+import csv
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
-from .models import Event
+from .models import Event, EventStatus
 from .serializers import EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer
 from .filters import EventFilter
 from users.models import UserRole
 from emails import send_event_cancelled
+
+
+def _get_company_dashboard_metrics(user):
+    now = timezone.now()
+    base_queryset = Event.objects.filter(company=user)
+
+    from registrations.models import Registration
+
+    registrations_queryset = Registration.objects.filter(event__company=user)
+    registration_stats = registrations_queryset.aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(status='PENDING')),
+        confirmed=Count('id', filter=Q(status='CONFIRMED')),
+        waitlist=Count('id', filter=Q(status='WAITLIST')),
+        cancelled=Count('id', filter=Q(status='CANCELLED')),
+    )
+
+    event_stats = base_queryset.aggregate(
+        total_views=Sum('view_count'),
+        total_capacity=Sum('capacity'),
+        upcoming_events=Count('id', filter=Q(status=EventStatus.PUBLISHED, date_start__gte=now)),
+        past_events=Count('id', filter=Q(date_end__lt=now)),
+    )
+
+    total_views = event_stats['total_views'] or 0
+    total_capacity = event_stats['total_capacity'] or 0
+    confirmed_participants = registration_stats['confirmed'] or 0
+    total_registrations = registration_stats['total'] or 0
+    cancelled_count = registration_stats['cancelled'] or 0
+    average_fill_rate = round((confirmed_participants / total_capacity) * 100, 1) if total_capacity > 0 else 0
+    cancellation_rate = round((cancelled_count / total_registrations) * 100, 1) if total_registrations > 0 else 0
+
+    return {
+        'total_views': total_views,
+        'total_registrations': total_registrations,
+        'pending_requests': registration_stats['pending'] or 0,
+        'confirmed_participants': confirmed_participants,
+        'waitlist_count': registration_stats['waitlist'] or 0,
+        'average_fill_rate': average_fill_rate,
+        'upcoming_events': event_stats['upcoming_events'] or 0,
+        'past_events': event_stats['past_events'] or 0,
+        'cancellation_rate': cancellation_rate,
+    }
+
+
+def _require_company_dashboard_access(request):
+    if request.user.role not in [UserRole.COMPANY, UserRole.ADMIN]:
+        raise PermissionDenied("Accès refusé")
 
 
 # --- Permissions personnalisées ---
@@ -86,6 +136,13 @@ class EventDetailView(generics.RetrieveAPIView):
         .prefetch_related('tags', 'registrations')
     )
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        Event.objects.filter(pk=instance.pk).update(view_count=F('view_count') + 1)
+        instance.refresh_from_db()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
 
 # --- Vues Company ---
 
@@ -144,6 +201,103 @@ class MyEventsView(generics.ListAPIView):
             .select_related('company')
             .prefetch_related('tags', 'registrations')
         )
+
+
+class CompanyDashboardStatsView(APIView):
+    """
+    Statistiques globales du dashboard entreprise — GET /api/events/dashboard-stats/
+    Accessible à l'entreprise connectée.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        _require_company_dashboard_access(request)
+        return Response(_get_company_dashboard_metrics(request.user))
+
+
+class CompanyDashboardStatsSummaryExportView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        _require_company_dashboard_access(request)
+        metrics = _get_company_dashboard_metrics(request.user)
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="dashboard_summary.csv"'
+        response.write('\ufeff')
+
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['Metric', 'Value'])
+        writer.writerow(['Total views', metrics['total_views']])
+        writer.writerow(['Total registrations', metrics['total_registrations']])
+        writer.writerow(['Pending requests', metrics['pending_requests']])
+        writer.writerow(['Confirmed participants', metrics['confirmed_participants']])
+        writer.writerow(['Waitlist count', metrics['waitlist_count']])
+        writer.writerow(['Average fill rate (%)', metrics['average_fill_rate']])
+        writer.writerow(['Upcoming events', metrics['upcoming_events']])
+        writer.writerow(['Past events', metrics['past_events']])
+        writer.writerow(['Cancellation rate (%)', metrics['cancellation_rate']])
+        return response
+
+
+class CompanyDashboardPerformanceExportView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        _require_company_dashboard_access(request)
+        events = (
+            Event.objects
+            .filter(company=request.user)
+            .annotate(
+                total_registrations=Count('registrations'),
+                confirmed_registrations=Count('registrations', filter=Q(registrations__status='CONFIRMED')),
+                pending_registrations=Count('registrations', filter=Q(registrations__status='PENDING')),
+                waitlist_registrations=Count('registrations', filter=Q(registrations__status='WAITLIST')),
+                cancelled_registrations=Count('registrations', filter=Q(registrations__status='CANCELLED')),
+            )
+            .order_by('date_start')
+        )
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = 'attachment; filename="events_performance.csv"'
+        response.write('\ufeff')
+
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow([
+            'Event title',
+            'Status',
+            'Start date',
+            'Format',
+            'Views',
+            'Capacity',
+            'Total registrations',
+            'Confirmed',
+            'Pending',
+            'Waitlist',
+            'Cancelled',
+            'Fill rate (%)',
+            'Cancellation rate (%)',
+        ])
+
+        for event in events:
+            fill_rate = round((event.confirmed_registrations / event.capacity) * 100, 1) if event.capacity > 0 else 0
+            cancellation_rate = round((event.cancelled_registrations / event.total_registrations) * 100, 1) if event.total_registrations > 0 else 0
+            writer.writerow([
+                event.title,
+                event.status,
+                event.date_start.strftime('%Y-%m-%d %H:%M'),
+                event.format,
+                event.view_count,
+                event.capacity,
+                event.total_registrations,
+                event.confirmed_registrations,
+                event.pending_registrations,
+                event.waitlist_registrations,
+                event.cancelled_registrations,
+                fill_rate,
+                cancellation_rate,
+            ])
+        return response
 
 
 class RecommendedEventsView(generics.ListAPIView):

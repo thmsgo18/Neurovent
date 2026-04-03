@@ -10,6 +10,7 @@ from datetime import timedelta
 from .models import Event, EventStatus, EventFormat, RegistrationMode
 from users.models import CustomUser, UserRole
 from tags.models import Tag
+from registrations.models import Registration, RegistrationStatus
 
 
 def create_participant(email='alice@test.com', password='Test1234!'):
@@ -200,6 +201,8 @@ class EventCRUDTest(TestCase):
         r = self.client.get(f'/api/events/{event.id}/')
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         self.assertEqual(r.data['title'], event.title)
+        event.refresh_from_db()
+        self.assertEqual(event.view_count, 1)
 
     def test_get_draft_event_not_visible_to_public(self):
         """Un event DRAFT n'est pas visible par un visiteur anonyme"""
@@ -275,6 +278,85 @@ class EventStatsTest(TestCase):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
 
 
+class CompanyDashboardStatsTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.company = create_company()
+        self.other_company = create_company(identifier='other-corp', company_name='OtherCorp')
+        self.participant = create_participant()
+
+        now = timezone.now()
+        self.upcoming_event = create_event(self.company, title='Upcoming Event', days_from_now=5, capacity=100)
+        self.upcoming_event.view_count = 42
+        self.upcoming_event.save()
+
+        self.past_event = create_event(self.company, title='Past Event', days_from_now=-10, capacity=50)
+        self.past_event.date_end = now - timedelta(days=9, hours=20)
+        self.past_event.view_count = 18
+        self.past_event.save()
+
+        Registration.objects.create(
+            participant=self.participant,
+            event=self.upcoming_event,
+            status=RegistrationStatus.CONFIRMED,
+        )
+        waitlist_participant = create_participant(email='wait@test.com')
+        Registration.objects.create(
+            participant=waitlist_participant,
+            event=self.upcoming_event,
+            status=RegistrationStatus.WAITLIST,
+        )
+        pending_participant = create_participant(email='pending@test.com')
+        Registration.objects.create(
+            participant=pending_participant,
+            event=self.upcoming_event,
+            status=RegistrationStatus.PENDING,
+        )
+        cancelled_participant = create_participant(email='cancelled@test.com')
+        Registration.objects.create(
+            participant=cancelled_participant,
+            event=self.past_event,
+            status=RegistrationStatus.CANCELLED,
+        )
+
+        other_event = create_event(self.other_company, title='Other Event', capacity=10)
+        other_event.view_count = 99
+        other_event.save()
+
+    def test_company_can_get_dashboard_stats(self):
+        self.client.force_authenticate(user=self.company)
+        r = self.client.get('/api/events/dashboard-stats/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['total_views'], 60)
+        self.assertEqual(r.data['total_registrations'], 4)
+        self.assertEqual(r.data['pending_requests'], 1)
+        self.assertEqual(r.data['confirmed_participants'], 1)
+        self.assertEqual(r.data['waitlist_count'], 1)
+        self.assertEqual(r.data['average_fill_rate'], 0.7)
+        self.assertEqual(r.data['upcoming_events'], 1)
+        self.assertEqual(r.data['past_events'], 1)
+        self.assertEqual(r.data['cancellation_rate'], 25.0)
+
+    def test_participant_cannot_get_dashboard_stats(self):
+        self.client.force_authenticate(user=self.participant)
+        r = self.client.get('/api/events/dashboard-stats/')
+        self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_company_can_export_dashboard_summary(self):
+        self.client.force_authenticate(user=self.company)
+        r = self.client.get('/api/events/dashboard-stats/export-summary/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertIn('text/csv', r['Content-Type'])
+        self.assertIn('dashboard_summary.csv', r['Content-Disposition'])
+
+    def test_company_can_export_events_performance(self):
+        self.client.force_authenticate(user=self.company)
+        r = self.client.get('/api/events/dashboard-stats/export-performance/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertIn('text/csv', r['Content-Type'])
+        self.assertIn('events_performance.csv', r['Content-Disposition'])
+
+
 # ─────────────────────────────────────────
 #  RECOMMANDATIONS
 # ─────────────────────────────────────────
@@ -284,8 +366,8 @@ class RecommendedEventsTest(TestCase):
         self.client = APIClient()
         self.company = create_company()
         self.participant = create_participant()
-        self.tag_ml = Tag.objects.create(name='Machine Learning')
-        self.tag_neuro = Tag.objects.create(name='Neurosciences')
+        self.tag_ml, _ = Tag.objects.get_or_create(name='Machine Learning')
+        self.tag_neuro, _ = Tag.objects.get_or_create(name='Neurosciences')
 
         self.event_ml = create_event(self.company, title='Event ML')
         self.event_ml.tags.add(self.tag_ml)

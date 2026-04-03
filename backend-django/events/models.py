@@ -50,6 +50,7 @@ class Event(models.Model):
     date_end = models.DateTimeField()
     capacity = models.PositiveIntegerField()
     status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT)
+    view_count = models.PositiveIntegerField(default=0)
     tags = models.ManyToManyField('tags.Tag', blank=True, related_name='events')
 
     # --- Format & inscription ---
