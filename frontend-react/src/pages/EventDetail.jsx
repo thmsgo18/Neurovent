@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, MapPin, Lock, Download, Check, X, Users, Trash2 } from "lucide-react";
 import "../styles/EventDetail.css";
 import { getEvent, deleteEvent, getEventStats } from "../api/events";
@@ -19,9 +19,11 @@ const resolveMediaUrl = (value) => {
 export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const role = getRole();
   const isAdmin = role === "ADMIN";
   const authed = isAuthed();
+  const [isWideViewport, setIsWideViewport] = useState(() => window.innerWidth > 1100);
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());
 
   const [event, setEvent] = useState(null);
@@ -57,6 +59,15 @@ export default function EventDetail() {
     }, 60000);
 
     return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsWideViewport(window.innerWidth > 1100);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Vérifier si le participant est déjà inscrit
@@ -219,9 +230,26 @@ export default function EventDetail() {
 
   const myCompanyName = getCompanyName();
   const isEventOwner = isCompany() && myCompanyName && event?.company_name === myCompanyName;
+  const shouldUseOwnerFixedLayout = isEventOwner && isWideViewport;
+  const fromResults = location.state?.fromResults;
+  const fromDashboard = location.state?.fromDashboard;
+  const backTarget = isAdmin
+    ? "/admin/events"
+    : isEventOwner
+      ? "/my-events"
+      : (fromDashboard || fromResults || "/events");
+  const backLabel = isAdmin
+    ? "Back to admin events"
+    : isEventOwner
+      ? "Back to my events"
+      : fromDashboard
+        ? "Back to dashboard"
+        : fromResults
+        ? "Back to results"
+        : "Back to discovery";
 
   useEffect(() => {
-    if (!isEventOwner) return undefined;
+    if (!shouldUseOwnerFixedLayout) return undefined;
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior;
@@ -239,7 +267,7 @@ export default function EventDetail() {
       document.documentElement.style.overflow = previousHtmlOverflow;
       document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior;
     };
-  }, [isEventOwner]);
+  }, [shouldUseOwnerFixedLayout]);
 
   const statusColor = {
     CONFIRMED: "var(--success)",
@@ -332,12 +360,12 @@ export default function EventDetail() {
     : null;
 
   return (
-    <div className={`event-detail-page${isEventOwner ? " event-detail-page--owner-fixed" : ""}`}>
-      <main className={`event-detail-main${isEventOwner ? " event-detail-main--owner" : ""}`}>
-        <div className={`event-detail-left${isEventOwner ? " event-detail-left--owner" : ""}`}>
-          <button onClick={() => navigate(isAdmin ? "/admin/events" : isEventOwner ? "/my-events" : "/events")} className="event-detail-back-btn event-detail-back-btn--inline">
+    <div className={`event-detail-page${shouldUseOwnerFixedLayout ? " event-detail-page--owner-fixed" : ""}`}>
+      <main className={`event-detail-main${shouldUseOwnerFixedLayout ? " event-detail-main--owner" : ""}`}>
+        <div className={`event-detail-left${shouldUseOwnerFixedLayout ? " event-detail-left--owner" : ""}`}>
+          <button onClick={() => navigate(backTarget)} className="event-detail-back-btn event-detail-back-btn--inline">
             <ArrowLeft size={15} />
-            {isAdmin ? "Back to admin events" : isEventOwner ? "Back to my events" : "Back to discovery"}
+            {backLabel}
           </button>
 
           <div className="event-detail-title-row">

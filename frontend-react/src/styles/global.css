@@ -74,6 +74,8 @@
   --transition:       all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow:  all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   --spring:           all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --theme-switch-duration: 520ms;
+  --theme-switch-ease: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: dark;
 }
 
@@ -139,6 +141,93 @@ body {
     radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
   background-size: 28px 28px;
   background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+:root[data-theme-switching="true"] body,
+:root[data-theme-switching="true"] body::after,
+:root[data-theme-switching="true"] #root,
+:root[data-theme-switching="true"] .app-layout,
+:root[data-theme-switching="true"] .app-layout__content,
+:root[data-theme-switching="true"] .app-header,
+:root[data-theme-switching="true"] .app-header__control-icon,
+:root[data-theme-switching="true"] .app-header__segmented,
+:root[data-theme-switching="true"] .app-header__segmented-btn,
+:root[data-theme-switching="true"] .card,
+:root[data-theme-switching="true"] .btn,
+:root[data-theme-switching="true"] .input,
+:root[data-theme-switching="true"] .events-hero-search-shell,
+:root[data-theme-switching="true"] .events-results-search-shell,
+:root[data-theme-switching="true"] .events-search-input-body,
+:root[data-theme-switching="true"] .events-search-format-wrap,
+:root[data-theme-switching="true"] .events-search-format-select,
+:root[data-theme-switching="true"] .events-spotlight,
+:root[data-theme-switching="true"] .events-spotlight-card,
+:root[data-theme-switching="true"] .event-card,
+:root[data-theme-switching="true"] .company-card,
+:root[data-theme-switching="true"] .dashboard-stat-card,
+:root[data-theme-switching="true"] .dashboard-inline-stat,
+:root[data-theme-switching="true"] .dashboard-org-stat-card,
+:root[data-theme-switching="true"] .my-events-view-switch,
+:root[data-theme-switching="true"] .my-events-view-indicator,
+:root[data-theme-switching="true"] .my-events-view-btn,
+:root[data-theme-switching="true"] .profile-badge-card,
+:root[data-theme-switching="true"] .profile-badge-status,
+:root[data-theme-switching="true"] .profile-badge-progress,
+:root[data-theme-switching="true"] .profile-links-grid a,
+:root[data-theme-switching="true"] .profile-stat-card,
+:root[data-theme-switching="true"] .profile-surface,
+:root[data-theme-switching="true"] [class*="modal"],
+:root[data-theme-switching="true"] [class*="popover"],
+:root[data-theme-switching="true"] [class*="drawer"] {
+  transition:
+    background-color var(--theme-switch-duration) var(--theme-switch-ease),
+    background var(--theme-switch-duration) var(--theme-switch-ease),
+    color var(--theme-switch-duration) var(--theme-switch-ease),
+    border-color calc(var(--theme-switch-duration) * 0.92) var(--theme-switch-ease),
+    box-shadow calc(var(--theme-switch-duration) * 1.05) var(--theme-switch-ease),
+    opacity calc(var(--theme-switch-duration) * 0.9) var(--theme-switch-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme-switching="true"] body,
+  :root[data-theme-switching="true"] body::after,
+  :root[data-theme-switching="true"] #root,
+  :root[data-theme-switching="true"] .app-layout,
+  :root[data-theme-switching="true"] .app-layout__content,
+  :root[data-theme-switching="true"] .app-header,
+  :root[data-theme-switching="true"] .app-header__control-icon,
+  :root[data-theme-switching="true"] .app-header__segmented,
+  :root[data-theme-switching="true"] .app-header__segmented-btn,
+  :root[data-theme-switching="true"] .card,
+  :root[data-theme-switching="true"] .btn,
+  :root[data-theme-switching="true"] .input,
+  :root[data-theme-switching="true"] .events-hero-search-shell,
+  :root[data-theme-switching="true"] .events-results-search-shell,
+  :root[data-theme-switching="true"] .events-search-input-body,
+  :root[data-theme-switching="true"] .events-search-format-wrap,
+  :root[data-theme-switching="true"] .events-search-format-select,
+  :root[data-theme-switching="true"] .events-spotlight,
+  :root[data-theme-switching="true"] .events-spotlight-card,
+  :root[data-theme-switching="true"] .event-card,
+  :root[data-theme-switching="true"] .company-card,
+  :root[data-theme-switching="true"] .dashboard-stat-card,
+  :root[data-theme-switching="true"] .dashboard-inline-stat,
+  :root[data-theme-switching="true"] .dashboard-org-stat-card,
+  :root[data-theme-switching="true"] .my-events-view-switch,
+  :root[data-theme-switching="true"] .my-events-view-indicator,
+  :root[data-theme-switching="true"] .my-events-view-btn,
+  :root[data-theme-switching="true"] .profile-badge-card,
+  :root[data-theme-switching="true"] .profile-badge-status,
+  :root[data-theme-switching="true"] .profile-badge-progress,
+  :root[data-theme-switching="true"] .profile-links-grid a,
+  :root[data-theme-switching="true"] .profile-stat-card,
+  :root[data-theme-switching="true"] .profile-surface,
+  :root[data-theme-switching="true"] [class*="modal"],
+  :root[data-theme-switching="true"] [class*="popover"],
+  :root[data-theme-switching="true"] [class*="drawer"] {
+    transition: none !important;
+  }
 }
 
 /* iOS Safari: background-attachment:fixed is broken */
@@ -165,6 +254,13 @@ body::after {
 
 #root { position: relative; z-index: 1; }
 
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
 .app-layout {
   min-height: 100vh;
   display: flex;
@@ -179,6 +275,14 @@ body::after {
 .app-layout__content--fixed {
   height: calc(100dvh - 73px);
   overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .app-layout__content--fixed {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
 }
 
 h1, h2, h3, h4 {
@@ -263,6 +367,12 @@ h1, h2, h3, h4 {
   padding: 0 var(--page-gutter-lg);
 }
 
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 var(--page-gutter);
+  }
+}
+
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
 @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
 
@@ -293,7 +403,6 @@ h1, h2, h3, h4 {
 .card-hover:hover {
   border-color: rgba(105, 234, 215, 0.24);
   background: var(--surface-high);
-  transform: translateY(-3px);
   box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(105, 234, 215, 0.1);
 }
 
@@ -351,13 +460,12 @@ h1, h2, h3, h4 {
   border: none;
   cursor: pointer;
   box-shadow: 0 0 34px rgba(105, 234, 215, 0.32);
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  transition: box-shadow 0.3s ease, background 0.2s ease;
 }
 .btn-primary:hover {
   box-shadow: 0 0 60px rgba(105, 234, 215, 0.52);
-  transform: translateY(-2px);
 }
-.btn-primary:active { transform: translateY(0); box-shadow: 0 0 20px rgba(105, 234, 215, 0.34); }
+.btn-primary:active { box-shadow: 0 0 20px rgba(105, 234, 215, 0.34); }
 
 .btn-secondary {
   background: var(--surface-high);
@@ -367,7 +475,6 @@ h1, h2, h3, h4 {
 .btn-secondary:hover {
   background: var(--surface-raised);
   border-color: rgba(255,255,255,0.4);
-  transform: translateY(-1px);
 }
 
 .btn-ghost {
@@ -643,9 +750,38 @@ hr {
   }
 }
 
+@media (max-width: 520px) {
+  :root {
+    --fs-xs: 0.75rem;
+    --fs-sm: 0.875rem;
+    --fs-base: 0.96rem;
+    --fs-lg: 1.05rem;
+    --fs-xl: 1.16rem;
+  }
+
+  body {
+    line-height: 1.58;
+  }
+
+  .btn {
+    min-height: 40px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    padding: 0.68rem 1.2rem;
+    font-size: 0.78rem;
+  }
+
+  .card {
+    padding: 18px;
+  }
+}
+
 /* iPhone 14 Pro Max specific (430px wide) */
 @media (max-width: 430px) {
-  body { font-size: 16px; }
+  body { font-size: 15.5px; }
 
   .btn { min-height: 42px; padding: 10px 18px; font-size: 0.9375rem; }
   .btn-primary { padding: 0.7rem 1.4rem; font-size: 0.8rem; }

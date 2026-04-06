@@ -314,6 +314,8 @@ export default function EventsResults() {
     setPage(1);
   };
 
+  const resultsReturnTarget = `${location.pathname}${location.search}`;
+
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     setAppliedSearch(searchInput.trim());
@@ -562,7 +564,11 @@ export default function EventsResults() {
                           return (
                             <div
                               key={event.id}
-                              onClick={() => navigate(`/events/${event.id}`)}
+                              onClick={() => navigate(`/events/${event.id}`, {
+                                state: {
+                                  fromResults: resultsReturnTarget,
+                                },
+                              })}
                               className="event-card"
                             >
                               <div className="event-card-info">

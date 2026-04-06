@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { prefetchTags } from "./api/tags";
 import AdminRoute from "./components/AdminRoute";
@@ -29,14 +29,20 @@ import AdminStatistics from "./pages/AdminStatistics";
 
 export default function App() {
   const location = useLocation();
+  const [isDesktopFixedViewport, setIsDesktopFixedViewport] = useState(() => window.innerWidth > 1024);
   const hideGlobalHeader = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);
-  const fixedViewportContent =
-    location.pathname === "/events" ||
-    location.pathname === "/events/results" ||
-    location.pathname === "/dashboard" ||
-    location.pathname === "/my-events";
+  const fixedViewportContent = isDesktopFixedViewport && ["/events", "/events/results", "/dashboard", "/my-events"].includes(location.pathname);
 
   useEffect(() => { prefetchTags(); }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktopFixedViewport(window.innerWidth > 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });

@@ -208,9 +208,11 @@
 
 .profile-image-avatar {
   flex-shrink: 0;
-  object-fit: cover;
+  display: block;
+  object-position: center;
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 0 28px rgba(0, 229, 255, 0.12);
+  box-sizing: border-box;
 }
 
 .profile-image-avatar--circle {
@@ -223,6 +225,16 @@
   width: 88px;
   height: 88px;
   border-radius: 18px;
+}
+
+.profile-image-avatar--photo {
+  object-fit: cover;
+}
+
+.profile-image-avatar--logo {
+  object-fit: contain;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* Interest / domain tags */
@@ -335,11 +347,10 @@
   width: 100%;
   text-align: left;
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 220ms ease, background 180ms ease;
+  transition: border-color 180ms ease, box-shadow 220ms ease, background 180ms ease;
 }
 
 .profile-overview-item--interactive:hover {
-  transform: translateY(-3px);
   border-color: rgba(126, 229, 216, 0.28);
   background: linear-gradient(180deg, rgba(126, 229, 216, 0.08), rgba(255, 255, 255, 0.03));
   box-shadow: 0 20px 34px rgba(0, 0, 0, 0.18);
@@ -417,7 +428,7 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  transition: transform 180ms ease, box-shadow 220ms ease, border-color 180ms ease, color 180ms ease, background 180ms ease;
+  transition: box-shadow 220ms ease, border-color 180ms ease, color 180ms ease, background 180ms ease;
 }
 
 .profile-overview-link::after {
@@ -444,7 +455,6 @@
 .profile-overview-link:hover {
   color: var(--text);
   border-color: rgba(0, 229, 255, 0.28);
-  transform: translateY(-3px);
   box-shadow: 0 22px 36px rgba(0, 0, 0, 0.24);
 }
 
@@ -633,7 +643,6 @@
 }
 
 .profile-badge-card:hover {
-  transform: translateY(-4px);
   box-shadow: 0 24px 42px rgba(0, 0, 0, 0.24);
 }
 
@@ -949,6 +958,100 @@
 }
 
 @media (max-width: 520px) {
+  .profile-avatar-square,
+  .profile-image-avatar--square {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+  }
+
+  .profile-image-avatar--square {
+    padding: 5px;
+  }
+
+  .profile-name,
+  .profile-name--overview {
+    font-size: clamp(1.35rem, 7vw, 1.7rem);
+  }
+
+  .profile-card,
+  .profile-overview-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .profile-overview-section-title,
+  .profile-section-title,
+  .profile-danger-title {
+    font-size: 1.12rem;
+    margin-bottom: 12px;
+  }
+
+  .profile-overview-grid {
+    gap: 12px;
+  }
+
+  .profile-overview-item {
+    min-height: 0;
+    padding: 14px 14px 13px;
+    border-radius: 12px;
+  }
+
+  .profile-overview-label {
+    font-size: 0.78rem;
+    margin-bottom: 6px;
+    letter-spacing: 0.1em;
+  }
+
+  .profile-email,
+  .profile-email--overview,
+  .profile-overview-value,
+  .profile-overview-hint,
+  .profile-badge-description,
+  .profile-danger-copy {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .profile-overview-value {
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .profile-overview-hint {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .profile-tags-wrap {
+    gap: 8px;
+  }
+
+  .profile-tag-btn,
+  .profile-tag-btn--static {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+    border-radius: 999px;
+  }
+
+  .profile-overview-links {
+    gap: 10px;
+  }
+
+  .profile-overview-link {
+    min-height: 42px;
+    padding: 0 14px;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+
+  .profile-overview-link svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .profile-form-row { grid-template-columns: 1fr; }
   .profile-form-row--triple { grid-template-columns: 1fr; }
 
@@ -963,4 +1066,14 @@
   .profile-nav-btn { padding: 6px 8px; font-size: 0.8rem; }
   .profile-content { padding: 12px; }
   .profile-name { font-size: 1.2rem; }
+  .profile-avatar-square,
+  .profile-image-avatar--square {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+  }
+
+  .profile-image-avatar--square {
+    padding: 4px;
+  }
 }

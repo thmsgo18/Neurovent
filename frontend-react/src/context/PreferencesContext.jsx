@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { interpolate, translations } from "../i18n/translations";
 
 const STORAGE_THEME_KEY = "neurovent-theme";
@@ -6,14 +14,22 @@ const STORAGE_LOCALE_KEY = "neurovent-locale";
 
 const PreferencesContext = createContext(null);
 
-const getSystemTheme = () =>
-  window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
-    ? "light"
-    : "dark";
+const getSystemTheme = () => {
+  if (typeof window === "undefined" || !window.matchMedia) return "dark";
 
-const getStoredTheme = () => {
-  if (typeof window === "undefined") return "system";
-  return window.localStorage.getItem(STORAGE_THEME_KEY) || "system";
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+  const prefersLight = window.matchMedia("(prefers-color-scheme: light)");
+
+  if (prefersDark.matches) return "dark";
+  if (prefersLight.matches) return "light";
+  return "light";
+};
+
+const getStoredThemePreference = () => {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem(STORAGE_THEME_KEY);
+  if (stored === "light" || stored === "dark") return stored;
+  return null;
 };
 
 const getStoredLocale = () => {
@@ -25,33 +41,82 @@ const getStoredLocale = () => {
 };
 
 export function PreferencesProvider({ children }) {
-  const [themeMode, setThemeModeState] = useState(getStoredTheme);
+  const [themePreference, setThemePreference] = useState(getStoredThemePreference);
   const [systemTheme, setSystemTheme] = useState(
     typeof window === "undefined" ? "dark" : getSystemTheme()
   );
   const [locale, setLocaleState] = useState(getStoredLocale);
+  const hasMountedThemeRef = useRef(false);
+  const themeSwitchTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!window.matchMedia) return undefined;
-    const media = window.matchMedia("(prefers-color-scheme: light)");
-    const onChange = () => setSystemTheme(media.matches ? "light" : "dark");
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const nextTheme = media.matches ? "dark" : "light";
+      setSystemTheme(nextTheme);
+      setThemePreference(null);
+      window.localStorage.removeItem(STORAGE_THEME_KEY);
+    };
     onChange();
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    }
+
+    if (typeof media.addListener === "function") {
+      media.addListener(onChange);
+      return () => media.removeListener(onChange);
+    }
+
+    return undefined;
   }, []);
 
-  const theme = themeMode === "system" ? systemTheme : themeMode;
+  const theme = themePreference || systemTheme;
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    const root = document.documentElement;
+
+    if (!hasMountedThemeRef.current) {
+      root.dataset.theme = theme;
+      hasMountedThemeRef.current = true;
+      return undefined;
+    }
+
+    root.dataset.themeSwitching = "true";
+
+    const frame = window.requestAnimationFrame(() => {
+      root.dataset.theme = theme;
+    });
+
+    if (themeSwitchTimeoutRef.current) {
+      window.clearTimeout(themeSwitchTimeoutRef.current);
+    }
+
+    themeSwitchTimeoutRef.current = window.setTimeout(() => {
+      delete root.dataset.themeSwitching;
+      themeSwitchTimeoutRef.current = null;
+    }, 560);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [theme]);
+
+  useEffect(() => () => {
+    if (themeSwitchTimeoutRef.current) {
+      window.clearTimeout(themeSwitchTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
   const setThemeMode = (value) => {
-    setThemeModeState(value);
+    if (value !== "light" && value !== "dark") return;
+    setThemePreference(value);
     window.localStorage.setItem(STORAGE_THEME_KEY, value);
   };
 
@@ -71,11 +136,12 @@ export function PreferencesProvider({ children }) {
       locale,
       setLocale,
       theme,
-      themeMode,
+      themeMode: theme,
+      themePreference,
       setThemeMode,
       t,
     }),
-    [locale, theme, themeMode, t]
+    [locale, theme, themePreference, t]
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

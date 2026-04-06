@@ -181,7 +181,11 @@ function UserDashboard() {
                 return (
                   <div
                     key={reg.id}
-                    onClick={() => navigate(`/events/${eventId}`)}
+                    onClick={() => navigate(`/events/${eventId}`, {
+                      state: {
+                        fromDashboard: "/dashboard",
+                      },
+                    })}
                     className="dashboard-registration-item"
                   >
                     <div className="dashboard-registration-info">

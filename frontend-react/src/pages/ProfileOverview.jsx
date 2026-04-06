@@ -42,7 +42,7 @@ function ProfileOverviewHeader({ initials, title, subtitle, actionLabel, onActio
           <img
             src={imageUrl}
             alt={title}
-            className={`profile-image-avatar ${square ? "profile-image-avatar--square" : "profile-image-avatar--circle"}`}
+            className={`profile-image-avatar ${square ? "profile-image-avatar--square profile-image-avatar--logo" : "profile-image-avatar--circle profile-image-avatar--photo"}`}
           />
         ) : (
           <div className={`profile-avatar ${square ? "profile-avatar-square" : "profile-avatar-circle"}`}>

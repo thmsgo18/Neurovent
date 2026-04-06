@@ -6,6 +6,7 @@ import sys
 from datetime import timedelta
 from html import escape
 from pathlib import Path
+from urllib.parse import urlparse
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -1045,6 +1046,22 @@ def build_company_description(blueprint):
     )
 
 
+DIRECT_COMPANY_LOGO_URLS = {
+    "mistral-ai": "https://mistral.ai/img/mistral-ai-logo.svg",
+    "doctolib": "https://assets.doctolib.fr/img/cms/logo-blue.png",
+}
+
+
+def official_company_logo_url(identifier: str, website_url: str) -> str:
+    if identifier in DIRECT_COMPANY_LOGO_URLS:
+        return DIRECT_COMPANY_LOGO_URLS[identifier]
+
+    parsed = urlparse(website_url)
+    host = parsed.netloc or parsed.path
+    host = host.strip("/")
+    return f"https://{host}/favicon.ico"
+
+
 def fake_siret(index: int) -> str:
     return f"990{index + 1:03d}{randomizer.randint(10000000, 99999999)}"[:14]
 
@@ -1066,17 +1083,6 @@ def social_url(network: str, identifier: str) -> str:
 def create_companies():
     companies = []
     for index, blueprint in enumerate(COMPANY_BLUEPRINTS, start=1):
-        logo_filename = f"demo_logo_{blueprint['identifier']}.svg"
-        write_demo_asset(
-            LOGO_DIR,
-            logo_filename,
-            build_company_logo_svg(
-                blueprint["company_name"],
-                blueprint["colors"][0],
-                blueprint["colors"][1],
-            ),
-        )
-
         company = CustomUser.objects.create_user(
             role=UserRole.COMPANY,
             email=None,
@@ -1085,7 +1091,7 @@ def create_companies():
             recovery_email=f"contact@{blueprint['identifier']}.neurovent.demo",
             company_name=blueprint["company_name"],
             company_description=build_company_description(blueprint),
-            company_logo_url=media_url("logos", logo_filename),
+            company_logo_url=official_company_logo_url(blueprint["identifier"], blueprint["website"]),
             website_url=blueprint["website"],
             youtube_url=social_url("youtube", blueprint["identifier"]),
             linkedin_url=social_url("linkedin", blueprint["identifier"]),

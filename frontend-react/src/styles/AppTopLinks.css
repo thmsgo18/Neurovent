@@ -111,7 +111,6 @@
 
 .app-top-links__item:hover {
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .app-top-links__item--active {
@@ -123,9 +122,42 @@
   color: #0f1b2d;
 }
 
+@media (max-width: 900px) {
+  .app-top-links {
+    display: flex;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+  }
+
+  .app-top-links__indicator {
+    display: none;
+  }
+
+  .app-top-links__item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .app-top-links__item--active {
+    background: linear-gradient(135deg, rgba(105, 234, 215, 0.24), rgba(105, 234, 215, 0.12));
+    box-shadow: 0 0 0 1px rgba(105, 234, 215, 0.14);
+  }
+
+  :root[data-theme="light"] .app-top-links__item--active {
+    background: linear-gradient(135deg, rgba(24, 191, 174, 0.18), rgba(24, 191, 174, 0.1));
+    box-shadow: 0 0 0 1px rgba(24, 191, 174, 0.12);
+  }
+}
+
 @media (max-width: 520px) {
   .app-top-links {
     gap: 4px;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
   }
 
   .app-top-links__item {

@@ -391,10 +391,25 @@
 }
 
 @media (max-width: 640px) {
+  .register-left {
+    display: none;
+  }
+
   .register-right,
   .register-left {
     padding-left: var(--page-gutter);
     padding-right: var(--page-gutter);
+  }
+
+  .register-right {
+    min-height: calc(100vh - 72px);
+    align-items: flex-start;
+    padding-top: 20px;
+    padding-bottom: 28px;
+  }
+
+  .register-form-wrap {
+    max-width: none;
   }
 
   .register-form-row {
@@ -418,12 +433,13 @@
   }
 
   .register-left-title {
-    font-size: clamp(2rem, 10vw, 2.7rem);
+    font-size: clamp(1.8rem, 9vw, 2.35rem);
   }
 
   .register-left-desc,
   .register-note {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
   }
 
   .register-submit {

@@ -183,7 +183,6 @@
 .dashboard-stat-card:hover {
   border-color: rgba(0,240,200,0.12);
   background: var(--surface-high);
-  transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
 
@@ -222,8 +221,7 @@
 .dashboard-event-item {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
-  border-radius: 0 8px 8px 0;
+  border-radius: 14px;
   padding: 14px 18px;
   display: flex;
   justify-content: space-between;
@@ -232,6 +230,25 @@
   transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   margin-bottom: 8px;
   animation: slideInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-origin: center;
+}
+
+.dashboard-event-item::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background:
+    radial-gradient(ellipse at top center, rgba(0, 240, 200, 0.08), transparent 52%),
+    radial-gradient(ellipse at left center, rgba(0, 240, 200, 0.05), transparent 60%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 .dashboard-event-item:nth-child(1) { animation-delay: 0.1s; }
@@ -240,9 +257,18 @@
 
 .dashboard-event-item:hover {
   background: var(--surface-high);
-  border-left-color: var(--accent);
-  transform: translateX(3px);
-  box-shadow: -3px 0 16px rgba(0,240,200,0.08);
+  border-color: rgba(0, 229, 255, 0.22);
+  transform: translate3d(0, -2px, 0) scale(1.012);
+  z-index: 2;
+  box-shadow:
+    0 -8px 20px rgba(0, 0, 0, 0.12),
+    0 24px 52px rgba(0, 0, 0, 0.46),
+    0 0 28px rgba(0, 240, 200, 0.08),
+    0 0 0 1px rgba(0, 240, 200, 0.12);
+}
+
+.dashboard-event-item:hover::before {
+  opacity: 1;
 }
 
 /* Tip banner */
@@ -308,7 +334,6 @@
 .dashboard-inline-stat:hover {
   background: var(--surface-high);
   border-color: rgba(0, 240, 200, 0.18);
-  transform: translateY(-1px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 }
 
@@ -368,8 +393,7 @@
 .dashboard-registration-item {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 18px 22px;
   min-height: 88px;
   display: flex;
@@ -381,6 +405,9 @@
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(8px);
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-origin: center;
 }
 
 .dashboard-registration-item::before {
@@ -389,16 +416,23 @@
   inset: 0;
   opacity: 0;
   transition: opacity 0.3s ease;
-  background: radial-gradient(ellipse at left center, rgba(0, 240, 200, 0.05), transparent 60%);
+  background:
+    radial-gradient(ellipse at top center, rgba(0, 240, 200, 0.08), transparent 52%),
+    radial-gradient(ellipse at left center, rgba(0, 240, 200, 0.05), transparent 60%);
   pointer-events: none;
   border-radius: inherit;
 }
 
 .dashboard-registration-item:hover {
   background: var(--surface-high);
-  border-left-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 240, 200, 0.08);
+  border-color: rgba(0, 229, 255, 0.22);
+  transform: translate3d(0, -2px, 0) scale(1.012);
+  z-index: 2;
+  box-shadow:
+    0 -8px 20px rgba(0, 0, 0, 0.12),
+    0 24px 52px rgba(0, 0, 0, 0.46),
+    0 0 28px rgba(0, 240, 200, 0.08),
+    0 0 0 1px rgba(0, 240, 200, 0.12);
 }
 
 .dashboard-registration-item:hover::before {
@@ -800,7 +834,6 @@
 }
 
 .dashboard-org-stat-card:hover {
-  transform: translateY(-2px);
   border-color: rgba(0, 240, 200, 0.16);
   box-shadow:
     0 14px 34px rgba(0, 0, 0, 0.24),
@@ -872,13 +905,67 @@
 }
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .dashboard-page,
+  .dashboard-main,
+  .dashboard-content--fixed-shell,
+  .dashboard-content--org-fixed,
+  .dashboard-content--my-events-fixed,
+  .dashboard-user-layout,
+  .dashboard-list-scroll,
+  .my-events-layout,
+  .my-events-list-scroll {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .dashboard-topbar-nav {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .dashboard-topbar-nav-btn {
+    white-space: nowrap;
+  }
+
+  .dashboard-inline-stat {
+    flex: 1 1 180px;
+  }
+
+  .dashboard-registration-item,
+  .dashboard-event-item {
+    align-items: flex-start;
+  }
+
+  .dashboard-org-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+
+  .dashboard-org-exportbar {
+    flex-wrap: wrap;
+  }
+
+  .dashboard-org-export-btn {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  .my-events-view-switch {
+    width: min(100%, 420px);
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-page {
     min-height: 100vh;
     overflow: auto;
   }
 
-  .dashboard-main { overflow: auto; }
+  .dashboard-main { overflow: visible; }
 
   .dashboard-topbar {
     position: sticky;
@@ -898,7 +985,7 @@
   .dashboard-content { padding: 16px; }
 
   .dashboard-content--fixed-shell {
-    overflow: hidden;
+    overflow: visible;
   }
 
   .dashboard-stats-3,
@@ -944,6 +1031,61 @@
 }
 
 @media (max-width: 480px) {
+  .dashboard-welcome-title,
+  .dashboard-org-hero-title,
+  .dashboard-org-events-title {
+    font-size: clamp(1.45rem, 8vw, 1.9rem);
+  }
+
+  .dashboard-welcome-copy,
+  .dashboard-org-hero-copy,
+  .dashboard-org-events-copy {
+    font-size: 0.94rem;
+    line-height: 1.55;
+  }
+
+  .dashboard-registration-title {
+    font-size: 1rem;
+  }
+
+  .dashboard-registration-organizer,
+  .dashboard-registration-meta,
+  .dashboard-registration-submeta,
+  .dashboard-org-stat-detail {
+    font-size: 0.84rem;
+  }
+
+  .dashboard-org-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: 10px;
+  }
+
+  .dashboard-org-stat-card {
+    padding: 12px 12px 11px;
+    border-radius: 12px;
+  }
+
+  .dashboard-org-stat-card::before {
+    left: 14px;
+    width: 32px;
+  }
+
+  .dashboard-org-stat-label {
+    margin-bottom: 8px;
+    font-size: 0.76rem;
+    letter-spacing: 0.1em;
+  }
+
+  .dashboard-org-stat-value {
+    margin-bottom: 0;
+    font-size: clamp(1.45rem, 6vw, 1.95rem);
+  }
+
+  .dashboard-org-stat-detail {
+    display: none;
+  }
+
   .dashboard-stats-3,
   .dashboard-stats-4 { grid-template-columns: 1fr; }
 
@@ -953,12 +1095,28 @@
   }
 
   .dashboard-inline-stats {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
   }
 
-  .dashboard-org-stats-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: none;
+  .dashboard-inline-stat {
+    min-width: 0;
+    padding: 10px 8px;
+    align-items: center;
+    text-align: center;
+    gap: 3px;
+    border-radius: 9px;
+  }
+
+  .dashboard-inline-stat-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 2px;
+  }
+
+  .dashboard-inline-stat-value {
+    font-size: clamp(1rem, 4vw, 1.2rem);
   }
 
   .my-events-view-switch {

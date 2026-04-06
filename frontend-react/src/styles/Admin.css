@@ -103,13 +103,13 @@
   font-size: 0.82rem;
   letter-spacing: 0.05em;
   cursor: pointer;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
 .admin-filter-chip:hover {
-  transform: translateY(-1px);
   border-color: rgba(126, 229, 216, 0.26);
   color: var(--text);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
 .admin-filter-chip--active {
@@ -167,29 +167,72 @@
   width: 100%;
   text-align: left;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 14px;
   padding: 18px 20px;
-  background:
-    radial-gradient(circle at top right, rgba(126, 229, 216, 0.08), transparent 34%),
-    linear-gradient(180deg, rgba(20, 25, 38, 0.98), rgba(12, 15, 25, 0.98));
+  background: var(--bg-card);
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.14);
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 220ms ease;
+  transition: transform 0.2s ease, box-shadow 0.3s ease, border-color 0.2s ease, background 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-origin: center;
+}
+
+:root[data-theme="light"] .admin-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 248, 253, 0.98));
+  border-color: rgba(22, 37, 58, 0.1);
+  box-shadow: 0 16px 32px rgba(15, 28, 45, 0.06);
 }
 
 .admin-card--interactive {
   cursor: pointer;
 }
 
+.admin-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background:
+    radial-gradient(ellipse at top center, rgba(0, 240, 200, 0.08), transparent 52%),
+    radial-gradient(ellipse at left center, rgba(0, 240, 200, 0.05), transparent 60%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .admin-card--interactive:hover {
-  transform: translateY(-2px);
-  border-color: rgba(126, 229, 216, 0.26);
-  box-shadow: 0 20px 36px rgba(0, 0, 0, 0.18);
+  background: var(--surface-high);
+  border-color: rgba(0, 229, 255, 0.22);
+  transform: translate3d(0, -2px, 0) scale(1.012);
+  z-index: 2;
+  box-shadow:
+    0 -8px 20px rgba(0, 0, 0, 0.12),
+    0 24px 52px rgba(0, 0, 0, 0.46),
+    0 0 28px rgba(0, 240, 200, 0.08),
+    0 0 0 1px rgba(0, 240, 200, 0.12);
+}
+
+:root[data-theme="light"] .admin-card--interactive:hover {
+  box-shadow:
+    0 -6px 16px rgba(15, 28, 45, 0.05),
+    0 22px 42px rgba(15, 28, 45, 0.16),
+    0 0 24px rgba(24, 191, 174, 0.06),
+    0 0 0 1px rgba(24, 191, 174, 0.12);
+}
+
+.admin-card--interactive:hover::before {
+  opacity: 1;
 }
 
 .admin-card--interactive:focus-visible {
   outline: none;
-  border-color: rgba(126, 229, 216, 0.34);
-  box-shadow: 0 0 0 3px rgba(126, 229, 216, 0.12), 0 20px 36px rgba(0, 0, 0, 0.18);
+  border-color: rgba(0, 229, 255, 0.28);
+  box-shadow:
+    0 0 0 3px rgba(0, 229, 255, 0.12),
+    0 18px 34px rgba(0, 0, 0, 0.22);
 }
 
 .admin-card-top {
@@ -362,9 +405,9 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
 }
 
 .admin-top-item strong {
@@ -451,6 +494,28 @@
   }
 }
 
+@media (max-width: 900px) {
+  .admin-filter-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .admin-filter-group {
+    flex-wrap: nowrap;
+  }
+
+  .admin-filter-chip {
+    white-space: nowrap;
+  }
+
+  .admin-search,
+  .admin-search--wide {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .admin-shell {
     padding: 20px 16px 28px;
@@ -477,5 +542,30 @@
   .admin-danger-btn,
   .admin-secondary-btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-title {
+    font-size: clamp(1.7rem, 8vw, 2.15rem);
+  }
+
+  .admin-copy,
+  .admin-card-subtitle {
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .admin-section-title {
+    font-size: 1.2rem;
+  }
+
+  .admin-card-title {
+    font-size: 1rem;
+  }
+
+  .admin-section-meta,
+  .admin-pill {
+    font-size: 0.76rem;
   }
 }

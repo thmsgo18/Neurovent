@@ -337,7 +337,6 @@
 .home-feature-card:hover {
   border-color: rgba(0,240,200,0.15);
   background: var(--bg-card);
-  transform: translateY(-4px);
   box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,240,200,0.05);
 }
 
@@ -517,6 +516,25 @@
 }
 
 @media (max-width: 520px) {
+  .home-title {
+    font-size: clamp(1.95rem, 9vw, 2.8rem);
+    margin-bottom: 16px;
+  }
+
+  .home-subtitle {
+    font-size: 0.96rem;
+    line-height: 1.6;
+  }
+
+  .home-section-title {
+    font-size: clamp(1.4rem, 7vw, 1.9rem);
+  }
+
+  .home-feature-title,
+  .home-step-title {
+    font-size: 0.98rem;
+  }
+
   .home-stats {
     grid-template-columns: 1fr;
   }
@@ -544,7 +562,7 @@
   }
 
   .home-title {
-    font-size: clamp(2.1rem, 11vw, 3.1rem);
+    font-size: clamp(1.8rem, 10vw, 2.45rem);
   }
 
   .home-feature-card,

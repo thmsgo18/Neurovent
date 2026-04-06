@@ -92,7 +92,7 @@
 }
 
 .login-mode-btn:hover {
-  transform: translateY(-1px);
+  color: var(--text);
 }
 
 .login-card {
@@ -227,6 +227,16 @@
 /* ===== RESPONSIVE ===== */
 @media (max-width: 480px) {
   .login-page { padding: 0; }
+
+  .login-title {
+    font-size: clamp(1.75rem, 8vw, 2.2rem);
+  }
+
+  .login-subtitle,
+  .login-copy {
+    font-size: 0.94rem;
+    line-height: 1.55;
+  }
 
   .login-top-brand {
     margin-bottom: 24px;

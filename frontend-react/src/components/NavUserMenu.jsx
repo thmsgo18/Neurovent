@@ -85,7 +85,11 @@ export default function NavUserMenu() {
       >
         <div className="nav-user-avatar-shell">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={label} className="nav-user-avatar nav-user-avatar--image" />
+            <img
+              src={avatarUrl}
+              alt={label}
+              className={`nav-user-avatar nav-user-avatar--image ${isCompany ? "nav-user-avatar--logo" : "nav-user-avatar--photo"}`}
+            />
           ) : (
             <div
               className="nav-user-avatar"
@@ -99,7 +103,6 @@ export default function NavUserMenu() {
           )}
         </div>
         <span className="nav-user-label">{label}</span>
-        <span className="nav-user-chevron">▾</span>
       </button>
 
       {open && (

@@ -159,6 +159,7 @@ export default function CreateEvent() {
   const [capacityInput, setCapacityInput] = useState(String(INITIAL_FORM.capacity));
   const [fieldErrors, setFieldErrors] = useState({});
   const [stepErrorMessage, setStepErrorMessage] = useState("");
+  const contentRef = useRef(null);
   const hasUnsavedChanges = !published && JSON.stringify(form) !== JSON.stringify(INITIAL_FORM);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const allowNavigationRef = useRef(false);
@@ -211,6 +212,11 @@ export default function CreateEvent() {
       registration_deadline_time: "",
     }));
   }, [form.allow_registration_during_event, form.registration_deadline_date, form.registration_deadline_time]);
+
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
 
   useEffect(() => {
     if (!hasUnsavedChanges) return undefined;
@@ -557,9 +563,9 @@ export default function CreateEvent() {
   }
 
   return (
-    <div className="create-event-page">
+      <div className="create-event-page">
       <div className="create-event-shell">
-      <div className="create-event-content create-event-content--single">
+      <div ref={contentRef} className="create-event-content create-event-content--single">
         <div className="create-event-main create-event-main--wide">
           <div className="create-event-topbar">
             <button
@@ -654,38 +660,17 @@ export default function CreateEvent() {
                   <p style={{ fontSize: "13px", color: "var(--text-dim)", margin: "0 0 10px" }}>Chargement des tags...</p>
                 )}
 
-                {/* Input + bouton Ajouter */}
-                <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+                {/* Input tags */}
+                <div style={{ marginBottom: "12px" }}>
                   <input
                     type="text"
                     className="input"
-                    style={{ height: "48px", flex: 1 }}
+                    style={{ height: "48px", width: "100%" }}
                     placeholder={availableTags.length ? "Add a tag…" : "No tags available"}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTagByName(); } }}
                   />
-                  <button
-                    type="button"
-                    onClick={addTagByName}
-                    style={{
-                      height: "48px",
-                      padding: "0 18px",
-                      borderRadius: "10px",
-                      border: "1px solid var(--border)",
-                      background: "var(--surface-high)",
-                      color: "var(--text-muted)",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      transition: "var(--transition)",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
-                  >
-                    Add Tag
-                  </button>
                 </div>
 
                 {/* Suggestions filtrées selon ce qui est tapé */}
@@ -1291,7 +1276,7 @@ export default function CreateEvent() {
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "28px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "28px" }}>
                 <button
                   className="btn btn-primary"
                   style={{ padding: "14px 28px", fontSize: "16px" }}
@@ -1304,7 +1289,7 @@ export default function CreateEvent() {
 
               {/* Preview card */}
               <div className="create-event-card">
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "22px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "22px" }}>
                   <div
                     style={{
                       width: "52px",

@@ -219,7 +219,11 @@ function UserProfile() {
       <form onSubmit={handleSave} className="profile-form profile-card">
         <div className="profile-avatar-row">
           {form.avatarUrl ? (
-            <img src={form.avatarUrl} alt={`${form.firstName} ${form.lastName}`} className="profile-image-avatar profile-image-avatar--circle" />
+            <img
+              src={form.avatarUrl}
+              alt={`${form.firstName} ${form.lastName}`}
+              className="profile-image-avatar profile-image-avatar--circle profile-image-avatar--photo"
+            />
           ) : (
             <div className="profile-avatar profile-avatar-circle">
               {initials}
@@ -626,7 +630,11 @@ function OrgProfile() {
       <form onSubmit={handleSave} className="profile-form profile-card">
         <div className="profile-avatar-row">
           {form.logoUrl ? (
-            <img src={form.logoUrl} alt={form.name} className="profile-image-avatar profile-image-avatar--square" />
+            <img
+              src={form.logoUrl}
+              alt={form.name}
+              className="profile-image-avatar profile-image-avatar--square profile-image-avatar--logo"
+            />
           ) : (
             <div className="profile-avatar profile-avatar-square">
               {initials}

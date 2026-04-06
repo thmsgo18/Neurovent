@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AlertCircle, CheckCircle, Eye, EyeOff, Monitor, Moon, Sun } from "lucide-react";
+import { AlertCircle, CheckCircle, Eye, EyeOff, Languages, Moon, Settings2, Sun } from "lucide-react";
 import "../styles/Register.css";
 import "../styles/AppHeader.css";
 import { registerParticipantApi, registerCompanyApi } from "../api/auth";
@@ -46,6 +46,7 @@ export default function Register() {
   const navigate = useNavigate();
   const { t, locale, setLocale, themeMode, setThemeMode } = usePreferences();
   const [activeTab, setActiveTab] = useState("participant");
+  const [mobilePrefsOpen, setMobilePrefsOpen] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -65,10 +66,10 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const mobilePrefsRef = useRef(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const themeOptions = [
-    { value: "system", label: t("System"), icon: Monitor },
     { value: "light", label: t("Light"), icon: Sun },
     { value: "dark", label: t("Dark"), icon: Moon },
   ];
@@ -77,6 +78,77 @@ export default function Register() {
     { value: "en", label: "EN", fullLabel: t("English") },
     { value: "fr", label: "FR", fullLabel: t("French") },
   ];
+
+  useEffect(() => {
+    if (!mobilePrefsOpen) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (mobilePrefsRef.current && !mobilePrefsRef.current.contains(event.target)) {
+        setMobilePrefsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setMobilePrefsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobilePrefsOpen]);
+
+  const renderLanguageControls = ({ mobile = false } = {}) => (
+    <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
+      <div className="app-header__segmented" role="group" aria-label={t("Language")}>
+        {localeOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`app-header__segmented-btn${locale === option.value ? " is-active" : ""}`}
+            onClick={() => {
+              setLocale(option.value);
+              if (mobile) setMobilePrefsOpen(false);
+            }}
+            title={option.fullLabel}
+            aria-pressed={locale === option.value}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderThemeControls = ({ mobile = false } = {}) => (
+    <div className="app-header__control" aria-label={t("Theme")}>
+      <div className="app-header__segmented app-header__segmented--theme" role="group" aria-label={t("Theme")}>
+        {themeOptions.map((option) => {
+          const Icon = option.icon;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={`app-header__segmented-btn app-header__segmented-btn--theme${themeMode === option.value ? " is-active" : ""}`}
+              onClick={() => {
+                setThemeMode(option.value);
+                if (mobile) setMobilePrefsOpen(false);
+              }}
+              title={option.label}
+              aria-pressed={themeMode === option.value}
+            >
+              <Icon size={15} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   const passwordsMatch =
     form.confirmPassword !== "" && form.password === form.confirmPassword;
@@ -170,42 +242,41 @@ export default function Register() {
           <div aria-hidden="true" />
           <div className="app-header__right register-top-brand__controls">
             <div className="app-header__preferences">
-              <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
-                <div className="app-header__segmented" role="group" aria-label={t("Language")}>
-                  {localeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`app-header__segmented-btn${locale === option.value ? " is-active" : ""}`}
-                      onClick={() => setLocale(option.value)}
-                      title={option.fullLabel}
-                      aria-pressed={locale === option.value}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {renderLanguageControls()}
+              {renderThemeControls()}
+            </div>
 
-              <div className="app-header__control" aria-label={t("Theme")}>
-                <div className="app-header__segmented app-header__segmented--theme" role="group" aria-label={t("Theme")}>
-                  {themeOptions.map((option) => {
-                    const Icon = option.icon;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={`app-header__segmented-btn app-header__segmented-btn--theme${themeMode === option.value ? " is-active" : ""}`}
-                        onClick={() => setThemeMode(option.value)}
-                        title={option.label}
-                        aria-pressed={themeMode === option.value}
-                      >
-                        <Icon size={15} />
-                      </button>
-                    );
-                  })}
+            <div ref={mobilePrefsRef} className="app-header__mobile-prefs">
+              <button
+                type="button"
+                className={`app-header__mobile-prefs-toggle${mobilePrefsOpen ? " is-open" : ""}`}
+                aria-label={t("Display preferences")}
+                aria-haspopup="menu"
+                aria-expanded={mobilePrefsOpen}
+                onClick={() => setMobilePrefsOpen((value) => !value)}
+              >
+                <Settings2 size={16} />
+              </button>
+
+              {mobilePrefsOpen ? (
+                <div className="app-header__mobile-prefs-panel" role="menu" aria-label={t("Display preferences")}>
+                  <div className="app-header__mobile-prefs-section">
+                    <p className="app-header__mobile-prefs-title">
+                      <Languages size={14} />
+                      {t("Language")}
+                    </p>
+                    {renderLanguageControls({ mobile: true })}
+                  </div>
+
+                  <div className="app-header__mobile-prefs-section">
+                    <p className="app-header__mobile-prefs-title">
+                      <Settings2 size={14} />
+                      {t("Theme")}
+                    </p>
+                    {renderThemeControls({ mobile: true })}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </div>
           </div>
         </div>
