@@ -1,11 +1,11 @@
 .app-top-links {
-  --indicator-padding: 4px;
+  --indicator-padding: 2px;
   position: relative;
   display: grid;
   grid-template-columns: repeat(var(--link-count), minmax(0, 1fr));
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 3px;
   padding: var(--indicator-padding);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.065);
@@ -98,10 +98,10 @@
   z-index: 1;
   text-decoration: none;
   color: var(--text-soft);
-  font-size: 0.98rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-align: center;
-  padding: 10px 16px;
+  padding: 7px 11px;
   border-radius: 999px;
   transition:
     color 0.24s ease,

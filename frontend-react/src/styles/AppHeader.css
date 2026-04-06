@@ -34,19 +34,19 @@
 }
 
 .app-header__inner {
-  min-height: 72px;
+  min-height: 52px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 16px;
-  padding: 12px var(--page-gutter-lg);
+  gap: 8px;
+  padding: 6px var(--page-gutter-lg);
 }
 
 .app-header__brand {
   text-decoration: none;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(1.28rem, 1.15rem + 0.45vw, 1.58rem);
+  font-size: clamp(0.92rem, 0.9rem + 0.18vw, 1.08rem);
   color: var(--text);
   white-space: nowrap;
   justify-self: start;
@@ -65,7 +65,7 @@
   justify-content: flex-end;
   justify-self: end;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -73,7 +73,7 @@
 .app-header__preferences {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 5px;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -89,8 +89,8 @@
 }
 
 .app-header__mobile-prefs-toggle {
-  width: 42px;
-  height: 42px;
+  width: 31px;
+  height: 31px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.05);
@@ -103,8 +103,8 @@
 }
 
 .app-header__mobile-auth-toggle {
-  width: 42px;
-  height: 42px;
+  width: 31px;
+  height: 31px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.05);
@@ -161,7 +161,7 @@
   backdrop-filter: blur(18px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   z-index: 150;
 }
 
@@ -230,12 +230,12 @@
 .app-header__control {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .app-header__control-icon {
-  width: 40px;
-  height: 40px;
+  width: 29px;
+  height: 29px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
@@ -248,7 +248,7 @@
 .app-header__segmented {
   display: inline-flex;
   align-items: center;
-  padding: 5px;
+  padding: 2px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.035));
@@ -263,15 +263,15 @@
 }
 
 .app-header__segmented-btn {
-  min-width: 52px;
-  min-height: 40px;
-  padding: 0 16px;
+  min-width: 36px;
+  min-height: 28px;
+  padding: 0 9px;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 0.88rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   cursor: pointer;
@@ -284,8 +284,8 @@
 }
 
 .app-header__segmented-btn--theme {
-  min-width: 42px;
-  padding: 0 12px;
+  min-width: 28px;
+  padding: 0 7px;
 }
 
 .app-header__segmented-btn:hover {
@@ -374,9 +374,24 @@
 }
 
 .app-header__auth-btn {
-  width: 144px;
-  flex: 0 0 144px;
+  width: 110px;
+  flex: 0 0 110px;
   justify-content: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.app-header__auth-btn.btn-primary {
+  padding: 0.62rem 0.95rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.055em;
+}
+
+.app-header__auth-btn.btn-secondary {
+  padding: 8px 10px;
+  font-size: 0.76rem;
 }
 
 @media (max-width: 1080px) {
@@ -385,7 +400,7 @@
     grid-template-areas:
       "brand right"
       "nav nav";
-    gap: 12px 16px;
+    gap: 10px 12px;
   }
 
   .app-header__brand {
@@ -398,7 +413,7 @@
 
   .app-header__nav {
     grid-area: nav;
-    justify-content: flex-start;
+    justify-content: center;
     width: 100%;
   }
 
@@ -429,7 +444,7 @@
 
   .app-header__right {
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
   }
 
   .app-header__preferences {
@@ -461,7 +476,7 @@
     grid-template-areas:
       "brand right"
       "nav nav";
-    padding: 12px var(--page-gutter);
+    padding: 10px var(--page-gutter);
   }
 
   .app-header__right {

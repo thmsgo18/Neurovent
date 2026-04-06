@@ -6,7 +6,7 @@
 
 :root {
   /* Hauteur réelle du header, mise à jour par ResizeObserver dans AppHeader.jsx */
-  --header-height: 96px;
+  --header-height: 88px;
 
   /* --- Color Palette --- */
   --bg:            #0d1522;
@@ -55,15 +55,15 @@
   --font-mono:     'JetBrains Mono', monospace;
 
   /* --- Responsive layout & type --- */
-  --page-gutter:    clamp(1rem, 0.8rem + 1vw, 2rem);
-  --page-gutter-lg: clamp(1.25rem, 1rem + 2.5vw, 4.5rem);
-  --content-max:    1200px;
+  --page-gutter:    clamp(0.875rem, 0.72rem + 0.85vw, 1.75rem);
+  --page-gutter-lg: clamp(1rem, 0.85rem + 2vw, 3.75rem);
+  --content-max:    1160px;
 
-  --fs-xs:   clamp(0.8125rem, 0.79rem + 0.08vw, 0.875rem);
-  --fs-sm:   clamp(0.9375rem, 0.91rem + 0.12vw, 1rem);
-  --fs-base: clamp(1rem, 0.98rem + 0.18vw, 1.0625rem);
-  --fs-lg:   clamp(1.125rem, 1.08rem + 0.3vw, 1.25rem);
-  --fs-xl:   clamp(1.3125rem, 1.22rem + 0.5vw, 1.5rem);
+  --fs-xs:   clamp(0.775rem, 0.755rem + 0.07vw, 0.84rem);
+  --fs-sm:   clamp(0.9rem, 0.875rem + 0.1vw, 0.965rem);
+  --fs-base: clamp(0.96rem, 0.94rem + 0.14vw, 1.015rem);
+  --fs-lg:   clamp(1.06rem, 1.02rem + 0.22vw, 1.16rem);
+  --fs-xl:   clamp(1.2rem, 1.13rem + 0.36vw, 1.34rem);
 
   /* --- Spacing & Shape --- */
   --radius-s:  6px;
@@ -127,7 +127,10 @@
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  font-size: 15px;
+}
 
 body {
   background-color: var(--bg);
@@ -808,4 +811,3 @@ hr {
     padding-top: max(0px, env(safe-area-inset-top));
   }
 }
-
