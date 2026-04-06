@@ -1,11 +1,13 @@
 /* ===== REGISTER PAGE ===== */
 
 .register-page {
+  --auth-header-height: calc(72px + env(safe-area-inset-top, 0px));
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg-deep);
-  display: flex;
-  padding-top: 72px;
+  height: 100dvh;
   position: relative;
+  overflow: hidden;
 }
 
 .register-top-brand {
@@ -14,14 +16,35 @@
   left: 0;
   right: 0;
   z-index: 120;
+  background: rgba(13, 21, 34, 0.98);
+  border-bottom: 1px solid var(--border);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="light"] .register-top-brand {
+  background: rgba(238, 244, 251, 0.98);
 }
 
 .register-top-brand__inner {
   min-height: 72px;
+  padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 12px));
+  padding-bottom: 12px;
 }
 
 .register-top-brand__controls {
   justify-self: end;
+}
+
+.register-body {
+  position: absolute;
+  top: var(--auth-header-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  min-height: 0;
+  height: auto;
 }
 
 .register-left {
@@ -141,18 +164,26 @@
 
 .register-right {
   flex: 1;
-  min-height: 100vh;
-  padding: clamp(1.5rem, 4vw, 3.75rem);
+  min-height: 0;
+  height: 100%;
+  padding: 0 clamp(1.5rem, 4vw, 3.75rem) clamp(1.5rem, 4vw, 3.75rem);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
   background: var(--surface);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .register-form-wrap {
   width: 100%;
   max-width: 540px;
+  flex: 0 0 auto;
+  margin: auto;
+  padding-top: 20px;
+  padding-bottom: 24px;
 }
 
 .register-tab-switcher {
@@ -367,12 +398,15 @@
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
-  .register-page {
+  .register-body {
     flex-direction: column;
-    padding-top: 72px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .register-left {
+    flex: 0 0 auto;
     width: 100%;
     min-width: 0;
     min-height: auto;
@@ -386,7 +420,19 @@
   }
 
   .register-right {
-    min-height: auto;
+    flex: 0 0 auto;
+    min-height: 0;
+    height: auto;
+    justify-content: flex-start;
+    padding-top: 24px;
+    padding-bottom: 36px;
+    overflow: visible;
+  }
+
+  .register-form-wrap {
+    margin: 0 auto;
+    padding-top: 12px;
+    padding-bottom: 16px;
   }
 }
 
@@ -402,14 +448,19 @@
   }
 
   .register-right {
-    min-height: calc(100vh - 72px);
-    align-items: flex-start;
-    padding-top: 20px;
+    min-height: 0;
+    height: auto;
+    justify-content: flex-start;
+    padding-top: 0;
     padding-bottom: 28px;
+    overflow-y: auto;
   }
 
   .register-form-wrap {
     max-width: none;
+    margin: 0 auto;
+    padding-top: 20px;
+    padding-bottom: 24px;
   }
 
   .register-form-row {

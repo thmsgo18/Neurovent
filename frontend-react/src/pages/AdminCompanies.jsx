@@ -2,10 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Admin.css";
 import { deleteAdminUser, getAdminCompanies, verifyAdminCompany } from "../api/admin";
+import { usePreferences } from "../context/PreferencesContext";
 
-function formatJoined(value) {
-  if (!value) return "Unknown join date";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+function formatJoined(value, locale, t) {
+  if (!value) return t("Unknown join date");
+  return new Date(value).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function getVerificationTone(status) {
@@ -15,8 +20,17 @@ function getVerificationTone(status) {
   return "admin-pill--muted";
 }
 
+function getVerificationLabel(status, t) {
+  if (status === "VERIFIED") return t("Verified");
+  if (status === "REJECTED") return t("Rejected");
+  if (status === "NEEDS_REVIEW") return t("Needs Review");
+  if (status === "PENDING") return t("Pending");
+  return status || t("Unknown");
+}
+
 export default function AdminCompanies() {
   const navigate = useNavigate();
+  const { t, locale } = usePreferences();
   const [verifiedCompanies, setVerifiedCompanies] = useState([]);
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
@@ -44,15 +58,15 @@ export default function AdminCompanies() {
     event.stopPropagation();
     const isPendingCompany = company.verification_status !== "VERIFIED";
     const confirmMessage = isPendingCompany
-      ? "Delete this organization account while it is still pending verification? This action cannot be undone."
-      : "Delete this verified organization account? This action cannot be undone.";
+      ? t("Delete this organization account while it is still pending verification? This action cannot be undone.")
+      : t("Delete this verified organization account? This action cannot be undone.");
     if (!window.confirm(confirmMessage)) return;
     try {
       await deleteAdminUser(company.id);
       setVerifiedCompanies((prev) => prev.filter((item) => item.id !== company.id));
       setPendingCompanies((prev) => prev.filter((item) => item.id !== company.id));
     } catch (error) {
-      alert(error.message || "Unable to delete this organization right now.");
+      alert(error.message || t("Unable to delete this organization right now."));
     }
   };
 
@@ -62,7 +76,7 @@ export default function AdminCompanies() {
       await verifyAdminCompany(companyId, verificationStatus);
       loadCompanies();
     } catch (error) {
-      alert(error.message || "Unable to update this verification status.");
+      alert(error.message || t("Unable to update this verification status."));
     }
   };
 
@@ -75,9 +89,9 @@ export default function AdminCompanies() {
         <div className="admin-stack">
           <header className="admin-header">
             <div>
-              <h1 className="admin-title">Organizations</h1>
+              <h1 className="admin-title">{t("Organizations")}</h1>
               <p className="admin-copy">
-                Monitor organization accounts, validate pending applications, and review every company currently active on the platform.
+                {t("Monitor organization accounts, validate pending applications, and review every company currently active on the platform.")}
               </p>
             </div>
 
@@ -92,7 +106,7 @@ export default function AdminCompanies() {
                 className="input admin-search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search any organization field..."
+                placeholder={t("Search any organization field...")}
               />
               {submittedSearch ? (
                 <button
@@ -103,7 +117,7 @@ export default function AdminCompanies() {
                     setSubmittedSearch("");
                   }}
                 >
-                  View All
+                  {t("View All")}
                 </button>
               ) : null}
             </form>
@@ -112,12 +126,14 @@ export default function AdminCompanies() {
           <div className={`admin-grid${hasPending ? "" : " admin-grid--single"}`}>
             <section className="admin-section">
               <div className="admin-section-head">
-                <h2 className="admin-section-title">Pending Verification</h2>
-                <span className="admin-section-meta">{pendingCompanies.length} waiting review</span>
+                <h2 className="admin-section-title">{t("Pending Verification")}</h2>
+                <span className="admin-section-meta">
+                  {t("{{count}} waiting review", { count: pendingCompanies.length })}
+                </span>
               </div>
 
               {pendingCompanies.length === 0 ? (
-                <div className="admin-empty">No organization is currently waiting for manual review.</div>
+                <div className="admin-empty">{t("No organization is currently waiting for manual review.")}</div>
               ) : (
                 <div className="admin-list">
                   {pendingCompanies.map((company) => (
@@ -136,25 +152,31 @@ export default function AdminCompanies() {
                     >
                       <div className="admin-card-top">
                         <div className="admin-card-copy">
-                          <h3 className="admin-card-title">{company.company_name || "Organization"}</h3>
-                          <p className="admin-card-subtitle">{company.recovery_email || "No recovery email"}</p>
+                          <h3 className="admin-card-title">{company.company_name || t("Organization")}</h3>
+                          <p className="admin-card-subtitle">{company.recovery_email || t("No recovery email")}</p>
                           <div className="admin-card-meta">
                             <span className={`admin-pill ${getVerificationTone(company.verification_status)}`}>
-                              {company.verification_status}
+                              {getVerificationLabel(company.verification_status, t)}
                             </span>
-                            <span className="admin-pill admin-pill--muted">SIRET {company.siret || "missing"}</span>
-                            <span className="admin-pill admin-pill--muted">Joined {formatJoined(company.date_joined)}</span>
+                            <span className="admin-pill admin-pill--muted">
+                              {t("SIRET {{value}}", { value: company.siret || t("missing") })}
+                            </span>
+                            <span className="admin-pill admin-pill--muted">
+                              {t("Joined {{date}}", { date: formatJoined(company.date_joined, locale, t) })}
+                            </span>
                             {(company.match_reasons || []).map((reason) => (
-                              <span key={reason} className="admin-pill admin-pill--warning">Match in {reason}</span>
+                              <span key={reason} className="admin-pill admin-pill--warning">
+                                {t("Match in {{reason}}", { reason })}
+                              </span>
                             ))}
                           </div>
                           {company.review_note ? (
                             <p className="admin-card-subtitle" style={{ marginTop: "12px" }}>
-                              Review reason: {company.review_note}
+                              {t("Review reason: {{reason}}", { reason: company.review_note })}
                             </p>
                           ) : (
                             <p className="admin-card-subtitle" style={{ marginTop: "12px" }}>
-                              Review reason: automatic verification found missing or inconsistent company details.
+                              {t("Review reason: automatic verification found missing or inconsistent company details.")}
                             </p>
                           )}
                         </div>
@@ -169,21 +191,21 @@ export default function AdminCompanies() {
                             navigate(`/company/${company.id}`);
                           }}
                         >
-                          View profile
+                          {t("View profile")}
                         </button>
                         <div className="admin-actions">
                           <button type="button" className="admin-secondary-btn" onClick={(event) => handleVerify(event, company.id, "VERIFIED")}>
-                            Approve
+                            {t("Approve")}
                           </button>
                           <button
                             type="button"
                             className="admin-danger-btn"
                             onClick={(event) => handleDelete(event, company)}
                           >
-                            Delete
+                            {t("Delete")}
                           </button>
                           <button type="button" className="admin-danger-btn" onClick={(event) => handleVerify(event, company.id, "REJECTED")}>
-                            Reject
+                            {t("Reject")}
                           </button>
                         </div>
                       </div>
@@ -195,14 +217,16 @@ export default function AdminCompanies() {
 
             <section className="admin-section">
               <div className="admin-section-head">
-                <h2 className="admin-section-title">Verified Organizations</h2>
-                <span className="admin-section-meta">{verifiedCount} organization{verifiedCount !== 1 ? "s" : ""}</span>
+                <h2 className="admin-section-title">{t("Verified Organizations")}</h2>
+                <span className="admin-section-meta">
+                  {t("{{count}} organization{{suffix}}", { count: verifiedCount, suffix: verifiedCount !== 1 ? "s" : "" })}
+                </span>
               </div>
 
               {loading ? (
-                <div className="admin-empty">Loading companies...</div>
+                <div className="admin-empty">{t("Loading companies...")}</div>
               ) : verifiedCompanies.length === 0 ? (
-                <div className="admin-empty">No verified organizations match the current search.</div>
+                <div className="admin-empty">{t("No verified organizations match the current search.")}</div>
               ) : (
                 <div className="admin-list">
                   {verifiedCompanies.map((company) => (
@@ -221,32 +245,36 @@ export default function AdminCompanies() {
                     >
                       <div className="admin-card-top">
                         <div className="admin-card-copy">
-                          <h3 className="admin-card-title">{company.company_name || "Organization"}</h3>
-                          <p className="admin-card-subtitle">{company.recovery_email || "No recovery email"}</p>
+                          <h3 className="admin-card-title">{company.company_name || t("Organization")}</h3>
+                          <p className="admin-card-subtitle">{company.recovery_email || t("No recovery email")}</p>
                           <div className="admin-card-meta">
                             <span className={`admin-pill ${getVerificationTone(company.verification_status)}`}>
-                              {company.verification_status}
+                              {getVerificationLabel(company.verification_status, t)}
                             </span>
                             <span className={`admin-pill ${company.is_active ? "admin-pill--success" : "admin-pill--danger"}`}>
-                              {company.is_active ? "Active" : "Inactive"}
+                              {company.is_active ? t("Active") : t("Inactive")}
                             </span>
-                            <span className="admin-pill admin-pill--muted">Joined {formatJoined(company.date_joined)}</span>
+                            <span className="admin-pill admin-pill--muted">
+                              {t("Joined {{date}}", { date: formatJoined(company.date_joined, locale, t) })}
+                            </span>
                             {(company.match_reasons || []).map((reason) => (
-                              <span key={reason} className="admin-pill admin-pill--warning">Match in {reason}</span>
+                              <span key={reason} className="admin-pill admin-pill--warning">
+                                {t("Match in {{reason}}", { reason })}
+                              </span>
                             ))}
                           </div>
                         </div>
 
                         <div className="admin-actions">
                           <button
-                            type="button"
-                            className="admin-danger-btn"
-                            onClick={(event) => handleDelete(event, company)}
-                          >
-                            Delete
-                          </button>
-                        </div>
+                          type="button"
+                          className="admin-danger-btn"
+                          onClick={(event) => handleDelete(event, company)}
+                        >
+                          {t("Delete")}
+                        </button>
                       </div>
+                    </div>
                     </div>
                   ))}
                 </div>

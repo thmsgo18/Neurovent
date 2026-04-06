@@ -6,9 +6,11 @@ import { OrganizationProfileOverviewContent } from "./ProfileOverview";
 import { deleteAdminUser, getAdminEvents, getAdminUserProfile } from "../api/admin";
 import { getRole } from "../store/authStore";
 import "../styles/Admin.css";
+import { usePreferences } from "../context/PreferencesContext";
 
 export default function CompanyProfile() {
   const navigate = useNavigate();
+  const { t } = usePreferences();
   const { id } = useParams();
   const [company, setCompany] = useState(null);
   const [events, setEvents] = useState([]);
@@ -48,14 +50,14 @@ export default function CompanyProfile() {
   const handleDelete = async () => {
     const isPendingCompany = company.verification_status !== "VERIFIED";
     const confirmMessage = isPendingCompany
-      ? "Delete this organization account while it is still pending verification? This action cannot be undone."
-      : "Delete this verified organization account? This action cannot be undone.";
+      ? t("Delete this organization account while it is still pending verification? This action cannot be undone.")
+      : t("Delete this verified organization account? This action cannot be undone.");
     if (!window.confirm(confirmMessage)) return;
     try {
       await deleteAdminUser(company.id);
       navigate("/admin/companies");
     } catch (error) {
-      alert(error.message || "Unable to delete this organization.");
+      alert(error.message || t("Unable to delete this organization."));
     }
   };
 
@@ -67,17 +69,19 @@ export default function CompanyProfile() {
             <div className="admin-header admin-header--detail">
               <button type="button" className="admin-back-btn admin-back-btn--animated" onClick={() => navigate("/admin/companies")}>
                 <span className="admin-back-btn__arrow" aria-hidden="true">←</span>
-                Back to Organizations
+                {t("Back to Organizations")}
               </button>
               <div className="admin-actions">
                 <button type="button" className="admin-danger-btn" onClick={handleDelete}>
-                  Delete Organization
+                  {t("Delete Organization")}
                 </button>
               </div>
             </div>
             {company.verification_status !== "VERIFIED" ? (
               <div className="admin-empty admin-empty--review">
-                Review reason: {company.review_note || "This organization is waiting for manual validation because some company details are missing or inconsistent."}
+                {t("Review reason: {{reason}}", {
+                  reason: company.review_note || t("This organization is waiting for manual validation because some company details are missing or inconsistent."),
+                })}
               </div>
             ) : null}
           </div>
@@ -90,7 +94,7 @@ export default function CompanyProfile() {
           events={events}
           showEditButton={false}
           showBadges={!isAdmin}
-          subtitle={isAdmin ? (company.recovery_email || "Organization profile") : "Public organization profile"}
+          subtitle={isAdmin ? (company.recovery_email || t("Organization profile")) : t("Public organization profile")}
           wrapInShell={!isAdmin}
           onOpenEvents={isAdmin ? ((companyName, mode) => {
             const params = new URLSearchParams();

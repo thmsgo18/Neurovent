@@ -13,7 +13,30 @@ export default function AppHeader() {
   const [mobileAuthOpen, setMobileAuthOpen] = useState(false);
   const mobilePrefsRef = useRef(null);
   const mobileAuthRef = useRef(null);
+  const headerRef = useRef(null);
   const { locale, setLocale, themeMode, setThemeMode, t } = usePreferences();
+
+  // Met à jour --header-height sur :root dès que la hauteur du header change
+  // (orientation, taille de police, affichage de la barre d'adresse iOS, etc.)
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      document.documentElement.style.setProperty(
+        "--header-height",
+        `${el.getBoundingClientRect().height}px`
+      );
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Synchronise theme-color avec le thème pour que la barre de statut iOS
+  // ait la même couleur que le header (améliore l'apparence dans la safe area)
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", themeMode === "light" ? "#eef4fb" : "#0d1522");
+  }, [themeMode]);
 
   const themeOptions = [
     { value: "light", label: t("Light"), icon: Sun },
@@ -101,7 +124,7 @@ export default function AppHeader() {
   );
 
   return (
-    <header className="app-header">
+    <header ref={headerRef} className="app-header">
       <div className="app-header__inner">
         <Link to="/" className="app-header__brand">
           Neuro<span style={{ color: "var(--accent)" }}>vent</span>

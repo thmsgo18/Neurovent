@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { usePreferences } from "../context/PreferencesContext";
 import "../styles/DateInput.css";
 
-const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEK_DAYS = {
+  en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  fr: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+};
 
 const parseDateValue = (value) => {
   if (!value) return null;
@@ -115,13 +120,18 @@ export default function DateInput({
   placeholder = "Select a date",
   ...props
 }) {
+  const { locale, t } = usePreferences();
   const wrapperRef = useRef(null);
+  const popoverRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [popoverStyle, setPopoverStyle] = useState({});
   const selectedDate = parseDateValue(value);
   const minDate = parseDateValue(min);
   const maxDate = parseDateValue(max);
   const [viewDate, setViewDate] = useState(selectedDate || minDate || new Date());
+  const localeCode = locale === "fr" ? "fr-FR" : "en-GB";
+  const weekDays = WEEK_DAYS[locale] || WEEK_DAYS.en;
 
   useEffect(() => {
     setInputValue(value || "");
@@ -132,7 +142,10 @@ export default function DateInput({
     if (!open) return undefined;
 
     const handlePointerDown = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      const clickedInsideField = wrapperRef.current && wrapperRef.current.contains(event.target);
+      const clickedInsidePopover = popoverRef.current && popoverRef.current.contains(event.target);
+
+      if (!clickedInsideField && !clickedInsidePopover) {
         setOpen(false);
       }
     };
@@ -148,6 +161,45 @@ export default function DateInput({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+
+    const updatePopoverPosition = () => {
+      if (!wrapperRef.current) return;
+
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const measuredHeight = popoverRef.current?.offsetHeight || 336;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const sidePadding = 12;
+      const gap = 12;
+      const width = Math.min(Math.max(rect.width, 280), 340, viewportWidth - (sidePadding * 2));
+      const left = Math.min(
+        Math.max(sidePadding, rect.left),
+        Math.max(sidePadding, viewportWidth - width - sidePadding),
+      );
+      const openAbove = rect.bottom + gap + measuredHeight > viewportHeight - sidePadding && rect.top - gap - measuredHeight > sidePadding;
+      const top = openAbove
+        ? Math.max(sidePadding, rect.top - measuredHeight - gap)
+        : Math.min(viewportHeight - measuredHeight - sidePadding, rect.bottom + gap);
+
+      setPopoverStyle({
+        top: `${top}px`,
+        left: `${left}px`,
+        width: `${width}px`,
+      });
+    };
+
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    window.addEventListener("scroll", updatePopoverPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+    };
+  }, [open, locale, viewDate]);
 
   const calendarDays = useMemo(() => buildCalendarDays(viewDate), [viewDate]);
 
@@ -204,13 +256,15 @@ export default function DateInput({
   };
 
   return (
-    <div className="date-input-wrap" ref={wrapperRef}>
+    <div className={`date-input-wrap${open ? " date-input-wrap--open" : ""}`} ref={wrapperRef}>
       <input
         type="text"
         className={`input date-input-trigger ${className}`}
         style={style}
         value={inputValue}
         onChange={(event) => setInputValue(event.target.value)}
+        onFocus={() => !disabled && setOpen(true)}
+        onClick={() => !disabled && setOpen(true)}
         onBlur={commitTypedDate}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
@@ -218,11 +272,11 @@ export default function DateInput({
             commitTypedDate();
           }
         }}
-        placeholder={placeholder || "YYYY/MM/DD or DD/MM/YYYY"}
+        placeholder={placeholder ? t(placeholder) : t("YYYY/MM/DD or DD/MM/YYYY")}
         inputMode="numeric"
         autoComplete="off"
         disabled={disabled}
-        aria-label="Type a date or open the date picker"
+        aria-label={t("Type a date or open the date picker")}
       />
 
       <button
@@ -230,7 +284,7 @@ export default function DateInput({
         className="date-input-icon"
         onClick={() => !disabled && setOpen((current) => !current)}
         tabIndex={-1}
-        aria-label="Open date picker"
+        aria-label={t("Open date picker")}
         disabled={disabled}
       >
         <Calendar size={15} strokeWidth={2} />
@@ -238,22 +292,28 @@ export default function DateInput({
 
       <input type="hidden" value={value || ""} required={required} {...props} />
 
-      {open && (
-        <div className="date-input-popover" role="dialog" aria-modal="false">
+      {open && typeof document !== "undefined" && createPortal(
+        <div
+          ref={popoverRef}
+          className="date-input-popover date-input-popover--portal"
+          role="dialog"
+          aria-modal="false"
+          style={popoverStyle}
+        >
           <div className="date-input-popover-header">
-            <button type="button" className="date-input-nav" onClick={() => moveMonth(-1)} aria-label="Previous month">
+            <button type="button" className="date-input-nav" onClick={() => moveMonth(-1)} aria-label={t("Previous month")}>
               <ChevronLeft size={16} />
             </button>
             <div className="date-input-popover-title">
-              {viewDate.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+              {viewDate.toLocaleDateString(localeCode, { month: "long", year: "numeric" })}
             </div>
-            <button type="button" className="date-input-nav" onClick={() => moveMonth(1)} aria-label="Next month">
+            <button type="button" className="date-input-nav" onClick={() => moveMonth(1)} aria-label={t("Next month")}>
               <ChevronRight size={16} />
             </button>
           </div>
 
           <div className="date-input-grid date-input-grid--weekdays">
-            {WEEK_DAYS.map((day) => (
+            {weekDays.map((day) => (
               <span key={day} className="date-input-weekday">
                 {day}
               </span>
@@ -282,7 +342,8 @@ export default function DateInput({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

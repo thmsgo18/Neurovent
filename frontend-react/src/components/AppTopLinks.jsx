@@ -104,7 +104,7 @@ export default function AppTopLinks({ className = "" }) {
 
   return (
     <nav
-      className={`app-top-links${activeIndex >= 0 ? "" : " app-top-links--no-active"}${isMoving ? " app-top-links--moving" : ""} ${className}`.trim()}
+      className={`app-top-links${activeIndex >= 0 ? "" : " app-top-links--no-active"}${isMoving ? " app-top-links--moving" : ""}${isAdmin ? " app-top-links--admin" : ""} ${className}`.trim()}
       aria-label={t("Primary")}
       style={{
         "--link-count": links.length,

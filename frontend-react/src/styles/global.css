@@ -5,6 +5,9 @@
    ============================================================ */
 
 :root {
+  /* Hauteur réelle du header, mise à jour par ResizeObserver dans AppHeader.jsx */
+  --header-height: 96px;
+
   /* --- Color Palette --- */
   --bg:            #0d1522;
   --bg-2:          #152033;
@@ -141,7 +144,9 @@ body {
     radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
   background-size: 28px 28px;
   background-attachment: fixed;
-  overflow-x: hidden;
+  overflow-x: hidden; /* fallback anciens navigateurs */
+  overflow-x: clip;   /* iOS Safari : ne crée pas de scroll-container,
+                         ne casse pas position:fixed (contrairement à hidden) */
 }
 
 :root[data-theme-switching="true"] body,
@@ -262,7 +267,8 @@ canvas {
 }
 
 .app-layout {
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -270,11 +276,14 @@ canvas {
 .app-layout__content {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-layout__content--fixed {
-  height: calc(100dvh - 73px);
+  height: calc(100dvh - var(--header-height));
   overflow: hidden;
+  padding-top: 0;
 }
 
 @media (max-width: 1024px) {
@@ -799,3 +808,4 @@ hr {
     padding-top: max(0px, env(safe-area-inset-top));
   }
 }
+

@@ -3,14 +3,20 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Admin.css";
 import { deleteAdminUser, getAdminUsers } from "../api/admin";
 import { apiFetch } from "../api/client";
+import { usePreferences } from "../context/PreferencesContext";
 
-function formatJoined(value) {
-  if (!value) return "Unknown join date";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+function formatJoined(value, locale, t) {
+  if (!value) return t("Unknown join date");
+  return new Date(value).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function AdminParticipants() {
   const navigate = useNavigate();
+  const { t, locale } = usePreferences();
   const [participants, setParticipants] = useState([]);
   const [count, setCount] = useState(0);
   const [search, setSearch] = useState("");
@@ -30,13 +36,13 @@ export default function AdminParticipants() {
 
   const handleDelete = async (event, userId) => {
     event.stopPropagation();
-    if (!window.confirm("Delete this participant account? This action cannot be undone.")) return;
+    if (!window.confirm(t("Delete this participant account? This action cannot be undone."))) return;
     try {
       await deleteAdminUser(userId);
       setParticipants((prev) => prev.filter((item) => item.id !== userId));
       setCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      alert(error.message || "Unable to delete this participant right now.");
+      alert(error.message || t("Unable to delete this participant right now."));
     }
   };
 
@@ -44,8 +50,8 @@ export default function AdminParticipants() {
     event.stopPropagation();
     const nextAction = participant.is_active ? "suspend" : "activate";
     const confirmMessage = participant.is_active
-      ? "Suspend this participant account?"
-      : "Reactivate this participant account?";
+      ? t("Suspend this participant account?")
+      : t("Reactivate this participant account?");
     if (!window.confirm(confirmMessage)) return;
     try {
       await apiFetch(`/api/auth/admin/users/${participant.id}/${nextAction}/`, { method: "PATCH" });
@@ -53,7 +59,7 @@ export default function AdminParticipants() {
         item.id === participant.id ? { ...item, is_active: !item.is_active } : item
       )));
     } catch (error) {
-      alert(error.message || "Unable to update this participant status.");
+      alert(error.message || t("Unable to update this participant status."));
     }
   };
 
@@ -63,9 +69,9 @@ export default function AdminParticipants() {
         <div className="admin-stack">
           <header className="admin-header">
             <div>
-              <h1 className="admin-title">Participants</h1>
+              <h1 className="admin-title">{t("Participants")}</h1>
               <p className="admin-copy">
-                Review participant accounts, open their profile pages, and remove accounts when moderation is needed.
+                {t("Review participant accounts, open their profile pages, and remove accounts when moderation is needed.")}
               </p>
             </div>
 
@@ -80,7 +86,7 @@ export default function AdminParticipants() {
                 className="input admin-search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search any participant field..."
+                placeholder={t("Search any participant field...")}
               />
               {submittedSearch ? (
                 <button
@@ -91,7 +97,7 @@ export default function AdminParticipants() {
                     setSubmittedSearch("");
                   }}
                 >
-                  View All
+                  {t("View All")}
                 </button>
               ) : null}
             </form>
@@ -99,13 +105,15 @@ export default function AdminParticipants() {
 
           <section className="admin-section">
             <div className="admin-section-head">
-              <span className="admin-section-meta">{count} participant{count !== 1 ? "s" : ""}</span>
+              <span className="admin-section-meta">
+                {t("{{count}} participant{{suffix}}", { count, suffix: count !== 1 ? "s" : "" })}
+              </span>
             </div>
 
             {loading ? (
-              <div className="admin-empty">Loading participants...</div>
+              <div className="admin-empty">{t("Loading participants...")}</div>
             ) : participants.length === 0 ? (
-              <div className="admin-empty">No participants match the current search.</div>
+              <div className="admin-empty">{t("No participants match the current search.")}</div>
             ) : (
               <div className="admin-list">
                 {participants.map((participant) => (
@@ -124,15 +132,19 @@ export default function AdminParticipants() {
                   >
                     <div className="admin-card-top">
                       <div className="admin-card-copy">
-                        <h3 className="admin-card-title">{participant.name || "Participant"}</h3>
-                        <p className="admin-card-subtitle">{participant.email || "No email available"}</p>
+                        <h3 className="admin-card-title">{participant.name || t("Participant")}</h3>
+                        <p className="admin-card-subtitle">{participant.email || t("No email available")}</p>
                         <div className="admin-card-meta">
                           <span className={`admin-pill ${participant.is_active ? "admin-pill--success" : "admin-pill--danger"}`}>
-                            {participant.is_active ? "Active" : "Inactive"}
+                            {participant.is_active ? t("Active") : t("Inactive")}
                           </span>
-                          <span className="admin-pill admin-pill--muted">Joined {formatJoined(participant.date_joined)}</span>
+                          <span className="admin-pill admin-pill--muted">
+                            {t("Joined {{date}}", { date: formatJoined(participant.date_joined, locale, t) })}
+                          </span>
                           {(participant.match_reasons || []).map((reason) => (
-                            <span key={reason} className="admin-pill admin-pill--warning">Match in {reason}</span>
+                            <span key={reason} className="admin-pill admin-pill--warning">
+                              {t("Match in {{reason}}", { reason })}
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -143,14 +155,14 @@ export default function AdminParticipants() {
                           className="admin-secondary-btn"
                           onClick={(event) => handleToggleSuspension(event, participant)}
                         >
-                          {participant.is_active ? "Suspend" : "Reactivate"}
+                          {participant.is_active ? t("Suspend") : t("Reactivate")}
                         </button>
                         <button
                           type="button"
                           className="admin-danger-btn"
                           onClick={(event) => handleDelete(event, participant.id)}
                         >
-                          Delete
+                          {t("Delete")}
                         </button>
                       </div>
                     </div>

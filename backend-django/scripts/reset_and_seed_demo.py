@@ -1049,6 +1049,7 @@ def build_company_description(blueprint):
 DIRECT_COMPANY_LOGO_URLS = {
     "mistral-ai": "https://mistral.ai/img/mistral-ai-logo.svg",
     "doctolib": "https://assets.doctolib.fr/img/cms/logo-blue.png",
+    "iqvia": "https://s201.q4cdn.com/364468738/files/design/1image.jpg",
 }
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AlertCircle, Eye, EyeOff, Languages, Moon, Settings2, Sun } from "lucide-react";
 import "../styles/Login.css";
@@ -17,6 +17,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const pageRef = useRef(null);
+  const headerRef = useRef(null);
   const mobilePrefsRef = useRef(null);
 
   const isOrganization = mode === "organization";
@@ -53,6 +55,43 @@ export default function Login() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [mobilePrefsOpen]);
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const updateHeaderHeight = () => {
+      if (!pageRef.current || !headerRef.current) return;
+      pageRef.current.style.setProperty("--auth-header-height", `${headerRef.current.offsetHeight}px`);
+    };
+
+    updateHeaderHeight();
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => updateHeaderHeight())
+      : null;
+
+    if (resizeObserver && headerRef.current) {
+      resizeObserver.observe(headerRef.current);
+    }
+
+    window.addEventListener("resize", updateHeaderHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateHeaderHeight);
+    };
+  }, []);
 
   const renderLanguageControls = ({ mobile = false } = {}) => (
     <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
@@ -133,8 +172,8 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-top-brand">
+    <div ref={pageRef} className="login-page">
+      <div ref={headerRef} className="login-top-brand">
         <div className="app-header__inner login-top-brand__inner">
           <Link to="/" className="app-header__brand login-brand">
             Neuro<span style={{ color: "var(--accent)" }}>vent</span>
@@ -210,7 +249,6 @@ export default function Login() {
           style={{
             background: "var(--surface)",
             border: `1px solid ${isOrganization ? "var(--secondary)" : "var(--border-strong)"}`,
-            boxShadow: "0 0 40px rgba(0,0,0,0.4)",
           }}
         >
         <div className="login-heading">

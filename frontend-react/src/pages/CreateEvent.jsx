@@ -1,17 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, X } from "lucide-react";
+import { getMeApi } from "../api/auth";
 import { createEvent } from "../api/events";
 import { getTags, getTagsSync } from "../api/tags";
+import { usePreferences } from "../context/PreferencesContext";
 import { getCompanyName, getDisplayName } from "../store/authStore";
 import DateInput from "../components/DateInput";
 import "../styles/CreateEvent.css";
 
-const STEPS = [
-  { id: 1, label: "Basic Info" },
-  { id: 2, label: "Schedule" },
-  { id: 3, label: "Preview" },
-];
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
 
 const INITIAL_FORM = {
   title: "",
@@ -80,20 +78,21 @@ const formatDateForInput = (dateValue) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatSchedulePreview = (startDate, startTime, endDate, endTime) => {
-  if (!startDate || !startTime) return "TBD";
+const formatSchedulePreview = (startDate, startTime, endDate, endTime, locale, t) => {
+  if (!startDate || !startTime) return t("TBD");
   const start = combineDateAndTime(startDate, startTime);
   const end = combineDateAndTime(endDate, endTime);
   if (!start || !end) return `${startDate} ${startTime}`;
+  const localeCode = locale === "fr" ? "fr-FR" : "en-GB";
 
   const sameDay = formatDateForInput(start) === formatDateForInput(end);
-  const startLabel = start.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const startTimeLabel = start.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  const endTimeLabel = end.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const startLabel = start.toLocaleDateString(localeCode, { day: "numeric", month: "short", year: "numeric" });
+  const startTimeLabel = start.toLocaleTimeString(localeCode, { hour: "2-digit", minute: "2-digit" });
+  const endTimeLabel = end.toLocaleTimeString(localeCode, { hour: "2-digit", minute: "2-digit" });
 
   if (sameDay) return `${startLabel} • ${startTimeLabel} - ${endTimeLabel}`;
 
-  const endLabel = end.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const endLabel = end.toLocaleDateString(localeCode, { day: "numeric", month: "short", year: "numeric" });
   return `${startLabel} ${startTimeLabel} → ${endLabel} ${endTimeLabel}`;
 };
 
@@ -145,8 +144,16 @@ const detectPlatformFromLink = (url) => {
   return "";
 };
 
+const resolveMediaUrl = (value) => {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith("/")) return `${API_BASE}${value}`;
+  return `${API_BASE}/${value}`;
+};
+
 export default function CreateEvent() {
   const navigate = useNavigate();
+  const { t, locale } = usePreferences();
   const [step, setStep] = useState(1);
   const [published, setPublished] = useState(null); // {id}
   const [loading, setLoading] = useState(false);
@@ -159,6 +166,7 @@ export default function CreateEvent() {
   const [capacityInput, setCapacityInput] = useState(String(INITIAL_FORM.capacity));
   const [fieldErrors, setFieldErrors] = useState({});
   const [stepErrorMessage, setStepErrorMessage] = useState("");
+  const [companyLogoUrl, setCompanyLogoUrl] = useState("");
   const contentRef = useRef(null);
   const hasUnsavedChanges = !published && JSON.stringify(form) !== JSON.stringify(INITIAL_FORM);
   const [pendingNavigation, setPendingNavigation] = useState(null);
@@ -172,6 +180,23 @@ export default function CreateEvent() {
         .catch(() => setTagsLoading(false));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getMeApi()
+      .then((me) => {
+        if (cancelled) return;
+        setCompanyLogoUrl(resolveMediaUrl(me.company_logo_url || me.company_logo || ""));
+      })
+      .catch(() => {
+        if (!cancelled) setCompanyLogoUrl("");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (form.format !== "online" || !form.ends_next_day) return;
@@ -383,15 +408,15 @@ export default function CreateEvent() {
     setFieldErrors(nextErrors);
     setStepErrorMessage(
       hasPastStartDateTime
-        ? "The event start date and time cannot be in the past. Please choose a future time."
+        ? t("The event start date and time cannot be in the past. Please choose a future time.")
         : hasEqualMultiDayDates
-        ? "The end date must be different from the start date when “ends on another day” is enabled. If the event ends the same day, uncheck this option."
+        ? t("The end date must be different from the start date when \"Ends on another day\" is enabled. If the event ends the same day, uncheck this option.")
         : hasEndDateBeforeStartDate
-          ? "The end date cannot be before the start date. Choose a later end date or disable the multi-day option."
+          ? t("The end date cannot be before the start date. Choose a later end date or disable the multi-day option.")
           : hasInvalidSameDayEndTime
-            ? "For a same-day event, the end time must be after the start time. If the event continues overnight, enable “Ends on another day”."
+            ? t("For a same-day event, the end time must be after the start time. If the event continues overnight, enable \"Ends on another day\".")
         : Object.keys(nextErrors).length > 0
-          ? "Some required information is missing. Please complete the highlighted fields to continue."
+          ? t("Some required information is missing. Please complete the highlighted fields to continue.")
           : "",
     );
 
@@ -457,7 +482,7 @@ export default function CreateEvent() {
     setError("");
     try {
       if (!form.description.trim()) {
-        setError("Description is required.");
+        setError(t("Description is required."));
         setLoading(false);
         return;
       }
@@ -503,20 +528,30 @@ export default function CreateEvent() {
         }
       }
       if (form.registration_deadline_date && !form.allow_registration_during_event) {
-        const t = form.registration_deadline_time || "23:59";
-        payload.registration_deadline = `${form.registration_deadline_date}T${t}:00`;
+        const deadlineTime = form.registration_deadline_time || "23:59";
+        payload.registration_deadline = `${form.registration_deadline_date}T${deadlineTime}:00`;
       }
       const result = await createEvent(payload);
       setPublished(result);
     } catch (e) {
-      setError(e.message || "Failed to publish event.");
+      setError(e.message || t("Failed to publish event."));
     } finally {
       setLoading(false);
     }
   };
 
-  const organizer = getCompanyName() || getDisplayName() || "Organization";
-  const currentStep = STEPS.find((item) => item.id === step) || STEPS[0];
+  const organizer = getCompanyName() || getDisplayName() || t("Organization");
+  const steps = [
+    { id: 1, label: t("Basic Info") },
+    { id: 2, label: t("Schedule") },
+    { id: 3, label: t("Preview") },
+  ];
+  const currentStep = steps.find((item) => item.id === step) || steps[0];
+  const formatLabels = {
+    presential: t("In-Person"),
+    online: t("Online"),
+    hybrid: t("Hybrid"),
+  };
 
   const requestNavigation = (target) => {
     if (!hasUnsavedChanges) {
@@ -536,9 +571,9 @@ export default function CreateEvent() {
         <div className="create-event-success-shell">
           <div className="create-event-success-card">
           <div style={{ fontSize: "48px", marginBottom: "24px", color: "var(--success)" }}>✓</div>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>Event Published!</h2>
+          <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>{t("Event Published!")}</h2>
           <p style={{ color: "var(--text-muted)", fontSize: "15px", marginBottom: "36px", lineHeight: "1.6" }}>
-            Your event is now live and visible to the research community on Neurovent.
+            {t("Your event is now live and visible to the research community on Neurovent.")}
           </p>
           <div className="create-event-inline-actions">
             <button
@@ -546,14 +581,14 @@ export default function CreateEvent() {
               style={{ flex: 1, height: "48px" }}
               onClick={() => navigate(`/events/${published.id || ""}`)}
             >
-              View Event
+              {t("View Event")}
             </button>
             <button
               className="btn btn-secondary"
               style={{ flex: 1, height: "48px" }}
               onClick={() => navigate("/dashboard")}
             >
-              Back to Dashboard
+              {t("Back to Dashboard")}
             </button>
           </div>
         </div>
@@ -572,17 +607,17 @@ export default function CreateEvent() {
               className="create-event-back-btn"
               onClick={() => requestNavigation("/my-events")}
             >
-              ← Back to My Events
+              ← {t("Back to My Events")}
             </button>
           </div>
 
           <div className="create-event-hero">
-            <h1 className="create-event-page-title">Create New Event</h1>
+            <h1 className="create-event-page-title">{t("Create New Event")}</h1>
             <p className="create-event-page-state">{currentStep.label}</p>
           </div>
 
           <div className="create-event-stepper">
-            {STEPS.map((s) => (
+            {steps.map((s) => (
               <button
                 key={s.id}
                 type="button"
@@ -606,13 +641,13 @@ export default function CreateEvent() {
               )}
               <div className="form-field">
                 <label className="form-label">
-                  Event Title <span style={{ color: "var(--error)" }}>*</span>
+                  {t("Event Title")} <span style={{ color: "var(--error)" }}>*</span>
                 </label>
                 <input
                   type="text"
                   className={`input${getFieldErrorClass("title")}`}
                   style={{ height: "58px" }}
-                  placeholder="e.g. International Workshop on Neural Signal Processing"
+                  placeholder={t("e.g. International Workshop on Neural Signal Processing")}
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
                   required
@@ -621,7 +656,7 @@ export default function CreateEvent() {
 
               {/* Tags */}
               <div className="form-field">
-                <label className="form-label">Research Tags</label>
+                <label className="form-label">{t("Research Tags")}</label>
 
                 {/* Tags sélectionnés */}
                 {form.tagIds.length > 0 && (
@@ -657,7 +692,7 @@ export default function CreateEvent() {
                 )}
 
                 {tagsLoading && (
-                  <p style={{ fontSize: "13px", color: "var(--text-dim)", margin: "0 0 10px" }}>Chargement des tags...</p>
+                  <p style={{ fontSize: "13px", color: "var(--text-dim)", margin: "0 0 10px" }}>{t("Loading tags...")}</p>
                 )}
 
                 {/* Input tags */}
@@ -666,7 +701,7 @@ export default function CreateEvent() {
                     type="text"
                     className="input"
                     style={{ height: "48px", width: "100%" }}
-                    placeholder={availableTags.length ? "Add a tag…" : "No tags available"}
+                    placeholder={availableTags.length ? t("Add a tag…") : t("No tags available")}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTagByName(); } }}
@@ -710,12 +745,12 @@ export default function CreateEvent() {
 
               {/* Format */}
               <div className="form-field">
-                <label className="form-label">Format</label>
+                <label className="form-label">{t("Format")}</label>
                 <div className="create-event-grid-3">
                   {[
-                    { key: "presential", label: "In-Person", icon: "🏛" },
-                    { key: "online", label: "Online", icon: "🌐" },
-                    { key: "hybrid", label: "Hybrid", icon: "🔀" },
+                    { key: "presential", label: t("In-Person"), icon: "🏛" },
+                    { key: "online", label: t("Online"), icon: "🌐" },
+                    { key: "hybrid", label: t("Hybrid"), icon: "🔀" },
                   ].map((f) => (
                     <button
                       key={f.key}
@@ -760,7 +795,7 @@ export default function CreateEvent() {
                   if (validateStep(1)) setStep(2);
                 }}
               >
-                Continue to Schedule
+                {t("Continue to Schedule")}
               </button>
             </>
           )}
@@ -774,10 +809,10 @@ export default function CreateEvent() {
                   {stepErrorMessage}
                 </div>
               )}
-              <div className="create-event-grid-2">
+              <div className="create-event-grid-2 create-event-grid-2--schedule-primary">
                 <div className="form-field">
                   <label className="form-label">
-                    Start Date <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Start Date")} <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <DateInput
                     className={`create-event-schedule-input${getFieldErrorClass("date")}`}
@@ -816,15 +851,15 @@ export default function CreateEvent() {
                         <span className="create-event-switch-thumb" />
                       </span>
                       <span className="create-event-switch-copy">
-                        <strong>Ends on another day</strong>
-                        <small>Enable this only for events that continue past midnight.</small>
+                        <strong>{t("Ends on another day")}</strong>
+                        <small>{t("Enable this only for events that continue past midnight.")}</small>
                       </span>
                     </button>
                   )}
                 </div>
                 <div className="form-field">
                   <label className="form-label">
-                    Start Time <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Start Time")} <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="time"
@@ -837,10 +872,10 @@ export default function CreateEvent() {
               </div>
 
               {form.ends_next_day ? (
-                <div className="create-event-grid-2">
+                <div className="create-event-grid-2 create-event-grid-2--schedule-secondary">
                   <div className="form-field">
                     <label className="form-label">
-                      End Date <span style={{ color: "var(--error)" }}>*</span>
+                      {t("End Date")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <DateInput
                       className={`create-event-schedule-input${getFieldErrorClass("end_date")}`}
@@ -852,7 +887,7 @@ export default function CreateEvent() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      End Time <span style={{ color: "var(--error)" }}>*</span>
+                      {t("End Time")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="time"
@@ -864,10 +899,10 @@ export default function CreateEvent() {
                   </div>
                 </div>
               ) : (
-                <div className="create-event-grid-2">
+                <div className="create-event-grid-2 create-event-grid-2--schedule-summary">
                   <div className="form-field">
                     <label className="form-label">
-                      End Time <span style={{ color: "var(--error)" }}>*</span>
+                      {t("End Time")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="time"
@@ -877,13 +912,13 @@ export default function CreateEvent() {
                       onChange={(e) => set("end_time", e.target.value)}
                     />
                   </div>
-                  <div className="form-field">
-                    <label className="form-label">Calculated Duration</label>
+                  <div className="form-field create-event-form-field--duration">
+                    <label className="form-label">{t("Calculated Duration")}</label>
                     <div className="create-event-duration-display">
                       {computedDurationLabel}
                     </div>
                     <p className="create-event-inline-help">
-                      Same-day events must end before midnight.
+                      {t("Same-day events must end before midnight.")}
                     </p>
                   </div>
                 </div>
@@ -892,28 +927,28 @@ export default function CreateEvent() {
               {hasEqualMultiDayDates && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
                   <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
-                  The end date cannot be the same as the start date when this option is enabled. If the event ends the same day, uncheck “Ends on another day”.
+                  {t("The end date cannot be the same as the start date when this option is enabled. If the event ends the same day, uncheck \"Ends on another day\".")}
                 </div>
               )}
 
               {hasEndDateBeforeStartDate && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
                   <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
-                  The end date must be after the start date for a multi-day event. If the event ends the same day, turn this option off.
+                  {t("The end date must be after the start date for a multi-day event. If the event ends the same day, turn this option off.")}
                 </div>
               )}
 
               {hasPastStartDateTime && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
                   <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
-                  The start date and time cannot be in the past. Please choose a future time.
+                  {t("The start date and time cannot be in the past. Please choose a future time.")}
                 </div>
               )}
 
               {hasInvalidSameDayEndTime && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
                   <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
-                  For a same-day event, the end time must be after the start time. If it continues overnight, enable “Ends on another day”.
+                  {t("For a same-day event, the end time must be after the start time. If it continues overnight, enable \"Ends on another day\".")}
                 </div>
               )}
 
@@ -922,26 +957,26 @@ export default function CreateEvent() {
                   <div className="create-event-grid-2">
                     <div className="form-field">
                       <label className="form-label">
-                        City <span style={{ color: "var(--error)" }}>*</span>
+                        {t("City")} <span style={{ color: "var(--error)" }}>*</span>
                       </label>
                       <input
                         type="text"
                         className={`input${getFieldErrorClass("city")}`}
                         style={{ height: "58px" }}
-                        placeholder="e.g. Paris"
+                        placeholder={t("e.g. Paris")}
                         value={form.city}
                         onChange={(e) => set("city", e.target.value)}
                       />
                     </div>
                     <div className="form-field">
                       <label className="form-label">
-                        Country <span style={{ color: "var(--error)" }}>*</span>
+                        {t("Country")} <span style={{ color: "var(--error)" }}>*</span>
                       </label>
                       <input
                         type="text"
                         className={`input${getFieldErrorClass("country")}`}
                         style={{ height: "58px" }}
-                        placeholder="e.g. France"
+                        placeholder={t("e.g. France")}
                         value={form.country}
                         onChange={(e) => set("country", e.target.value)}
                       />
@@ -949,13 +984,13 @@ export default function CreateEvent() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      Full Address <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Full Address")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="text"
                       className={`input${getFieldErrorClass("address_full")}`}
                       style={{ height: "58px" }}
-                      placeholder="Full venue address including building and postal code"
+                      placeholder={t("Full venue address including building and postal code")}
                       value={form.address_full}
                       onChange={(e) => set("address_full", e.target.value)}
                     />
@@ -970,12 +1005,12 @@ export default function CreateEvent() {
                         <span className="create-event-switch-thumb" />
                       </span>
                       <span className="create-event-switch-copy">
-                        <strong>Share the full address later</strong>
-                        <small>Keep the exact venue private until shortly before the event starts.</small>
+                        <strong>{t("Share the full address later")}</strong>
+                        <small>{t("Keep the exact venue private until shortly before the event starts.")}</small>
                       </span>
                     </button>
                     <p className="create-event-inline-help">
-                      Useful if you want to reveal the exact venue shortly before the event by email.
+                      {t("Useful if you want to reveal the exact venue shortly before the event by email.")}
                     </p>
                     {form.address_share_later && (
                       <div className="create-event-inline-toggle">
@@ -986,7 +1021,7 @@ export default function CreateEvent() {
                             className={`create-event-choice-chip${form.address_share_offset_hours === hours ? " create-event-choice-chip--active" : ""}`}
                             onClick={() => set("address_share_offset_hours", hours)}
                           >
-                            Reveal {hours}h before start
+                            {t("Reveal {{hours}}h before start", { hours })}
                           </button>
                         ))}
                       </div>
@@ -998,12 +1033,12 @@ export default function CreateEvent() {
               {(form.format === "online" || form.format === "hybrid") && (
                 <>
                   <div className="form-field">
-                    <label className="form-label">Platform</label>
+                    <label className="form-label">{t("Platform")}</label>
                     <input
                       type="text"
                       className="input"
                       style={{ height: "58px" }}
-                      placeholder="e.g. Zoom, Teams, Google Meet"
+                      placeholder={t("e.g. Zoom, Teams, Google Meet")}
                       value={form.online_platform}
                       onChange={(e) => {
                         autoDetectedPlatformRef.current = "";
@@ -1014,13 +1049,13 @@ export default function CreateEvent() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      Online Link <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Online Link")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="url"
                       className={`input${getFieldErrorClass("online_link")}`}
                       style={{ height: "58px" }}
-                      placeholder="https://meeting-platform.com/your-link"
+                      placeholder={t("https://meeting-platform.com/your-link")}
                       value={form.online_link}
                       onChange={(e) => handleOnlineLinkChange(e.target.value)}
                     />
@@ -1035,12 +1070,12 @@ export default function CreateEvent() {
                         <span className="create-event-switch-thumb" />
                       </span>
                       <span className="create-event-switch-copy">
-                        <strong>Allow registration after the event starts</strong>
-                        <small>Useful for live webinars or hybrid sessions where attendees can still join after the opening.</small>
+                        <strong>{t("Allow registration after the event starts")}</strong>
+                        <small>{t("Useful for live webinars or hybrid sessions where attendees can still join after the opening.")}</small>
                       </span>
                     </button>
                     <p className="create-event-inline-help">
-                      If enabled, participants will still be able to join while the event is live.
+                      {t("If enabled, participants will still be able to join while the event is live.")}
                     </p>
                   </div>
                   <div className="create-event-card create-event-card--soft">
@@ -1061,14 +1096,14 @@ export default function CreateEvent() {
                         <span className="create-event-switch-thumb" />
                       </span>
                       <span className="create-event-switch-copy">
-                        <strong>Share the meeting link later</strong>
-                        <small>Show only the platform at publication, then reveal the full access link shortly before the event.</small>
+                        <strong>{t("Share the meeting link later")}</strong>
+                        <small>{t("Show only the platform at publication, then reveal the full access link shortly before the event.")}</small>
                       </span>
                     </button>
                     <p className="create-event-inline-help">
                       {form.allow_registration_during_event
-                        ? "Disabled because attendees must receive the full meeting link immediately when live registration is allowed."
-                        : "Useful if you want to send the exact meeting link closer to the session start."}
+                        ? t("Disabled because attendees must receive the full meeting link immediately when live registration is allowed.")
+                        : t("Useful if you want to send the exact meeting link closer to the session start.")}
                     </p>
                     {form.online_share_later && (
                       <div className="create-event-inline-toggle">
@@ -1079,7 +1114,7 @@ export default function CreateEvent() {
                             className={`create-event-choice-chip${form.online_share_offset_hours === hours ? " create-event-choice-chip--active" : ""}`}
                             onClick={() => set("online_share_offset_hours", hours)}
                           >
-                            Reveal {hours}h before start
+                            {t("Reveal {{hours}}h before start", { hours })}
                           </button>
                         ))}
                       </div>
@@ -1088,14 +1123,14 @@ export default function CreateEvent() {
                 </>
               )}
 
-              <div className="form-field">
+              <div className="form-field create-event-form-field--capacity">
                 <label className="form-label">
-                  Max Participants <span style={{ color: "var(--error)" }}>*</span>
+                  {t("Max Participants")} <span style={{ color: "var(--error)" }}>*</span>
                 </label>
                 <div className="create-event-grid-tight">
                   {[
-                    { key: false, label: "Limited", desc: "Set a maximum number of participants" },
-                    { key: true, label: "Unlimited", desc: "Allow registrations without a hard cap" },
+                    { key: false, label: t("Limited"), desc: t("Set a maximum number of participants") },
+                    { key: true, label: t("Unlimited"), desc: t("Allow registrations without a hard cap") },
                   ].map((option) => (
                     <button
                       key={String(option.key)}
@@ -1165,16 +1200,16 @@ export default function CreateEvent() {
                     </button>
                   </div>
                 ) : (
-                  <p className="create-event-inline-help">No registration limit will be applied to this event.</p>
+                  <p className="create-event-inline-help">{t("No registration limit will be applied to this event.")}</p>
                 )}
               </div>
 
               <div className="form-field">
-                <label className="form-label">Registration Mode</label>
+                <label className="form-label">{t("Registration Mode")}</label>
                 <div className="create-event-grid-tight">
                   {[
-                    { key: "VALIDATION", label: "Manual Review", desc: "You approve each registration" },
-                    { key: "AUTO", label: "Auto-Confirm", desc: "Registrations confirmed instantly" },
+                    { key: "VALIDATION", label: t("Manual Review"), desc: t("You approve each registration") },
+                    { key: "AUTO", label: t("Auto-Confirm"), desc: t("Registrations confirmed instantly") },
                   ].map((m) => (
                     <button
                       key={m.key}
@@ -1209,14 +1244,14 @@ export default function CreateEvent() {
                 </div>
                 {form.allow_registration_during_event && (
                   <p className="create-event-inline-help">
-                    Live registration requires instant access, so the event is automatically switched to Auto-Confirm.
+                    {t("Live registration requires instant access, so the event is automatically switched to Auto-Confirm.")}
                   </p>
                 )}
               </div>
 
               {!form.allow_registration_during_event && (
                 <div className="form-field">
-                  <label className="form-label">Registration Deadline <span style={{ fontSize: "13px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
+                  <label className="form-label">{t("Registration Deadline")} <span style={{ fontSize: "13px", color: "var(--text-dim)", fontWeight: "400" }}>({t("optional")})</span></label>
                   <div className="create-event-grid-2">
                     <DateInput
                       className="create-event-schedule-input"
@@ -1233,17 +1268,17 @@ export default function CreateEvent() {
                     />
                   </div>
                   <p style={{ fontSize: "13px", color: "var(--text-dim)", marginTop: "6px" }}>
-                    If empty, registrations close at event start.
+                    {t("If empty, registrations close at event start.")}
                   </p>
                 </div>
               )}
 
               <div className="form-field">
-                <label className="form-label">Description <span style={{ color: "var(--error)" }}>*</span></label>
+                <label className="form-label">{t("Description")} <span style={{ color: "var(--error)" }}>*</span></label>
                 <textarea
                   className={`input${getFieldErrorClass("description")}`}
                   style={{ height: "180px", resize: "vertical" }}
-                  placeholder="Describe the scientific scope, agenda structure, and target audience…"
+                  placeholder={t("Describe the scientific scope, agenda structure, and target audience…")}
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
                 />
@@ -1255,7 +1290,7 @@ export default function CreateEvent() {
                   if (validateStep(2)) setStep(3);
                 }}
               >
-                Generate Preview
+                {t("Generate Preview")}
               </button>
             </>
           )}
@@ -1283,77 +1318,66 @@ export default function CreateEvent() {
                   onClick={handlePublish}
                   disabled={loading}
                 >
-                  {loading ? "Publishing..." : "Publish Now"}
+                  {loading ? t("Publishing...") : t("Publish Now")}
                 </button>
               </div>
 
               {/* Preview card */}
               <div className="create-event-card">
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "22px" }}>
-                  <div
-                    style={{
-                      width: "52px",
-                      height: "52px",
-                      borderRadius: "12px",
-                      background: "var(--secondary)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "15px",
-                      fontWeight: "800",
-                      color: "#fff",
-                    }}
-                  >
-                    {organizer.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
+                <div className="create-event-preview-header">
+                  {companyLogoUrl ? (
+                    <div className="create-event-preview-logo-shell">
+                      <img
+                        src={companyLogoUrl}
+                        alt={organizer}
+                        className="create-event-preview-logo"
+                      />
+                    </div>
+                  ) : (
+                    <div className="create-event-preview-logo-shell create-event-preview-logo-fallback">
+                      {organizer.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="create-event-preview-heading">
                     <h3 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "6px" }}>
-                      {form.title || "Event Title"}
+                      {form.title || t("Event Title")}
                     </h3>
-                    <p style={{ fontSize: "14px", color: "var(--accent)" }}>Organized by {organizer}</p>
+                    <p style={{ fontSize: "14px", color: "var(--accent)" }}>{t("Organized by {{name}}", { name: organizer })}</p>
                   </div>
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      fontSize: "12px",
-                      fontFamily: "var(--font-mono)",
-                      color: "var(--accent)",
-                      background: "rgba(0,229,255,0.1)",
-                      padding: "6px 12px",
-                      borderRadius: "100px",
-                    }}
-                  >
-                    UPCOMING
+                  <span className="create-event-preview-status">
+                    {t("Upcoming").toUpperCase()}
                   </span>
                 </div>
 
                 <div className="create-event-preview-grid">
                   {[
                     {
-                      label: "Schedule",
+                      label: t("Schedule"),
                       value: formatSchedulePreview(
                         form.date,
                         form.time,
                         form.ends_next_day ? form.end_date : form.date,
                         form.end_time,
+                        locale,
+                        t,
                       ),
                     },
                     {
-                      label: "Location",
+                      label: t("Location"),
                       value:
                         form.format === "online"
-                          ? `${form.online_platform || "Online"}${form.online_share_later ? " • link later" : ""}`
+                          ? `${form.online_platform || t("Online")}${form.online_share_later ? ` • ${t("link later")}` : ""}`
                           : form.format === "hybrid"
                           ? (form.city
-                              ? `${form.city}${form.address_share_later ? " • full address later" : ""} + ${form.online_platform || "Online"}${form.online_share_later ? " • link later" : ""}`
-                              : "Hybrid")
+                              ? `${form.city}${form.address_share_later ? ` • ${t("full address later")}` : ""} + ${form.online_platform || t("Online")}${form.online_share_later ? ` • ${t("link later")}` : ""}`
+                              : t("Hybrid"))
                           : form.city
-                          ? `${form.city}, ${form.country}${form.address_share_later ? " • full address later" : ""}`
-                          : "TBD",
+                          ? `${form.city}, ${form.country}${form.address_share_later ? ` • ${t("full address later")}` : ""}`
+                          : t("TBD"),
                     },
                     {
-                      label: "Registration",
-                      value: form.registration_mode === "VALIDATION" ? "Manual" : "Auto-Confirm",
+                      label: t("Registration"),
+                      value: form.registration_mode === "VALIDATION" ? t("Manual") : t("Auto-Confirm"),
                     },
                   ].map((item) => (
                     <div
@@ -1370,7 +1394,7 @@ export default function CreateEvent() {
                         style={{
                           fontSize: "15px",
                           fontWeight: "700",
-                          color: item.label === "Registration" ? "var(--accent)" : "var(--text)",
+                          color: item.label === t("Registration") ? "var(--accent)" : "var(--text)",
                         }}
                       >
                         {item.value}
@@ -1388,9 +1412,9 @@ export default function CreateEvent() {
                       padding: "16px",
                     }}
                   >
-                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Capacity</p>
+                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Capacity")}</p>
                     <p style={{ fontSize: "15px", fontWeight: "700" }}>
-                      {form.unlimited_capacity ? "Unlimited" : `${form.capacity} participants`}
+                      {form.unlimited_capacity ? t("Unlimited") : t("{{count}} participants", { count: form.capacity })}
                     </p>
                   </div>
                   <div
@@ -1401,9 +1425,9 @@ export default function CreateEvent() {
                       padding: "16px",
                     }}
                   >
-                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Format</p>
+                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Format")}</p>
                     <p style={{ fontSize: "15px", fontWeight: "700", textTransform: "capitalize" }}>
-                      {form.format}
+                      {formatLabels[form.format]}
                     </p>
                   </div>
                   <div
@@ -1414,7 +1438,7 @@ export default function CreateEvent() {
                       padding: "16px",
                     }}
                   >
-                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Duration</p>
+                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Duration")}</p>
                     <p style={{ fontSize: "15px", fontWeight: "700" }}>{computedDurationLabel}</p>
                   </div>
                   {(form.format === "online" || form.format === "hybrid") && (
@@ -1426,9 +1450,9 @@ export default function CreateEvent() {
                         padding: "16px",
                       }}
                     >
-                      <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>Live registration</p>
+                      <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Live registration")}</p>
                       <p style={{ fontSize: "15px", fontWeight: "700", color: form.allow_registration_during_event ? "var(--accent)" : "var(--text)" }}>
-                        {form.allow_registration_during_event ? "Allowed while live" : "Closes at start"}
+                        {form.allow_registration_during_event ? t("Allowed while live") : t("Closes at start")}
                       </p>
                     </div>
                   )}
@@ -1473,14 +1497,14 @@ export default function CreateEvent() {
       {pendingNavigation && (
         <div className="create-event-leave-backdrop" onClick={() => setPendingNavigation(null)}>
           <div className="create-event-leave-modal" onClick={(e) => e.stopPropagation()}>
-            <p className="create-event-leave-eyebrow">Unsaved event</p>
-            <h2 className="create-event-leave-title">This event is not saved yet</h2>
+            <p className="create-event-leave-eyebrow">{t("Unsaved event")}</p>
+            <h2 className="create-event-leave-title">{t("This event is not saved yet")}</h2>
             <p className="create-event-leave-copy">
-              If you leave this page now, your event draft will be lost.
+              {t("If you leave this page now, your event draft will be lost.")}
             </p>
             <div className="create-event-leave-actions">
               <button className="btn btn-secondary" onClick={() => setPendingNavigation(null)}>
-                Stay here
+                {t("Stay here")}
               </button>
               <button
                 className="btn btn-primary"
@@ -1490,7 +1514,7 @@ export default function CreateEvent() {
                   proceed?.();
                 }}
               >
-                Leave without saving
+                {t("Leave without saving")}
               </button>
             </div>
           </div>

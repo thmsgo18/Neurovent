@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { prefetchTags } from "./api/tags";
 import AdminRoute from "./components/AdminRoute";
@@ -29,6 +29,7 @@ import AdminStatistics from "./pages/AdminStatistics";
 
 export default function App() {
   const location = useLocation();
+  const mainRef = useRef(null);
   const [isDesktopFixedViewport, setIsDesktopFixedViewport] = useState(() => window.innerWidth > 1024);
   const hideGlobalHeader = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);
   const fixedViewportContent = isDesktopFixedViewport && ["/events", "/events/results", "/dashboard", "/my-events"].includes(location.pathname);
@@ -45,7 +46,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    if (mainRef.current) mainRef.current.scrollTop = 0;
   }, [location.pathname]);
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function App() {
   return (
     <div className="app-layout">
       {!hideGlobalHeader && <AppHeader />}
-      <main className={`app-layout__content${fixedViewportContent ? " app-layout__content--fixed" : ""}`}>
+      <main ref={mainRef} className={`app-layout__content${fixedViewportContent ? " app-layout__content--fixed" : ""}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />

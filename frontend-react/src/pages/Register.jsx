@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AlertCircle, CheckCircle, Eye, EyeOff, Languages, Moon, Settings2, Sun } from "lucide-react";
 import "../styles/Register.css";
@@ -66,6 +66,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const pageRef = useRef(null);
+  const headerRef = useRef(null);
   const mobilePrefsRef = useRef(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -102,6 +104,43 @@ export default function Register() {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [mobilePrefsOpen]);
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    const updateHeaderHeight = () => {
+      if (!pageRef.current || !headerRef.current) return;
+      pageRef.current.style.setProperty("--auth-header-height", `${headerRef.current.offsetHeight}px`);
+    };
+
+    updateHeaderHeight();
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => updateHeaderHeight())
+      : null;
+
+    if (resizeObserver && headerRef.current) {
+      resizeObserver.observe(headerRef.current);
+    }
+
+    window.addEventListener("resize", updateHeaderHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateHeaderHeight);
+    };
+  }, []);
 
   const renderLanguageControls = ({ mobile = false } = {}) => (
     <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
@@ -233,8 +272,8 @@ export default function Register() {
   }
 
   return (
-    <div className="register-page">
-      <div className="register-top-brand">
+    <div ref={pageRef} className="register-page">
+      <div ref={headerRef} className="register-top-brand">
         <div className="app-header__inner register-top-brand__inner">
           <Link to="/" className="app-header__brand register-brand register-brand--header">
             Neuro<span style={{ color: "var(--accent)" }}>vent</span>
@@ -282,45 +321,46 @@ export default function Register() {
         </div>
       </div>
 
-      <div className="register-left">
-        <div className="register-left-copy">
-          <h1 className="register-left-title">
-            {isCompanyTab ? (
-              <>
-                {t("Empower your")}
-                <br />
-                {t("organization.")}
-              </>
-            ) : (
-              <>
-                {t("Start your")}
-                <br />
-                {t("scientific")}
-                <br />
-                {t("journey.")}
-              </>
-            )}
-          </h1>
-          <p className="register-left-desc">
-            {isCompanyTab
-              ? t("Create your organization account and submit the legal details needed for verification.")
-              : t("Connect with top organizations and participants worldwide.")}
-          </p>
+      <div className="register-body">
+        <div className="register-left">
+          <div className="register-left-copy">
+            <h1 className="register-left-title">
+              {isCompanyTab ? (
+                <>
+                  {t("Empower your")}
+                  <br />
+                  {t("organization.")}
+                </>
+              ) : (
+                <>
+                  {t("Start your")}
+                  <br />
+                  {t("scientific")}
+                  <br />
+                  {t("journey.")}
+                </>
+              )}
+            </h1>
+            <p className="register-left-desc">
+              {isCompanyTab
+                ? t("Create your organization account and submit the legal details needed for verification.")
+                : t("Connect with top organizations and participants worldwide.")}
+            </p>
+          </div>
+
+          <div className="register-left-features">
+            {sideHighlights.map((item) => (
+              <div key={item} className="register-left-feature">
+                <span className="register-left-feature-dot" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="register-left-features">
-          {sideHighlights.map((item) => (
-            <div key={item} className="register-left-feature">
-              <span className="register-left-feature-dot" />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="register-right">
-        <div className="register-form-wrap">
-          <div className="register-tab-switcher">
+        <div className="register-right">
+          <div className="register-form-wrap">
+            <div className="register-tab-switcher">
             {[
               { key: "participant", label: t("Participant") },
               { key: "organization", label: t("Organization") },
@@ -338,14 +378,14 @@ export default function Register() {
             ))}
           </div>
 
-          {error && (
-            <div className="register-error">
-              <AlertCircle size={18} className="register-error-icon" />
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="register-error">
+                <AlertCircle size={18} className="register-error-icon" />
+                {error}
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit}>
             {activeTab === "participant" ? (
               <>
                 <div className="register-form-row">
@@ -566,11 +606,12 @@ export default function Register() {
             </button>
           </form>
 
-          <div className="register-footer">
-            <p>
-              {t("Already have an account?")}{" "}
-              <Link to="/login">{t("Log In")}</Link>
-            </p>
+            <div className="register-footer">
+              <p>
+                {t("Already have an account?")}{" "}
+                <Link to="/login">{t("Log In")}</Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

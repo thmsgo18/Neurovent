@@ -399,17 +399,23 @@ export default function Events() {
                         {truncateText(event.description, 118)}
                       </p>
                       <div className="events-spotlight-card-meta">
-                        <span>{event.organizer || t("Organizer")}</span>
-                        <span>
+                        <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--organizer">
+                          {event.organizer || t("Organizer")}
+                        </span>
+                        <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--date">
                           {event.date_start
                             ? new Date(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
                             : t("TBD")}
                         </span>
                       </div>
                       <div className="events-spotlight-tags">
-                        <span>{event.format === "online" ? t("Online") : event.city || t("TBD")}</span>
-                        <span>{t("{{count}} registered", { count: event.registered_count || 0 })}</span>
-                        <span className="events-spotlight-tags-deadline">
+                        <span className="events-spotlight-tag events-spotlight-tag--location">
+                          {event.format === "online" ? t("Online") : event.city || t("TBD")}
+                        </span>
+                        <span className="events-spotlight-tag events-spotlight-tag--registered">
+                          {t("{{count}} registered", { count: event.registered_count || 0 })}
+                        </span>
+                        <span className="events-spotlight-tag events-spotlight-tag--deadline events-spotlight-tags-deadline">
                           {event.registration_deadline
                             ? t("Closes {{date}}", {
                                 date: new Date(event.registration_deadline).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric" }).toUpperCase(),
@@ -417,7 +423,7 @@ export default function Events() {
                             : t("Open until start")}
                         </span>
                         {(event.tags || []).slice(0, 1).map((tag) => (
-                          <span key={tag}>#{tag}</span>
+                          <span key={tag} className="events-spotlight-tag events-spotlight-tag--topic">#{tag}</span>
                         ))}
                       </div>
                     </button>

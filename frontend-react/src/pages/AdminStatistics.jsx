@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "../styles/Admin.css";
 import { getAdminStats } from "../api/admin";
+import { usePreferences } from "../context/PreferencesContext";
 
 function StatBlock({ label, value, hint }) {
   return (
@@ -12,7 +13,29 @@ function StatBlock({ label, value, hint }) {
   );
 }
 
+function translateEventStatus(value, t) {
+  const normalized = (value || "").toString().trim().toUpperCase();
+
+  if (normalized === "PUBLISHED") return t("Published");
+  if (normalized === "DRAFT") return t("Draft");
+  if (normalized === "CANCELLED") return t("Cancelled");
+  if (normalized === "UPCOMING") return t("Upcoming");
+  if (normalized === "LIVE") return t("Live");
+  if (normalized === "PAST") return t("Past");
+  return value || t("Unknown");
+}
+
+function translateEventFormat(value, t) {
+  const normalized = (value || "").toString().trim().toUpperCase();
+
+  if (normalized === "ONSITE" || normalized === "IN-PERSON" || normalized === "IN_PERSON") return t("In-Person");
+  if (normalized === "ONLINE") return t("Online");
+  if (normalized === "HYBRID") return t("Hybrid");
+  return value || t("Unknown");
+}
+
 export default function AdminStatistics() {
+  const { t } = usePreferences();
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
@@ -23,7 +46,7 @@ export default function AdminStatistics() {
     return (
       <div className="admin-page">
         <div className="admin-shell">
-          <div className="admin-empty">Loading platform statistics...</div>
+          <div className="admin-empty">{t("Loading platform statistics...")}</div>
         </div>
       </div>
     );
@@ -37,48 +60,48 @@ export default function AdminStatistics() {
         <div className="admin-stack">
           <header className="admin-header">
             <div>
-              <h1 className="admin-title">Statistics</h1>
+              <h1 className="admin-title">{t("Statistics")}</h1>
               <p className="admin-copy">
-                A global view of growth, moderation load, event publishing, and registration activity across the whole platform.
+                {t("A global view of growth, moderation load, event publishing, and registration activity across the whole platform.")}
               </p>
             </div>
           </header>
 
           <section className="admin-section">
             <div className="admin-kpis">
-              <StatBlock label="Participants" value={users.total_participants} hint="Total participant accounts" />
-              <StatBlock label="Companies" value={users.total_companies} hint="Organization accounts on the platform" />
-              <StatBlock label="Admins" value={users.total_admins} hint="Django admin accounts" />
-              <StatBlock label="Active Accounts" value={users.active_total} hint="Currently active users across all roles" />
-              <StatBlock label="Total Events" value={events.total} hint={`${events.new_this_month} created this month`} />
-              <StatBlock label="Event Views" value={events.total_views} hint="Total public event detail views" />
-              <StatBlock label="Registrations" value={registrations.total} hint="All registration records" />
-              <StatBlock label="New Users" value={users.new_this_month} hint="Accounts created this month" />
+              <StatBlock label={t("Participants")} value={users.total_participants} hint={t("Total participant accounts")} />
+              <StatBlock label={t("Companies")} value={users.total_companies} hint={t("Organization accounts on the platform")} />
+              <StatBlock label={t("Admins")} value={users.total_admins} hint={t("Django admin accounts")} />
+              <StatBlock label={t("Active Accounts")} value={users.active_total} hint={t("Currently active users across all roles")} />
+              <StatBlock label={t("Total Events")} value={events.total} hint={t("{{count}} created this month", { count: events.new_this_month })} />
+              <StatBlock label={t("Event Views")} value={events.total_views} hint={t("Total public event detail views")} />
+              <StatBlock label={t("Registrations")} value={registrations.total} hint={t("All registration records")} />
+              <StatBlock label={t("New Users")} value={users.new_this_month} hint={t("Accounts created this month")} />
             </div>
           </section>
 
           <div className="admin-grid">
             <section className="admin-section">
               <div className="admin-section-head">
-                <h2 className="admin-section-title">Company Verification</h2>
+                <h2 className="admin-section-title">{t("Company Verification")}</h2>
               </div>
               <div className="admin-kpis">
-                <StatBlock label="Pending" value={users.company_verification.pending} />
-                <StatBlock label="Needs Review" value={users.company_verification.needs_review} />
-                <StatBlock label="Verified" value={users.company_verification.verified} />
-                <StatBlock label="Rejected" value={users.company_verification.rejected} />
+                <StatBlock label={t("Pending")} value={users.company_verification.pending} />
+                <StatBlock label={t("Needs Review")} value={users.company_verification.needs_review} />
+                <StatBlock label={t("Verified")} value={users.company_verification.verified} />
+                <StatBlock label={t("Rejected")} value={users.company_verification.rejected} />
               </div>
             </section>
 
             <section className="admin-section">
               <div className="admin-section-head">
-                <h2 className="admin-section-title">Registrations by Status</h2>
+                <h2 className="admin-section-title">{t("Registrations by Status")}</h2>
               </div>
               <div className="admin-kpis">
-                <StatBlock label="Confirmed" value={registrations.by_status.confirmed} />
-                <StatBlock label="Pending" value={registrations.by_status.pending} />
-                <StatBlock label="Waitlist" value={registrations.by_status.waitlist} />
-                <StatBlock label="Cancelled" value={registrations.by_status.cancelled} />
+                <StatBlock label={t("Confirmed")} value={registrations.by_status.confirmed} />
+                <StatBlock label={t("Pending")} value={registrations.by_status.pending} />
+                <StatBlock label={t("Waitlist")} value={registrations.by_status.waitlist} />
+                <StatBlock label={t("Cancelled")} value={registrations.by_status.cancelled} />
               </div>
             </section>
           </div>
@@ -86,39 +109,39 @@ export default function AdminStatistics() {
           <div className="admin-grid">
             <section className="admin-section">
               <div className="admin-section-head">
-                <h2 className="admin-section-title">Events by Status</h2>
+                <h2 className="admin-section-title">{t("Events by Status")}</h2>
               </div>
               <div className="admin-kpis">
-                <StatBlock label="Published" value={events.by_status.published} />
-                <StatBlock label="Draft" value={events.by_status.draft} />
-                <StatBlock label="Cancelled" value={events.by_status.cancelled} />
+                <StatBlock label={t("Published")} value={events.by_status.published} />
+                <StatBlock label={t("Draft")} value={events.by_status.draft} />
+                <StatBlock label={t("Cancelled")} value={events.by_status.cancelled} />
               </div>
             </section>
 
             <section className="admin-section">
               <div className="admin-section-head">
-                <h2 className="admin-section-title">Events by Format</h2>
+                <h2 className="admin-section-title">{t("Events by Format")}</h2>
               </div>
               <div className="admin-kpis">
-                <StatBlock label="In-Person" value={events.by_format.onsite} />
-                <StatBlock label="Online" value={events.by_format.online} />
-                <StatBlock label="Hybrid" value={events.by_format.hybrid} />
+                <StatBlock label={t("In-Person")} value={events.by_format.onsite} />
+                <StatBlock label={t("Online")} value={events.by_format.online} />
+                <StatBlock label={t("Hybrid")} value={events.by_format.hybrid} />
               </div>
             </section>
           </div>
 
           <section className="admin-section">
             <div className="admin-section-head">
-              <h2 className="admin-section-title">Top Events by Confirmed Registrations</h2>
+              <h2 className="admin-section-title">{t("Top Events by Confirmed Registrations")}</h2>
             </div>
             <div className="admin-top-list">
               {(events.top_5_popular || []).map((item) => (
                 <div key={item.id} className="admin-top-item">
                   <div>
                     <strong>{item.title}</strong>
-                    <span> {item.format} · {item.status}</span>
+                    <span> {translateEventFormat(item.format, t)} · {translateEventStatus(item.status, t)}</span>
                   </div>
-                  <span>{item.confirmed_count} confirmed</span>
+                  <span>{t("{{count}} confirmed", { count: item.confirmed_count })}</span>
                 </div>
               ))}
             </div>

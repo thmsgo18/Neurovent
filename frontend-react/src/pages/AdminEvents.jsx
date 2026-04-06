@@ -2,30 +2,55 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../styles/Admin.css";
 import { deleteAdminEvent, getAdminEvents } from "../api/admin";
+import { usePreferences } from "../context/PreferencesContext";
 
-const STATUS_OPTIONS = [
-  { value: "", label: "All statuses" },
-  { value: "PUBLISHED", label: "Published" },
-  { value: "DRAFT", label: "Draft" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
+function formatDate(value, locale, t) {
+  if (!value) return t("Unknown date");
+  return new Date(value).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
-const FORMAT_OPTIONS = [
-  { value: "", label: "All formats" },
-  { value: "ONSITE", label: "In-Person" },
-  { value: "ONLINE", label: "Online" },
-  { value: "HYBRID", label: "Hybrid" },
-];
+function translateEventStatus(value, t) {
+  const normalized = (value || "").toString().trim().toUpperCase();
 
-function formatDate(value) {
-  if (!value) return "Unknown date";
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  if (normalized === "PUBLISHED") return t("Published");
+  if (normalized === "DRAFT") return t("Draft");
+  if (normalized === "CANCELLED") return t("Cancelled");
+  if (normalized === "UPCOMING") return t("Upcoming");
+  if (normalized === "LIVE") return t("Live");
+  if (normalized === "PAST") return t("Past");
+  return value || t("Unknown");
+}
+
+function translateEventFormat(value, t) {
+  const normalized = (value || "").toString().trim().toUpperCase();
+
+  if (normalized === "ONSITE" || normalized === "IN-PERSON" || normalized === "IN_PERSON") return t("In-Person");
+  if (normalized === "ONLINE") return t("Online");
+  if (normalized === "HYBRID") return t("Hybrid");
+  return value || t("Unknown");
 }
 
 export default function AdminEvents() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, locale } = usePreferences();
   const initialParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const statusOptions = useMemo(() => ([
+    { value: "", label: t("All statuses") },
+    { value: "PUBLISHED", label: t("Published") },
+    { value: "DRAFT", label: t("Draft") },
+    { value: "CANCELLED", label: t("Cancelled") },
+  ]), [t]);
+  const formatOptions = useMemo(() => ([
+    { value: "", label: t("All formats") },
+    { value: "ONSITE", label: t("In-Person") },
+    { value: "ONLINE", label: t("Online") },
+    { value: "HYBRID", label: t("Hybrid") },
+  ]), [t]);
   const [events, setEvents] = useState([]);
   const [count, setCount] = useState(0);
   const [search, setSearch] = useState(initialParams.get("organization") || "");
@@ -65,13 +90,13 @@ export default function AdminEvents() {
 
   const handleDelete = async (event, eventId) => {
     event.stopPropagation();
-    if (!window.confirm("Delete this event? This action cannot be undone.")) return;
+    if (!window.confirm(t("Delete this event? This action cannot be undone."))) return;
     try {
       await deleteAdminEvent(eventId);
       setEvents((prev) => prev.filter((item) => item.id !== eventId));
       setCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      alert(error.message || "Unable to delete this event.");
+      alert(error.message || t("Unable to delete this event."));
     }
   };
 
@@ -81,9 +106,9 @@ export default function AdminEvents() {
         <div className="admin-stack">
           <header className="admin-header">
             <div>
-              <h1 className="admin-title">Events</h1>
+              <h1 className="admin-title">{t("Events")}</h1>
               <p className="admin-copy">
-                Inspect every published, draft, or cancelled event across the platform and remove entries when moderation requires it.
+                {t("Inspect every published, draft, or cancelled event across the platform and remove entries when moderation requires it.")}
               </p>
             </div>
 
@@ -98,7 +123,7 @@ export default function AdminEvents() {
                 className="input admin-search admin-search--wide"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by event title or organization..."
+                placeholder={t("Search by event title or organization...")}
               />
               {submittedSearch ? (
                 <button
@@ -110,7 +135,7 @@ export default function AdminEvents() {
                     navigate("/admin/events", { replace: true });
                   }}
                 >
-                  View All
+                  {t("View All")}
                 </button>
               ) : null}
             </form>
@@ -118,7 +143,9 @@ export default function AdminEvents() {
 
           <section className="admin-section">
             <div className="admin-section-head">
-              <span className="admin-section-meta">{count} event{count !== 1 ? "s" : ""}</span>
+              <span className="admin-section-meta">
+                {t("{{count}} event{{suffix}}", { count, suffix: count !== 1 ? "s" : "" })}
+              </span>
             </div>
 
             <div className="my-events-toolbar">
@@ -129,21 +156,21 @@ export default function AdminEvents() {
                   className={`my-events-view-btn${scope === "future" ? " my-events-view-btn--active" : ""}`}
                   onClick={() => setScope("future")}
                 >
-                  Upcoming & Live
+                  {t("Upcoming & Live")}
                 </button>
                 <button
                   type="button"
                   className={`my-events-view-btn${scope === "past" ? " my-events-view-btn--active" : ""}`}
                   onClick={() => setScope("past")}
                 >
-                  Past Events
+                  {t("Past Events")}
                 </button>
               </div>
             </div>
 
             <div className="admin-filter-bar">
               <div className="admin-filter-group">
-                {STATUS_OPTIONS.map((option) => (
+                {statusOptions.map((option) => (
                   <button
                     key={option.value || "all-statuses"}
                     type="button"
@@ -155,7 +182,7 @@ export default function AdminEvents() {
                 ))}
               </div>
               <div className="admin-filter-group">
-                {FORMAT_OPTIONS.map((option) => (
+                {formatOptions.map((option) => (
                   <button
                     key={option.value || "all-formats"}
                     type="button"
@@ -169,9 +196,9 @@ export default function AdminEvents() {
             </div>
 
             {loading ? (
-              <div className="admin-empty">Loading events...</div>
+              <div className="admin-empty">{t("Loading events...")}</div>
             ) : visibleEvents.length === 0 ? (
-              <div className="admin-empty">No events match the current filters.</div>
+              <div className="admin-empty">{t("No events match the current filters.")}</div>
             ) : (
               <div className="admin-list">
                 {visibleEvents.map((event) => (
@@ -191,15 +218,24 @@ export default function AdminEvents() {
                     <div className="admin-card-top">
                       <div className="admin-card-copy">
                         <h3 className="admin-card-title">{event.title}</h3>
-                        <p className="admin-card-subtitle">{event.company_name || event.organizer || "Unknown organization"}</p>
+                        <p className="admin-card-subtitle">{event.company_name || event.organizer || t("Unknown organization")}</p>
                         <div className="admin-card-meta">
-                          <span className="admin-pill admin-pill--muted">{event.status_label}</span>
-                          <span className="admin-pill admin-pill--muted">{event.format}</span>
-                          <span className="admin-pill admin-pill--muted">{formatDate(event.date_start)}</span>
+                          <span className="admin-pill admin-pill--muted">
+                            {translateEventStatus(event.status_label || event.status, t)}
+                          </span>
+                          <span className="admin-pill admin-pill--muted">
+                            {translateEventFormat(event.format, t)}
+                          </span>
+                          <span className="admin-pill admin-pill--muted">
+                            {formatDate(event.date_start, locale, t)}
+                          </span>
                           <span className="admin-pill admin-pill--muted">
                             {event.unlimited_capacity
-                              ? `${event.registered_count || 0} registered`
-                              : `${event.registered_count || 0}/${event.max_participants || 0} registered`}
+                              ? t("{{count}} registered", { count: event.registered_count || 0 })
+                              : t("{{count}} / {{max}} registered", {
+                                  count: event.registered_count || 0,
+                                  max: event.max_participants || 0,
+                                })}
                           </span>
                         </div>
                       </div>
@@ -213,14 +249,14 @@ export default function AdminEvents() {
                             navigate(`/events/${event.id}`);
                           }}
                         >
-                          View Detail
+                          {t("View Detail")}
                         </button>
                         <button
                           type="button"
                           className="admin-danger-btn"
                           onClick={(clickEvent) => handleDelete(clickEvent, event.id)}
                         >
-                          Delete
+                          {t("Delete")}
                         </button>
                       </div>
                     </div>

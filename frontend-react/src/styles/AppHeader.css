@@ -6,6 +6,27 @@
   background: rgba(13, 21, 34, 0.94);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
+  isolation: isolate;
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .app-header {
+    top: 0;
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+
+  /* Étend le fond du header vers le haut dans la safe area.
+     Nécessaire si position:fixed top:0 se positionne à la bordure
+     de la safe area et non au sommet physique de l'écran. */
+  .app-header::before {
+    content: '';
+    position: absolute;
+    top: calc(-1 * env(safe-area-inset-top));
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: inherit;
+  }
 }
 
 :root[data-theme="light"] .app-header {
@@ -424,6 +445,17 @@
 }
 
 @media (max-width: 520px) {
+  .app-header {
+    background: #0d1522;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  :root[data-theme="light"] .app-header {
+    background: #eef4fb;
+  }
+
   .app-header__inner {
     grid-template-columns: 1fr auto;
     grid-template-areas:
