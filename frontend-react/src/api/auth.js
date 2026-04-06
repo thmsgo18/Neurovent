@@ -101,6 +101,10 @@ export const getMeApi = async () => {
   return apiFetch("/api/auth/me/");
 };
 
+export const getParticipantProfileApi = async (id) => {
+  return apiFetch(`/api/auth/participants/${id}/`);
+};
+
 // Update current user profile
 export const updateMeApi = async (data) => {
   if (USE_MOCK) {

@@ -6,6 +6,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     """Serializer complet pour afficher une inscription"""
     event_title = serializers.CharField(source='event.title', read_only=True)
     event_date = serializers.DateTimeField(source='event.date_start', read_only=True)
+    participant_id = serializers.IntegerField(source='participant.id', read_only=True)
     participant_name = serializers.SerializerMethodField()
     waitlist_position = serializers.IntegerField(read_only=True)
 
@@ -13,7 +14,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         model = Registration
         fields = [
             'id', 'event', 'event_title', 'event_date',
-            'participant_name', 'status', 'waitlist_position',
+            'participant_id', 'participant_name', 'status', 'waitlist_position',
             'accessibility_needs', 'company_comment',
             'created_at',
         ]

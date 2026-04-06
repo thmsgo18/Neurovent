@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Calendar, X } from "lucide-react";
 import { getRole, getDisplayName, getCompanyName } from "../store/authStore";
 import {
@@ -8,6 +8,7 @@ import {
   getCompanyDashboardStats,
 } from "../api/events";
 import { getMyRegistrations, cancelRegistration } from "../api/registrations";
+import { usePreferences } from "../context/PreferencesContext";
 import "../styles/Dashboard.css";
 
 // ---- Shared shell ----
@@ -81,7 +82,7 @@ function UserDashboard() {
     if (key === "settings") navigate("/profile");
   };
 
-  const displayName = getDisplayName() || "Researcher";
+  const displayName = getDisplayName() || "Participant";
 
   const activeRegs = registrations.filter((r) => r.status !== "CANCELLED" && r.status !== "REJECTED");
   const visibleRegs = activeRegs.filter((r) => statusFilter === "ALL" ? true : r.status === statusFilter);
@@ -107,7 +108,7 @@ function UserDashboard() {
       navItems={navItems}
       activeSection="dashboard"
       onNav={handleNav}
-      topTitle="Researcher Dashboard"
+      topTitle="Participant Dashboard"
       topAction={null}
       showTopbar={false}
       contentClassName="dashboard-content--fixed-shell"
@@ -253,6 +254,7 @@ function UserDashboard() {
 
 // ---- ORG DASHBOARD ----
 function OrgDashboard() {
+  const { t } = usePreferences();
   const [dashboardStats, setDashboardStats] = useState({
     total_views: 0,
     total_registrations: 0,
@@ -265,7 +267,7 @@ function OrgDashboard() {
     cancellation_rate: 0,
   });
 
-  const orgName = getCompanyName() || getDisplayName() || "Lab";
+  const orgName = getCompanyName() || getDisplayName() || t("Organization");
   useEffect(() => {
     getCompanyDashboardStats().then(setDashboardStats).catch(console.error);
   }, []);
@@ -340,10 +342,9 @@ function OrgDashboard() {
       <div className="dashboard-org-layout">
         <section className="dashboard-org-hero">
           <div className="dashboard-org-hero-copyblock">
-            <p className="dashboard-org-hero-eyebrow">Organization dashboard</p>
             <h1 className="dashboard-org-hero-title">{orgName}</h1>
             <p className="dashboard-org-hero-copy">
-              A global view of your event activity, registrations, and overall publishing performance.
+              {t("A global view of your event activity, registrations, and overall publishing performance.")}
             </p>
           </div>
         </section>
@@ -351,11 +352,11 @@ function OrgDashboard() {
         <section className="dashboard-org-stats-grid">
           {statCards.map((stat) => (
             <article key={stat.label} className="dashboard-org-stat-card">
-              <p className="dashboard-org-stat-label">{stat.label}</p>
+              <p className="dashboard-org-stat-label">{t(stat.label)}</p>
               <p className="dashboard-org-stat-value" style={{ color: stat.accent }}>
                 {stat.value}
               </p>
-              <p className="dashboard-org-stat-detail">{stat.detail}</p>
+              <p className="dashboard-org-stat-detail">{t(stat.detail)}</p>
             </article>
           ))}
         </section>
@@ -366,14 +367,14 @@ function OrgDashboard() {
             className="btn btn-secondary dashboard-org-export-btn"
             onClick={downloadCompanySummaryStats}
           >
-            Download Summary CSV
+            {t("Download Summary CSV")}
           </button>
           <button
             type="button"
             className="btn btn-primary dashboard-org-export-btn"
             onClick={downloadCompanyPerformanceStats}
           >
-            Download Performance CSV
+            {t("Download Performance CSV")}
           </button>
         </section>
       </div>
@@ -385,7 +386,10 @@ function OrgDashboard() {
 // ---- MAIN EXPORT ----
 export default function Dashboard() {
   const role = getRole();
-  if (role === "COMPANY" || role === "ADMIN") {
+  if (role === "ADMIN") {
+    return <Navigate to="/admin/participants" replace />;
+  }
+  if (role === "COMPANY") {
     return <OrgDashboard />;
   }
   return <UserDashboard />;

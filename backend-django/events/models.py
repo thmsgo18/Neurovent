@@ -49,6 +49,10 @@ class Event(models.Model):
     date_start = models.DateTimeField()
     date_end = models.DateTimeField()
     capacity = models.PositiveIntegerField()
+    unlimited_capacity = models.BooleanField(
+        default=False,
+        help_text="Si activé, l'événement n'a pas de limite de participants."
+    )
     status = models.CharField(max_length=20, choices=EventStatus.choices, default=EventStatus.DRAFT)
     view_count = models.PositiveIntegerField(default=0)
     tags = models.ManyToManyField('tags.Tag', blank=True, related_name='events')
@@ -63,6 +67,10 @@ class Event(models.Model):
     registration_deadline = models.DateTimeField(
         null=True, blank=True,
         help_text="Date limite d'inscription. Si vide, les inscriptions sont ouvertes jusqu'au début de l'event."
+    )
+    allow_registration_during_event = models.BooleanField(
+        default=False,
+        help_text="Autorise l'inscription après le début de l'événement (utile surtout pour les events online/hybrid)."
     )
 
     # --- Localisation (ONSITE et HYBRID) ---
@@ -98,6 +106,16 @@ class Event(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # --- Suivi notifications email ---
+    reminder_7d_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_1d_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_3h_sent_at = models.DateTimeField(null=True, blank=True)
+    address_reveal_email_sent_at = models.DateTimeField(null=True, blank=True)
+    online_reveal_email_sent_at = models.DateTimeField(null=True, blank=True)
+    almost_full_notified_at = models.DateTimeField(null=True, blank=True)
+    full_notified_at = models.DateTimeField(null=True, blank=True)
+    organizer_digest_sent_at = models.DateTimeField(null=True, blank=True)
+
     # ─────────────────────────────────────────
     #  PROPRIÉTÉS CALCULÉES
     # ─────────────────────────────────────────
@@ -106,19 +124,29 @@ class Event(models.Model):
     def registration_open(self):
         """
         Les inscriptions sont ouvertes si :
-        - L'event n'a pas encore commencé
-        - ET la deadline n'est pas dépassée (si elle est fixée)
+        - La deadline n'est pas dépassée (si elle est fixée)
+        - L'event n'est pas terminé
+        - Si l'event a commencé :
+          - ONLINE / HYBRID : inscription possible seulement si activée par l'organisateur
+          - ONSITE : inscription fermée
         """
         now = timezone.now()
-        if now >= self.date_start:
-            return False
         if self.registration_deadline and now >= self.registration_deadline:
             return False
+        if now >= self.date_end:
+            return False
+        if now >= self.date_start:
+            return (
+                self.allow_registration_during_event
+                and self.format in (EventFormat.ONLINE, EventFormat.HYBRID)
+            )
         return True
 
     @property
     def spots_remaining(self):
         """Places restantes = capacité - inscriptions confirmées"""
+        if self.unlimited_capacity:
+            return None
         confirmed = self.registrations.filter(status='CONFIRMED').count()
         return self.capacity - confirmed
 

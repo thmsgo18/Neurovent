@@ -165,10 +165,44 @@ class ProfileTest(TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.employer_name, 'Sorbonne')
 
+    def test_update_extended_participant_profile(self):
+        r = self.client.patch('/api/auth/me/', {
+            'participant_profile_type': 'PROFESSIONAL',
+            'professional_company_name': 'OpenAI',
+            'job_title': 'Research Engineer',
+            'job_started_at': '2024-10-01',
+            'participant_bio': 'Building AI systems for research workflows.',
+            'favorite_domain': 'Neuroscience',
+            'personal_website_url': 'https://alice.dev',
+            'github_url': 'https://github.com/alice',
+            'participant_linkedin_url': 'https://linkedin.com/in/alice',
+            'participant_avatar_url': 'https://images.example.com/alice.png',
+        }, format='json')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.participant_profile_type, 'PROFESSIONAL')
+        self.assertEqual(self.user.professional_company_name, 'OpenAI')
+        self.assertEqual(self.user.employer_name, 'OpenAI')
+        self.assertEqual(self.user.favorite_domain, 'Neuroscience')
+
     def test_profile_requires_auth(self):
         self.client.force_authenticate(user=None)
         r = self.client.get('/api/auth/me/')
         self.assertEqual(r.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class CompanyPublicSearchTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.company = create_company(identifier='atlas', company_name='Atlas Neuro Labs')
+        self.company.company_description = 'Clinical neurotechnology and translational research events.'
+        self.company.save(update_fields=['company_description'])
+
+    def test_search_company_by_name(self):
+        r = self.client.get('/api/companies/?search=Atlas')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        names = [item['company_name'] for item in r.data['results']]
+        self.assertIn('Atlas Neuro Labs', names)
 
 
 # ─────────────────────────────────────────
@@ -249,6 +283,22 @@ class AdminUserListTest(TestCase):
         self.assertEqual(r.status_code, status.HTTP_200_OK)
         for u in r.data['results']:
             self.assertEqual(u['role'], 'PARTICIPANT')
+
+    def test_user_detail_participant(self):
+        r = self.client.get(f'/api/auth/admin/users/{self.participant.id}/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(r.data['role'], 'PARTICIPANT')
+        self.assertEqual(r.data['email'], self.participant.email)
+
+    def test_company_list(self):
+        r = self.client.get('/api/auth/admin/companies/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(r.data['count'], 1)
+
+    def test_admin_stats_contains_verification_breakdown(self):
+        r = self.client.get('/api/auth/admin/stats/')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertIn('company_verification', r.data['users'])
 
     def test_participant_cannot_access(self):
         self.client.force_authenticate(user=self.participant)

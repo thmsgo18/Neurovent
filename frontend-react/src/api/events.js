@@ -26,6 +26,26 @@ function getEventStatusLabel(status) {
   return status || "Unknown";
 }
 
+function getEventStatusBadge(status, format, registrationOpen) {
+  if (status === "live" && registrationOpen && (format === "ONLINE" || format === "HYBRID")) {
+    return { label: "Join Live", className: "is-live-online" };
+  }
+
+  return {
+    label: getEventStatusLabel(status),
+    className:
+      status === "live"
+        ? "is-live"
+        : status === "past"
+          ? "is-past"
+          : status === "cancelled"
+            ? "is-cancelled"
+            : status === "draft"
+              ? "is-draft"
+              : "is-upcoming",
+  };
+}
+
 // ---- MOCK DATA ----
 // Les champs des mock utilisent les noms du backend Django
 const MOCK_EVENTS = [
@@ -104,9 +124,10 @@ const MOCK_EVENTS = [
 //   - create/update response : champs plats bruts (même chose que list)
 export function normalizeEvent(e) {
   const capacity = e.capacity || 0;
-  // L'API ne retourne pas registered_count — on le déduit de capacity - spots_remaining
-  const spotsRemaining = e.spots_remaining ?? 0;
-  const registered = e.registered_count ?? Math.max(0, capacity - spotsRemaining);
+  const unlimitedCapacity = e.unlimited_capacity ?? false;
+  // Si registered_count n'est pas renvoyé, on le déduit seulement pour les événements limités.
+  const spotsRemaining = unlimitedCapacity ? null : (e.spots_remaining ?? 0);
+  const registered = e.registered_count ?? (unlimitedCapacity ? 0 : Math.max(0, capacity - (spotsRemaining ?? 0)));
 
   // Résoudre l'adresse selon la shape disponible
   const va = e.visible_address; // detail endpoint
@@ -131,6 +152,8 @@ export function normalizeEvent(e) {
   }
 
   const normalizedStatus = deriveEventStatus(e.status, e.date_start, e.date_end);
+  const registrationOpen = e.registration_open ?? true;
+  const statusBadge = getEventStatusBadge(normalizedStatus, e.format, registrationOpen);
 
   return {
     ...e,
@@ -138,11 +161,11 @@ export function normalizeEvent(e) {
     date: e.date_start ? e.date_start.split("T")[0] : null,
     time: e.date_start ? e.date_start.split("T")[1]?.substring(0, 5) : null,
     // Capacité
-    max_participants: capacity,
+    max_participants: unlimitedCapacity ? null : capacity,
     registered_count: registered,
     spots_remaining: spotsRemaining,
-    is_full: e.is_full ?? spotsRemaining <= 0,
-    registration_open: e.registration_open ?? true,
+    is_full: unlimitedCapacity ? false : (e.is_full ?? spotsRemaining <= 0),
+    registration_open: registrationOpen,
     // Organizer
     organizer: e.company_name || e.organizer || "",
     // Localisation normalisée (gère list + detail + create)
@@ -155,8 +178,12 @@ export function normalizeEvent(e) {
     // Normalisation des valeurs enum → UI
     format: e.format === "ONSITE" ? "presential" : e.format === "ONLINE" ? "online" : e.format === "HYBRID" ? "hybrid" : e.format?.toLowerCase(),
     validation: e.registration_mode === "VALIDATION" ? "manual" : "auto",
+    allow_registration_during_event: e.allow_registration_during_event ?? false,
+    unlimited_capacity: unlimitedCapacity,
     status: normalizedStatus,
     status_label: getEventStatusLabel(normalizedStatus),
+    status_badge_label: statusBadge.label,
+    status_badge_class: statusBadge.className,
     tags: (e.tags || []).map((t) => (typeof t === "object" ? t.name : t)),
     tag_ids: (e.tags || []).filter((t) => typeof t === "object").map((t) => t.id),
   };
@@ -179,6 +206,8 @@ export const getEvents = async (filters = {}) => {
   if (filters.ordering) params.set("ordering", filters.ordering);
   if (filters.city) params.set("city", filters.city);
   if (filters.country) params.set("country", filters.country);
+  if (filters.organization) params.set("organization", filters.organization);
+  if (filters.upcomingOnly) params.set("upcoming_only", "true");
   // tags peut être un tableau d'IDs
   const tags = Array.isArray(filters.tags) ? filters.tags : filters.tags ? [filters.tags] : [];
   tags.forEach((t) => params.append("tags", t));

@@ -1,294 +1,264 @@
 # Neurovent
 
-Plateforme de gestion d'événements scientifiques — Projet de Programmation Web (M1 IAD-VMI, 2025-2026)
+Plateforme web de gestion d'evenements scientifiques et tech.
 
----
+Projet de Programmation Web, M1 IAD-VMI, 2025-2026.
 
-## Présentation
+## Vue d'ensemble
 
-**Neurovent** est une application web full-stack permettant de créer, gérer et rejoindre des événements scientifiques (conférences, workshops, séminaires) autour de thématiques comme le Machine Learning, les Neurosciences, l'IA et plus encore.
+Neurovent permet de :
+- decouvrir des evenements publics et des organizations
+- rechercher par mot-cle, topic, organization, lieu et format
+- s'inscrire a des evenements en ligne, hybrides ou en presentiel
+- gerer des evenements cote organization
+- moderer la plateforme cote admin
 
-Le projet est une implémentation de la consigne "EventHub" de l'enseignante, avec une coloration thématique neurosciences/IA.
+Le projet a evolue d'un simple EventHub vers une application plus complete avec :
+- profils riches participant et organization
+- recherche mixte events + organizations
+- dashboard organization avec stats et exports CSV
+- espace admin front dedie
+- systeme de verification organization
+- badges de progression sur les profils
 
----
+## Structure du projet
 
-## Équipe
-
-| Personne | Rôle | Responsabilité principale |
-|----------|------|---------------------------|
-| **Thomas** | Backend Django | Modèles, API REST, JWT, permissions, logique métier |
-| **Noureddine** | Frontend React | Composants, pages, formulaires, intégration API |
-| **Azouaou** | Node.js + Déploiement | API Express simplifiée, comparaison Django vs Node, rapport |
-
----
-
-## Architecture du projet
-
-```
-neurovent/
-├── backend-django/     # API principale (Django + DRF + JWT)
-├── frontend-react/     # Interface utilisateur (React + React Router)
-├── backend-node/       # API simplifiée pour comparaison (Express.js)
-├── docs/               # Rapport, slides, comparaison technique
-├── CLAUDE.md           # Contexte complet du projet pour l'IA
+```text
+Projet/
+├── backend-django/      # API principale Django + DRF + JWT
+├── frontend-react/      # Frontend React
+├── backend-node/        # Backend de comparaison (Express)
+├── docs/                # Rapport / livrables
+├── CLAUDE.md            # Contexte de travail pour assistants IA
 └── README.md
 ```
 
----
-
 ## Stack technique
 
-| Partie | Technologies |
-|--------|-------------|
-| Backend principal | Django 6.0.2, Django REST Framework, JWT, SQLite, python-decouple |
-| Frontend | React, React Router DOM, CSS natif, Lucide React |
-| Backend comparaison | Node.js, Express.js |
-| Auth | JWT (djangorestframework-simplejwt + token blacklist) |
+### Backend principal
+- Django 6
+- Django REST Framework
+- SimpleJWT + token blacklist
+- django-filter
+- drf-spectacular
+- Pillow
+- SQLite en dev
 
----
+### Frontend
+- React
+- React Router DOM
+- CSS natif
+- lucide-react
 
-## Les 4 types d'utilisateurs
+### Outillage
+- tests Django sur `users`, `events`, `registrations`, `tags`
+- build React via `react-scripts`
 
-### Visiteur (non connecté)
-Accès en lecture seule à la plateforme. Peut parcourir les événements publiés et voir leurs détails, mais ne peut pas s'inscrire.
+## Roles metier
 
 ### Participant
-Utilisateur inscrit souhaitant assister à des événements.
+- recherche et consultation des events et organizations
+- inscription / annulation
+- suivi de ses registrations
+- profil enrichi :
+  - student ou professional
+  - bio
+  - avatar
+  - liens
+  - favorite domain
+  - badges "missions accomplished"
 
-**Informations de compte :** prénom, nom, email (login), mot de passe
-**Peut :**
-- Voir et rechercher des événements
-- S'inscrire à un événement (avec besoins d'accessibilité optionnels)
-- Rejoindre une liste d'attente si l'event est complet (mode AUTO)
-- Annuler une inscription
-- Gérer son profil (employer, tags d'intérêt)
-
-### Company (Organisateur)
-Entreprise ou organisation qui crée et gère des événements.
-
-**Informations de compte :** identifiant unique (login), email de récupération, nom d'entreprise, SIRET, représentant légal, mot de passe
-
-**Vérification entreprise :** à l'inscription, le SIRET est contrôlé automatiquement via l'API officielle INSEE/SIRENE. Statuts possibles :
-| Statut | Description |
-|--------|-------------|
-| `PENDING` | Vérification en cours |
-| `VERIFIED` | Entreprise validée — peut créer des événements |
-| `NEEDS_REVIEW` | Révision manuelle requise — envoyer un Kbis ou RNE |
-| `REJECTED` | SIRET invalide ou établissement fermé |
-
-**Peut :**
-- Créer, modifier et supprimer ses événements (**uniquement si VERIFIED**)
-- Choisir le mode d'inscription (automatique ou avec validation)
-- Voir la liste des inscrits à ses événements
-- Confirmer ou rejeter des inscriptions (mode VALIDATION), avec un commentaire
-- Gérer son profil (logo, description, liens réseaux sociaux, tags)
-- Exporter la liste des inscrits en CSV
-- Uploader un justificatif Kbis/RNE si la vérification auto a échoué
+### Organization
+- creation, edition et suppression de ses events
+- gestion des registrations
+- export CSV
+- dashboard avec stats globales
+- page `My Events`
+- profil enrichi :
+  - logo
+  - description
+  - liens publics
+  - domains
+  - badges
 
 ### Admin
-Administrateur de la plateforme, accès via Django Admin (`/admin/`) et API.
+- espace admin front dedie
+- onglets :
+  - `Participants`
+  - `Organizations`
+  - `Events`
+  - `Statistics`
+- moderation des comptes
+- verification des organizations
+- suppression d'events
+- vue globale de la plateforme
 
-**Peut :**
-- Voir et gérer tous les comptes
-- Suspendre / réactiver un compte (`PATCH /api/auth/admin/users/<id>/suspend/`)
-- Supprimer (anonymiser) n'importe quel compte non-admin (`DELETE /api/auth/admin/users/<id>/delete/`)
-- Lister les utilisateurs avec filtre par rôle (`GET /api/auth/admin/users/`)
-- Valider ou rejeter n'importe quelle inscription
-- Voir et modérer tous les événements (filtre `?status=DRAFT` disponible)
-- Exporter les inscrits de n'importe quel event en CSV
-- Gérer la liste des tags
-- Consulter les statistiques globales (`GET /api/auth/admin/stats/`)
+Important :
+- l'admin Django est un vrai compte `ADMIN`
+- l'admin n'a pas de page profil produit
 
----
+## Fonctionnalites principales
 
-## Les événements
+### Recherche
+- page `Search` publique
+- page de resultats avec scroll interne
+- recherche flexible dans :
+  - titre d'event
+  - description
+  - nom d'organization
+  - topics
+  - lieu
+- suggestions de topics via `#`
+- topics affiches en bulles dans la barre
+- affichage d'events et d'organizations dans les resultats
 
-### Formats
-| Format | Description |
-|--------|-------------|
-| `ONSITE` | Présentiel uniquement → adresse physique |
-| `ONLINE` | Distanciel uniquement → lien de connexion |
-| `HYBRID` | Présentiel + retransmission live → adresse + lien |
+### Events
+- formats :
+  - onsite
+  - online
+  - hybrid
+- capacite limitee ou illimitee
+- registration mode :
+  - auto-confirm
+  - manual review
+- possibilite d'autoriser l'inscription pendant un event live pour certains formats
+- gestion de la visibilite de l'adresse et du meeting link
+- details enrichis :
+  - logo d'organization
+  - lien vers le profil de l'organization
+  - statut temporel reel (`upcoming`, `live`, `past`, `cancelled`, `draft`)
+  - countdown avant debut et fin des inscriptions
 
-### Statuts
-| Statut | Description |
-|--------|-------------|
-| `DRAFT` | Brouillon, non visible publiquement (404 sur l'endpoint public) |
-| `PUBLISHED` | Publié, inscriptions ouvertes |
-| `CANCELLED` | Annulé — notification email envoyée aux inscrits |
+### Dashboard organization
+- stats globales :
+  - views
+  - registrations
+  - pending
+  - confirmed
+  - waitlist
+  - average fill rate
+  - upcoming / past events
+  - cancellation rate
+- exports CSV :
+  - summary
+  - performance
 
-### Modes d'inscription
-| Mode | Comportement |
-|------|-------------|
-| `AUTO` | Le participant est **immédiatement confirmé** — ou mis en **liste d'attente** si complet |
-| `VALIDATION` | L'inscription est **en attente** (PENDING), la company ou un admin doit confirmer ou rejeter |
+### Profil
+- vue `profile`
+- vue `profile/edit`
+- avertissement si on quitte avec des changements non sauvegardes
+- profils organization publics reutilises dans plusieurs contextes
 
-### Date limite d'inscription
-La company peut fixer une `registration_deadline`. Passé cette date, plus aucune inscription n'est acceptée. Sans deadline, les inscriptions sont ouvertes jusqu'au début de l'event.
+## Installation rapide
 
-### Bannière
-Chaque event peut avoir une image/bannière uploadée par la company (format recommandé : 1200x400px).
+### 1. Backend Django
 
-### Visibilité de l'adresse / du lien
-La company peut choisir ce qu'elle révèle publiquement :
-- `FULL` → information complète toujours visible
-- `PARTIAL` → affiche seulement la ville + pays (adresse) ou le nom de la plateforme (lien)
-- Avec une **date de révélation optionnelle** : l'info complète devient visible automatiquement à cette date
-
----
-
-## Les inscriptions
-
-### Statuts possibles
-| Statut | Description |
-|--------|-------------|
-| `PENDING` | En attente de validation (mode VALIDATION uniquement) |
-| `CONFIRMED` | Inscription confirmée |
-| `REJECTED` | Inscription rejetée par la company ou l'admin |
-| `CANCELLED` | Annulée par le participant |
-| `WAITLIST` | En liste d'attente (event complet, mode AUTO uniquement) |
-
-### Liste d'attente (Waitlist)
-Quand un event en mode `AUTO` est complet, le participant est automatiquement mis en `WAITLIST` au lieu de recevoir une erreur. Dès qu'une place se libère (annulation ou rejet), le **premier de la liste d'attente est automatiquement confirmé** et reçoit un email. Le champ `waitlist_position` indique sa position (1 = premier).
-
-### Champs d'inscription
-- `accessibility_needs` — besoins d'accessibilité (PMR, daltonisme...), renseigné par le participant à l'inscription
-- `company_comment` — commentaire de l'organisateur, visible par le participant lors de la confirmation/rejet
-
----
-
-## Permissions par rôle
-
-| Action | Visiteur | Participant | Company | Admin |
-|--------|----------|-------------|---------|-------|
-| Voir la liste des events | ✅ | ✅ | ✅ | ✅ |
-| Voir le détail d'un event | ✅ | ✅ | ✅ | ✅ |
-| Voir le profil public d'une company | ✅ | ✅ | ✅ | ✅ |
-| S'inscrire à un event | ❌ | ✅ | ❌ | ❌ |
-| Rejoindre la liste d'attente | ❌ | ✅ | ❌ | ❌ |
-| Voir les recommandations | ❌ | ✅ | ❌ | ❌ |
-| Supprimer son compte | ❌ | ✅ | ✅ | ❌ |
-| Créer un event | ❌ | ❌ | ✅ | ❌ |
-| Modifier / supprimer son event | ❌ | ❌ | ✅ | ✅ |
-| Valider des inscriptions | ❌ | ❌ | ✅ (owner) | ✅ |
-| Voir les stats d'un event | ❌ | ❌ | ✅ (owner) | ✅ |
-| Voir les stats globales | ❌ | ❌ | ❌ | ✅ |
-| Suspendre / réactiver un compte | ❌ | ❌ | ❌ | ✅ |
-| Supprimer un compte (admin) | ❌ | ❌ | ❌ | ✅ |
-| Gérer les tags | ❌ | ❌ | ❌ | ✅ |
-
----
-
-## Lancer le projet
-
-### Backend Django
 ```bash
 cd backend-django
+python3 -m venv .venv
 source .venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
 python manage.py runserver
 ```
-→ API disponible sur `http://127.0.0.1:8000`
-→ Admin Django sur `http://127.0.0.1:8000/admin/`
 
-### Frontend React
+Backend local :
+- API : [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Django admin : [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+- Swagger : [http://127.0.0.1:8000/api/docs/](http://127.0.0.1:8000/api/docs/)
+- ReDoc : [http://127.0.0.1:8000/api/redoc/](http://127.0.0.1:8000/api/redoc/)
+
+### 2. Frontend React
+
 ```bash
 cd frontend-react
 npm install
-npm run dev
-```
-→ Interface disponible sur `http://localhost:5173` (ou `3000` selon la config)
-
----
-
-## API Contract
-
-> Base URL : `http://127.0.0.1:8000`
-> Authentification : header `Authorization: Bearer <access_token>`
-
-### Authentification & Profil
-
-| Méthode | URL | Accès | Body |
-|---------|-----|-------|------|
-| POST | `/api/auth/register/participant/` | Public | `email, password, password_confirm, first_name, last_name` |
-| POST | `/api/auth/register/company/` | Public | `company_identifier, password, password_confirm, company_name, recovery_email, siret, legal_representative` |
-| POST | `/api/auth/login/participant/` | Public | `email, password` |
-| POST | `/api/auth/login/company/` | Public | `identifier, password` |
-| POST | `/api/auth/token/refresh/` | Public | `refresh` |
-| POST | `/api/auth/logout/` | Connecté | `refresh` — blackliste le token |
-| GET | `/api/auth/me/` | Connecté | — |
-| PATCH | `/api/auth/me/` | Connecté | champs à modifier (`tag_ids` pour les tags) |
-| DELETE | `/api/auth/me/` | Connecté | — Suppression RGPD |
-| PATCH | `/api/auth/me/password/` | Connecté | `current_password, new_password, new_password_confirm` |
-| POST | `/api/auth/password-reset/` | Public | `email` — envoie un lien de reset par email |
-| POST | `/api/auth/password-reset/confirm/` | Public | `uid, token, new_password, new_password_confirm` |
-| GET | `/api/auth/admin/stats/` | Admin | — |
-| GET | `/api/auth/admin/users/` | Admin | `?role=PARTICIPANT\|COMPANY\|ADMIN` |
-| PATCH | `/api/auth/admin/users/<id>/suspend/` | Admin | — |
-| PATCH | `/api/auth/admin/users/<id>/activate/` | Admin | — |
-| DELETE | `/api/auth/admin/users/<id>/delete/` | Admin | — Impossible sur un autre admin |
-| GET | `/api/auth/admin/companies/pending/` | Admin | `?status=PENDING\|NEEDS_REVIEW\|VERIFIED\|REJECTED` |
-| PATCH | `/api/auth/admin/companies/<id>/verify/` | Admin | `{"verification_status": "VERIFIED\|REJECTED", "review_note": "..."}` |
-| PATCH | `/api/auth/me/verification/document/` | Company | Upload Kbis/RNE (`multipart/form-data`, champ `verification_document`) |
-
-> **Note tags :** pour lire → champ `tags` retourne `[{id, name}]`. Pour écrire → envoyer `tag_ids: [1, 2]`
-
-### Événements
-
-| Méthode | URL | Accès | Notes |
-|---------|-----|-------|-------|
-| GET | `/api/events/` | Public | Liste events PUBLISHED — paginée (10/page) |
-| GET | `/api/events/<id>/` | Public | Détail d'un event PUBLISHED (404 si DRAFT) |
-| POST | `/api/events/create/` | Company **VERIFIED** | Créer un event |
-| PUT/PATCH | `/api/events/<id>/update/` | Company (owner) | Modifier son event |
-| DELETE | `/api/events/<id>/delete/` | Company (owner) | Supprimer son event |
-| GET | `/api/events/my-events/` | Company | Tous ses events (tous statuts) |
-| GET | `/api/events/<id>/stats/` | Company (owner) / Admin | Stats de l'event |
-| GET | `/api/events/recommended/` | Participant | Events recommandés selon ses tags |
-
-**Filtres `GET /api/events/` :**
-```
-?format=ONSITE|ONLINE|HYBRID   ?tags=1&tags=2   ?date_after=   ?date_before=
-?city=   ?country=   ?search=   ?ordering=date_start   ?page=2
-?status=DRAFT   → admin uniquement
+npm start
 ```
 
-### Companies
+Frontend local :
+- [http://localhost:3000](http://localhost:3000)
 
-| Méthode | URL | Accès | Notes |
-|---------|-----|-------|-------|
-| GET | `/api/companies/<id>/` | Public | Profil public + events publiés |
+## Base de donnees de demo
 
-### Inscriptions
+Un script de reset / seed est disponible :
 
-| Méthode | URL | Accès | Body / Notes |
-|---------|-----|-------|--------------|
-| POST | `/api/registrations/` | Participant | `{"event": <id>, "accessibility_needs": "..."}` |
-| GET | `/api/registrations/my/` | Participant | `?status=CONFIRMED\|PENDING\|WAITLIST\|...` |
-| PATCH | `/api/registrations/<id>/cancel/` | Participant | Annule + promeut le 1er WAITLIST |
-| GET | `/api/registrations/event/<id>/` | Company | Inscrits d'un event |
-| PATCH | `/api/registrations/<id>/status/` | Company / Admin | `{"status": "CONFIRMED\|REJECTED", "company_comment": "..."}` |
-| GET | `/api/registrations/event/<id>/export/` | Company (owner) / Admin | Export CSV des inscrits |
+```bash
+cd backend-django
+source .venv/bin/activate
+python scripts/reset_and_seed_demo.py
+```
 
-### Tags
+Il recree un jeu de donnees de demo coherent avec :
+- participants
+- organizations
+- admin
+- events
+- registrations
 
-| Méthode | URL | Accès | Body |
-|---------|-----|-------|------|
-| GET | `/api/tags/` | Public | — |
-| POST | `/api/tags/create/` | Admin | `{"name": "Neurosciences"}` |
-| DELETE | `/api/tags/<id>/delete/` | Admin | — |
+Comptes de demo connus :
+- participant : `amelie.rousseau@participants.neurovent.demo` / `Participant2026!`
+- organization : `atlas-neuro-labs` / `Company2026!`
+- admin : `admin@neurovent.demo` / `Admin2026!`
 
-### Documentation API
+## Commandes utiles
 
-| URL | Description |
-|-----|-------------|
-| `/api/docs/` | Interface Swagger interactive |
-| `/api/redoc/` | Interface ReDoc |
+### Tests backend
 
----
+```bash
+cd backend-django
+source .venv/bin/activate
+python manage.py test users events registrations tags
+```
 
-## Deadlines
+### Build frontend
 
-| Date | Étape |
-|------|-------|
-| ~27 mars 2026 | Démo intermédiaire enseignante |
-| 10 avril 2026 | Rendu final (code + rapport + présentation) |
+```bash
+cd frontend-react
+npm run build
+```
+
+## Endpoints importants
+
+### Auth
+- `POST /api/auth/register/participant/`
+- `POST /api/auth/register/company/`
+- `POST /api/auth/login/participant/`
+- `POST /api/auth/login/company/`
+- `GET /api/auth/me/`
+- `PATCH /api/auth/me/`
+
+### Events
+- `GET /api/events/`
+- `GET /api/events/<id>/`
+- `POST /api/events/create/`
+- `PATCH /api/events/<id>/update/`
+- `DELETE /api/events/<id>/delete/`
+- `GET /api/events/my-events/`
+- `GET /api/events/dashboard-stats/`
+
+### Admin
+- `GET /api/auth/admin/users/`
+- `GET /api/auth/admin/users/<id>/`
+- `PATCH /api/auth/admin/users/<id>/suspend/`
+- `PATCH /api/auth/admin/users/<id>/activate/`
+- `DELETE /api/auth/admin/users/<id>/delete/`
+- `GET /api/auth/admin/companies/`
+- `PATCH /api/auth/admin/companies/<id>/verify/`
+- `GET /api/events/admin/`
+- `GET /api/events/admin/<id>/`
+- `DELETE /api/events/admin/<id>/delete/`
+- `GET /api/auth/admin/stats/`
+
+## Etat actuel du produit
+
+Le projet contient aujourd'hui :
+- un flow participant complet
+- un flow organization complet
+- un flow admin front complet
+- un systeme de profils publics / prives
+- un vrai jeu de donnees de demo
+
+Les deux points a toujours garder en tete en local :
+- faire `python manage.py migrate` apres un pull
+- faire `npm run build` et `python manage.py test users events` apres une grosse passe de modifs

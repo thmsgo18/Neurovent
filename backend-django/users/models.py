@@ -22,6 +22,11 @@ class VerificationStatus(models.TextChoices):
     NEEDS_REVIEW = 'NEEDS_REVIEW', 'Révision manuelle'
 
 
+class ParticipantProfileType(models.TextChoices):
+    STUDENT = 'STUDENT', 'Student'
+    PROFESSIONAL = 'PROFESSIONAL', 'Professional'
+
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, email=None, password=None, **extra_fields):
         if email:
@@ -57,6 +62,22 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
     employer_name = models.CharField(max_length=200, blank=True)  # entreprise où il travaille
+    participant_profile_type = models.CharField(
+        max_length=20,
+        choices=ParticipantProfileType.choices,
+        default=ParticipantProfileType.STUDENT,
+    )
+    school_name = models.CharField(max_length=200, blank=True)
+    study_level = models.CharField(max_length=120, blank=True)
+    professional_company_name = models.CharField(max_length=200, blank=True)
+    job_title = models.CharField(max_length=200, blank=True)
+    job_started_at = models.DateField(null=True, blank=True)
+    participant_avatar_url = models.URLField(blank=True, max_length=500)
+    participant_bio = models.TextField(blank=True)
+    favorite_domain = models.CharField(max_length=200, blank=True)
+    personal_website_url = models.URLField(blank=True, max_length=500)
+    github_url = models.URLField(blank=True, max_length=500)
+    participant_linkedin_url = models.URLField(blank=True, max_length=500)
 
     # === COMPANY ===
     # company_identifier sert de login pour les companies (pas l'email)
@@ -75,12 +96,13 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     company_name = models.CharField(max_length=200, blank=True)
     company_logo = models.ImageField(upload_to='logos/', null=True, blank=True)
     company_description = models.TextField(blank=True)
-    website_url = models.URLField(blank=True)
-    youtube_url = models.URLField(blank=True)
-    linkedin_url = models.URLField(blank=True)
-    twitter_url = models.URLField(blank=True)
-    instagram_url = models.URLField(blank=True)
-    facebook_url = models.URLField(blank=True)
+    company_logo_url = models.URLField(blank=True, max_length=500)
+    website_url = models.URLField(blank=True, max_length=500)
+    youtube_url = models.URLField(blank=True, max_length=500)
+    linkedin_url = models.URLField(blank=True, max_length=500)
+    twitter_url = models.URLField(blank=True, max_length=500)
+    instagram_url = models.URLField(blank=True, max_length=500)
+    facebook_url = models.URLField(blank=True, max_length=500)
 
     # === VÉRIFICATION COMPANY (SIRENE) ===
     siret = models.CharField(max_length=14, blank=True)

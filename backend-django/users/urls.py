@@ -3,14 +3,17 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegisterParticipantView, RegisterCompanyView,
     ProfileView,
+    ParticipantPublicProfileView,
     AdminStatsView,
     AdminUserListView,
+    AdminUserDetailView,
     AdminDeleteUserView,
     CompanyLoginView,
     AdminSuspendUserView, AdminActivateUserView,
     LogoutView,
     ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView,
+    AdminCompanyListView,
     AdminPendingCompaniesView,
     AdminCompanyVerifyView,
     CompanyUploadDocumentView,
@@ -31,6 +34,7 @@ urlpatterns = [
 
     # Profil de l'utilisateur connecté
     path('me/', ProfileView.as_view(), name='profile'),
+    path('participants/<int:pk>/', ParticipantPublicProfileView.as_view(), name='participant-public-profile'),
 
     # Logout
     path('logout/', LogoutView.as_view(), name='logout'),
@@ -45,11 +49,13 @@ urlpatterns = [
 
     # Liste & modération admin
     path('admin/users/', AdminUserListView.as_view(), name='admin-user-list'),
+    path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
     path('admin/users/<int:pk>/delete/', AdminDeleteUserView.as_view(), name='admin-delete-user'),
     path('admin/users/<int:pk>/suspend/', AdminSuspendUserView.as_view(), name='admin-suspend-user'),
     path('admin/users/<int:pk>/activate/', AdminActivateUserView.as_view(), name='admin-activate-user'),
 
     # Vérification entreprises (admin)
+    path('admin/companies/', AdminCompanyListView.as_view(), name='admin-company-list'),
     path('admin/companies/pending/', AdminPendingCompaniesView.as_view(), name='admin-companies-pending'),
     path('admin/companies/<int:pk>/verify/', AdminCompanyVerifyView.as_view(), name='admin-company-verify'),
 

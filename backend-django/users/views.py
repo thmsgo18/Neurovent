@@ -1,5 +1,5 @@
 from django.utils import timezone
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, Q, Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -17,6 +17,7 @@ from .serializers import (
     ParticipantProfileSerializer,
     CompanyProfileSerializer,
     CompanyPublicSerializer,
+    CompanySearchSerializer,
     UserProfileSerializer,
     UserListSerializer,
     AdminCompanyVerificationSerializer,
@@ -25,6 +26,16 @@ from .serializers import (
     PasswordResetConfirmSerializer,
 )
 from emails import send_password_reset, send_company_verification_result
+
+
+class CanViewParticipantProfile(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.role in [UserRole.COMPANY, UserRole.ADMIN, UserRole.PARTICIPANT]
+        )
 
 
 # ─────────────────────────────────────────
@@ -140,7 +151,7 @@ class ProfileView(APIView):
     def get_serializer_class(self):
         if self.request.user.role == UserRole.PARTICIPANT:
             return ParticipantProfileSerializer
-        if self.request.user.role == UserRole.COMPANY:
+        if self.request.user.role in [UserRole.COMPANY, UserRole.ADMIN]:
             return CompanyProfileSerializer
         return UserProfileSerializer
 
@@ -186,10 +197,22 @@ class ProfileView(APIView):
             user.first_name = "[Supprimé]"
             user.last_name = "[Supprimé]"
             user.employer_name = ""
+            user.school_name = ""
+            user.study_level = ""
+            user.professional_company_name = ""
+            user.job_title = ""
+            user.job_started_at = None
+            user.participant_avatar_url = ""
+            user.participant_bio = ""
+            user.favorite_domain = ""
+            user.personal_website_url = ""
+            user.github_url = ""
+            user.participant_linkedin_url = ""
         elif user.role == UserRole.COMPANY:
             user.company_name = "[Entreprise supprimée]"
             user.company_description = ""
             user.recovery_email = ""
+            user.company_logo_url = ""
             user.website_url = ""
             user.youtube_url = ""
             user.linkedin_url = ""
@@ -205,6 +228,21 @@ class ProfileView(APIView):
             {'message': 'Compte supprimé avec succès.'},
             status=status.HTTP_200_OK
         )
+
+
+class ParticipantPublicProfileView(APIView):
+    permission_classes = [CanViewParticipantProfile]
+
+    def get(self, request, pk):
+        try:
+            participant = CustomUser.objects.prefetch_related('tags').get(pk=pk, role=UserRole.PARTICIPANT)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Participant introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user.role == UserRole.PARTICIPANT and request.user.pk != participant.pk:
+            return Response({'error': 'Accès refusé.'}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response(ParticipantProfileSerializer(participant).data)
 
 
 # ─────────────────────────────────────────
@@ -340,6 +378,42 @@ class CompanyPublicView(generics.RetrieveAPIView):
     queryset = CustomUser.objects.filter(role=UserRole.COMPANY, is_active=True)
 
 
+class CompanyPublicListView(generics.ListAPIView):
+    """
+    Recherche publique des companies — GET /api/companies/?search=...
+    Accessible sans authentification.
+    """
+    serializer_class = CompanySearchSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        queryset = (
+            CustomUser.objects
+            .filter(role=UserRole.COMPANY, is_active=True)
+            .prefetch_related('tags', 'events')
+            .order_by('company_name')
+        )
+
+        organization = (self.request.query_params.get('organization') or '').strip()
+        if organization:
+            queryset = queryset.filter(company_name__iexact=organization)
+
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            terms = [term for term in search.split() if term.strip()]
+            if terms:
+                query = Q()
+                for term in terms:
+                    query &= (
+                        Q(company_name__icontains=term) |
+                        Q(company_description__icontains=term) |
+                        Q(tags__name__icontains=term)
+                    )
+                queryset = queryset.filter(query).distinct()
+
+        return queryset
+
+
 # ─────────────────────────────────────────
 #  LISTE UTILISATEURS ADMIN
 # ─────────────────────────────────────────
@@ -357,6 +431,15 @@ class AdminUserListView(generics.ListAPIView):
     """
     serializer_class = UserListSerializer
     permission_classes = [permissions.IsAdminUser]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+        })
 
     def get_queryset(self):
         queryset = CustomUser.objects.exclude(role=UserRole.ADMIN).order_by('date_joined')
@@ -369,7 +452,47 @@ class AdminUserListView(generics.ListAPIView):
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
 
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            terms = [term.strip() for term in search.split() if term.strip()]
+            query = Q()
+            for term in terms:
+                query &= (
+                    Q(email__icontains=term) |
+                    Q(first_name__icontains=term) |
+                    Q(last_name__icontains=term) |
+                    Q(employer_name__icontains=term) |
+                    Q(school_name__icontains=term) |
+                    Q(study_level__icontains=term) |
+                    Q(professional_company_name__icontains=term) |
+                    Q(job_title__icontains=term) |
+                    Q(participant_bio__icontains=term) |
+                    Q(favorite_domain__icontains=term) |
+                    Q(tags__name__icontains=term)
+                )
+            queryset = queryset.filter(query).distinct()
+
         return queryset
+
+
+class AdminUserDetailView(APIView):
+    """
+    Détail complet d'un utilisateur — GET /api/auth/admin/users/<id>/
+    Réservé aux admins.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request, pk):
+        try:
+            user = CustomUser.objects.prefetch_related('tags').get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Utilisateur introuvable.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == UserRole.ADMIN:
+            return Response({'error': 'Profil admin indisponible.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer_class = ParticipantProfileSerializer if user.role == UserRole.PARTICIPANT else CompanyProfileSerializer
+        return Response(serializer_class(user).data)
 
 
 # ─────────────────────────────────────────
@@ -477,6 +600,15 @@ class AdminPendingCompaniesView(generics.ListAPIView):
     """
     serializer_class = AdminCompanyVerificationSerializer
     permission_classes = [permissions.IsAdminUser]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+        })
 
     def get_queryset(self):
         status_filter = self.request.query_params.get('status', VerificationStatus.PENDING)
@@ -485,6 +617,68 @@ class AdminPendingCompaniesView(generics.ListAPIView):
             .filter(role=UserRole.COMPANY, verification_status=status_filter)
             .order_by('date_joined')
         )
+
+
+class AdminCompanyListView(generics.ListAPIView):
+    """
+    Liste complète des entreprises — GET /api/auth/admin/companies/
+    Filtres optionnels :
+        ?verification_status=VERIFIED|PENDING|NEEDS_REVIEW|REJECTED
+        ?is_active=true|false
+        ?search=atlas
+    """
+    serializer_class = CompanyProfileSerializer
+    permission_classes = [permissions.IsAdminUser]
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+        })
+
+    def get_queryset(self):
+        queryset = CustomUser.objects.filter(role=UserRole.COMPANY).prefetch_related('tags').order_by('date_joined')
+
+        verification_status = self.request.query_params.get('verification_status')
+        if verification_status in [
+            VerificationStatus.PENDING,
+            VerificationStatus.VERIFIED,
+            VerificationStatus.REJECTED,
+            VerificationStatus.NEEDS_REVIEW,
+        ]:
+            queryset = queryset.filter(verification_status=verification_status)
+
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            terms = [term.strip() for term in search.split() if term.strip()]
+            query = Q()
+            for term in terms:
+                query &= (
+                    Q(company_name__icontains=term) |
+                    Q(recovery_email__icontains=term) |
+                    Q(company_identifier__icontains=term) |
+                    Q(company_description__icontains=term) |
+                    Q(siret__icontains=term) |
+                    Q(legal_representative__icontains=term) |
+                    Q(review_note__icontains=term) |
+                    Q(website_url__icontains=term) |
+                    Q(youtube_url__icontains=term) |
+                    Q(linkedin_url__icontains=term) |
+                    Q(twitter_url__icontains=term) |
+                    Q(instagram_url__icontains=term) |
+                    Q(facebook_url__icontains=term) |
+                    Q(tags__name__icontains=term)
+                )
+            queryset = queryset.filter(query).distinct()
+
+        return queryset
 
 
 class AdminCompanyVerifyView(APIView):
@@ -576,10 +770,17 @@ class AdminStatsView(APIView):
         # --- Utilisateurs ---
         total_participants = CustomUser.objects.filter(role=UserRole.PARTICIPANT).count()
         total_companies = CustomUser.objects.filter(role=UserRole.COMPANY).count()
+        total_admins = CustomUser.objects.filter(role=UserRole.ADMIN).count()
         new_users_this_month = CustomUser.objects.filter(date_joined__gte=first_day_of_month).count()
+        active_users = CustomUser.objects.filter(is_active=True).count()
+        companies_pending = CustomUser.objects.filter(role=UserRole.COMPANY, verification_status=VerificationStatus.PENDING).count()
+        companies_needing_review = CustomUser.objects.filter(role=UserRole.COMPANY, verification_status=VerificationStatus.NEEDS_REVIEW).count()
+        companies_verified = CustomUser.objects.filter(role=UserRole.COMPANY, verification_status=VerificationStatus.VERIFIED).count()
+        companies_rejected = CustomUser.objects.filter(role=UserRole.COMPANY, verification_status=VerificationStatus.REJECTED).count()
 
         # --- Événements ---
         total_events = Event.objects.count()
+        total_views = Event.objects.aggregate(total=Sum('view_count'))['total'] or 0
         events_by_status = {
             'published': Event.objects.filter(status='PUBLISHED').count(),
             'draft': Event.objects.filter(status='DRAFT').count(),
@@ -599,24 +800,34 @@ class AdminStatsView(APIView):
             'pending': Registration.objects.filter(status='PENDING').count(),
             'rejected': Registration.objects.filter(status='REJECTED').count(),
             'cancelled': Registration.objects.filter(status='CANCELLED').count(),
+            'waitlist': Registration.objects.filter(status='WAITLIST').count(),
         }
 
         # Top 5 events les plus populaires (par inscriptions confirmées)
         top_events = (
-            Event.objects.annotate(confirmed_count=Count('registrations'))
+            Event.objects.annotate(confirmed_count=Count('registrations', filter=Q(registrations__status='CONFIRMED')))
             .order_by('-confirmed_count')[:5]
-            .values('id', 'title', 'confirmed_count', 'capacity')
+            .values('id', 'title', 'confirmed_count', 'capacity', 'status', 'format')
         )
 
         return Response({
             'users': {
                 'total_participants': total_participants,
                 'total_companies': total_companies,
-                'total': total_participants + total_companies,
+                'total_admins': total_admins,
+                'total': total_participants + total_companies + total_admins,
+                'active_total': active_users,
                 'new_this_month': new_users_this_month,
+                'company_verification': {
+                    'pending': companies_pending,
+                    'needs_review': companies_needing_review,
+                    'verified': companies_verified,
+                    'rejected': companies_rejected,
+                },
             },
             'events': {
                 'total': total_events,
+                'total_views': total_views,
                 'new_this_month': new_events_this_month,
                 'by_status': events_by_status,
                 'by_format': events_by_format,

@@ -60,7 +60,7 @@ export const isAuthed = () => Boolean(getToken());
 
 // Rôles backend : PARTICIPANT, COMPANY, ADMIN
 export const isCompany = () => getRole() === "COMPANY";
-export const isAdmin = () => getRole() === "COMPANY" || getRole() === "ADMIN";
+export const isAdmin = () => getRole() === "ADMIN";
 export const isParticipant = () => getRole() === "PARTICIPANT";
 
 export const logout = () => {

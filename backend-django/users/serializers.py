@@ -71,6 +71,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
 
 class ParticipantProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
+    registration_stats = serializers.SerializerMethodField()
     tag_ids = serializers.PrimaryKeyRelatedField(
         many=True, write_only=True, source='tags',
         queryset=__import__('tags').models.Tag.objects.all(),
@@ -82,6 +83,13 @@ class ParticipantProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'role',
             'first_name', 'last_name', 'employer_name',
+            'participant_profile_type',
+            'school_name', 'study_level',
+            'professional_company_name', 'job_title', 'job_started_at',
+            'participant_avatar_url', 'participant_bio',
+            'favorite_domain',
+            'personal_website_url', 'github_url', 'participant_linkedin_url',
+            'registration_stats',
             'tags', 'tag_ids',
             'date_joined',
         ]
@@ -90,10 +98,28 @@ class ParticipantProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # ManyToMany doit être géré manuellement avec .set()
         tags = validated_data.pop('tags', None)
+        profile_type = validated_data.get('participant_profile_type', instance.participant_profile_type)
+
+        if 'employer_name' not in validated_data:
+            if profile_type == 'STUDENT' and 'school_name' in validated_data:
+                validated_data['employer_name'] = validated_data.get('school_name', instance.school_name)
+            elif profile_type == 'PROFESSIONAL' and 'professional_company_name' in validated_data:
+                validated_data['employer_name'] = validated_data.get(
+                    'professional_company_name', instance.professional_company_name
+                )
+
         instance = super().update(instance, validated_data)
         if tags is not None:
             instance.tags.set(tags)
         return instance
+
+    def get_registration_stats(self, obj):
+        registrations = obj.registrations.all()
+        return {
+            'total': registrations.count(),
+            'confirmed': registrations.filter(status='CONFIRMED').count(),
+            'waitlist': registrations.filter(status='WAITLIST').count(),
+        }
 
 
 # ─────────────────────────────────────────
@@ -102,6 +128,7 @@ class ParticipantProfileSerializer(serializers.ModelSerializer):
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
+    match_reasons = serializers.SerializerMethodField()
     tag_ids = serializers.PrimaryKeyRelatedField(
         many=True, write_only=True, source='tags',
         queryset=__import__('tags').models.Tag.objects.all(),
@@ -111,18 +138,19 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = [
-            'id', 'company_identifier', 'role',
+            'id', 'company_identifier', 'role', 'is_active',
             'company_name', 'recovery_email',
-            'company_logo', 'company_description',
+            'company_logo', 'company_logo_url', 'company_description',
             'website_url', 'youtube_url', 'linkedin_url',
             'twitter_url', 'instagram_url', 'facebook_url',
             'tags', 'tag_ids',
             'siret', 'legal_representative',
-            'verification_status', 'verified_at',
+            'verification_status', 'verified_at', 'review_note',
+            'match_reasons',
             'date_joined',
         ]
         read_only_fields = [
-            'id', 'company_identifier', 'role', 'date_joined',
+            'id', 'company_identifier', 'role', 'is_active', 'date_joined',
             'verification_status', 'verified_at',
         ]
 
@@ -133,6 +161,31 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
         if tags is not None:
             instance.tags.set(tags)
         return instance
+
+    def get_match_reasons(self, obj):
+        request = self.context.get('request')
+        search = (request.query_params.get('search') or '').strip() if request else ''
+        if not search:
+            return []
+
+        terms = [term.lower() for term in search.split() if term.strip()]
+        field_map = [
+            ("Organization name", obj.company_name or ""),
+            ("Recovery email", obj.recovery_email or ""),
+            ("Identifier", obj.company_identifier or ""),
+            ("Description", obj.company_description or ""),
+            ("SIRET", obj.siret or ""),
+            ("Legal representative", obj.legal_representative or ""),
+            ("Review note", obj.review_note or ""),
+            ("Research domains", " ".join(tag.name for tag in obj.tags.all())),
+        ]
+
+        reasons = []
+        for label, value in field_map:
+            lowered = value.lower()
+            if lowered and any(term in lowered for term in terms):
+                reasons.append(label)
+        return reasons[:4]
 
 
 # ─────────────────────────────────────────
@@ -155,6 +208,7 @@ class CompanyPublicSerializer(serializers.ModelSerializer):
             'id',
             'company_name',
             'company_logo',
+            'company_logo_url',
             'company_description',
             'website_url',
             'youtube_url',
@@ -162,6 +216,7 @@ class CompanyPublicSerializer(serializers.ModelSerializer):
             'twitter_url',
             'instagram_url',
             'facebook_url',
+            'verification_status',
             'tags',
             'events',
             'member_since',
@@ -177,10 +232,36 @@ class CompanyPublicSerializer(serializers.ModelSerializer):
                 'title': e.title,
                 'date_start': e.date_start,
                 'format': e.format,
+                'registered_count': e.registrations.filter(status='CONFIRMED').count(),
+                'unlimited_capacity': e.unlimited_capacity,
                 'spots_remaining': e.spots_remaining,
             }
             for e in published
         ]
+
+
+class CompanySearchSerializer(serializers.ModelSerializer):
+    tags = TagSerializer(many=True, read_only=True)
+    total_events = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            'id',
+            'company_name',
+            'company_logo',
+            'company_logo_url',
+            'company_description',
+            'website_url',
+            'linkedin_url',
+            'youtube_url',
+            'tags',
+            'verification_status',
+            'total_events',
+        ]
+
+    def get_total_events(self, obj):
+        return obj.events.filter(status='PUBLISHED').count()
 
 
 # ─────────────────────────────────────────
@@ -195,10 +276,11 @@ class UserListSerializer(serializers.ModelSerializer):
     - COMPANY     → nom de l'entreprise
     """
     name = serializers.SerializerMethodField()
+    match_reasons = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'role', 'email', 'name', 'is_active', 'date_joined', 'verification_status']
+        fields = ['id', 'role', 'email', 'name', 'is_active', 'date_joined', 'verification_status', 'match_reasons']
 
     def get_name(self, obj):
         if obj.role == UserRole.PARTICIPANT:
@@ -206,6 +288,34 @@ class UserListSerializer(serializers.ModelSerializer):
         if obj.role == UserRole.COMPANY:
             return obj.company_name
         return ''
+
+    def get_match_reasons(self, obj):
+        request = self.context.get('request')
+        search = (request.query_params.get('search') or '').strip() if request else ''
+        if not search:
+            return []
+
+        terms = [term.lower() for term in search.split() if term.strip()]
+        field_map = [
+            ("First name", obj.first_name or ""),
+            ("Last name", obj.last_name or ""),
+            ("Email", obj.email or ""),
+            ("Employer", obj.employer_name or ""),
+            ("School", obj.school_name or ""),
+            ("Study level", obj.study_level or ""),
+            ("Company", obj.professional_company_name or ""),
+            ("Job title", obj.job_title or ""),
+            ("Bio", obj.participant_bio or ""),
+            ("Favorite domain", obj.favorite_domain or ""),
+            ("Research interests", " ".join(tag.name for tag in obj.tags.all())),
+        ]
+
+        reasons = []
+        for label, value in field_map:
+            lowered = value.lower()
+            if lowered and any(term in lowered for term in terms):
+                reasons.append(label)
+        return reasons[:4]
 
 
 class AdminCompanyVerificationSerializer(serializers.ModelSerializer):
@@ -293,9 +403,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'email', 'role',
             # Participant
             'first_name', 'last_name', 'employer_name',
+            'participant_profile_type',
+            'school_name', 'study_level',
+            'professional_company_name', 'job_title', 'job_started_at',
+            'participant_avatar_url', 'participant_bio',
+            'favorite_domain',
+            'personal_website_url', 'github_url', 'participant_linkedin_url',
             # Company
             'company_identifier', 'company_name', 'recovery_email',
-            'company_logo', 'company_description',
+            'company_logo', 'company_logo_url', 'company_description',
             'website_url', 'youtube_url', 'linkedin_url',
             'twitter_url', 'instagram_url', 'facebook_url',
             # Commun

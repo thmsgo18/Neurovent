@@ -11,8 +11,14 @@ from django.utils import timezone
 from .models import Event, EventStatus
 from .serializers import EventListSerializer, EventDetailSerializer, EventCreateUpdateSerializer
 from .filters import EventFilter
+from .notification_utils import (
+    capture_event_notification_snapshot,
+    get_event_update_messages,
+    notify_event_capacity_milestones,
+    reset_scheduled_notification_flags,
+)
 from users.models import UserRole
-from emails import send_event_cancelled
+from emails import send_event_cancelled, send_event_updated
 
 
 def _get_company_dashboard_metrics(user):
@@ -32,7 +38,7 @@ def _get_company_dashboard_metrics(user):
 
     event_stats = base_queryset.aggregate(
         total_views=Sum('view_count'),
-        total_capacity=Sum('capacity'),
+        total_capacity=Sum('capacity', filter=Q(unlimited_capacity=False)),
         upcoming_events=Count('id', filter=Q(status=EventStatus.PUBLISHED, date_start__gte=now)),
         past_events=Count('id', filter=Q(date_end__lt=now)),
     )
@@ -126,6 +132,41 @@ class EventListView(generics.ListAPIView):
         )
 
 
+class AdminEventListView(generics.ListAPIView):
+    serializer_class = EventListSerializer
+    permission_classes = [permissions.IsAdminUser]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = EventFilter
+    ordering_fields = ['date_start', 'date_end', 'capacity', 'created_at']
+    ordering = ['date_start']
+    pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            'count': queryset.count(),
+            'results': serializer.data,
+        })
+
+    def get_queryset(self):
+        return (
+            Event.objects
+            .select_related('company')
+            .prefetch_related('tags', 'registrations')
+        )
+
+
+class AdminEventDetailView(generics.RetrieveAPIView):
+    serializer_class = EventDetailSerializer
+    permission_classes = [permissions.IsAdminUser]
+    queryset = (
+        Event.objects
+        .select_related('company')
+        .prefetch_related('tags', 'registrations')
+    )
+
+
 class EventDetailView(generics.RetrieveAPIView):
     """Détail d'un event — accessible à tous"""
     serializer_class = EventDetailSerializer
@@ -175,11 +216,31 @@ class EventUpdateView(generics.UpdateAPIView):
         )
 
     def perform_update(self, serializer):
+        previous_snapshot = capture_event_notification_snapshot(serializer.instance)
         old_status = serializer.instance.status
         instance = serializer.save()
+        reset_fields = reset_scheduled_notification_flags(instance, previous_snapshot)
+        if reset_fields:
+            instance.save(update_fields=reset_fields)
+
         # Si le statut vient de passer à CANCELLED → notifier les inscrits
         if old_status != 'CANCELLED' and instance.status == 'CANCELLED':
             send_event_cancelled(instance)
+            return
+
+        changes = get_event_update_messages(previous_snapshot, instance)
+        if changes:
+            from registrations.models import Registration, RegistrationStatus
+
+            confirmed_registrations = (
+                Registration.objects
+                .filter(event=instance, status=RegistrationStatus.CONFIRMED)
+                .select_related('participant', 'event')
+            )
+            for registration in confirmed_registrations:
+                send_event_updated(registration, changes)
+
+        notify_event_capacity_milestones(instance)
 
 
 class EventDeleteView(generics.DestroyAPIView):
@@ -188,6 +249,12 @@ class EventDeleteView(generics.DestroyAPIView):
 
     def get_queryset(self):
         return Event.objects.filter(company=self.request.user)
+
+
+class AdminEventDeleteView(generics.DestroyAPIView):
+    """Supprimer un event — Admin uniquement"""
+    permission_classes = [permissions.IsAdminUser]
+    queryset = Event.objects.all()
 
 
 class MyEventsView(generics.ListAPIView):
@@ -281,7 +348,11 @@ class CompanyDashboardPerformanceExportView(APIView):
         ])
 
         for event in events:
-            fill_rate = round((event.confirmed_registrations / event.capacity) * 100, 1) if event.capacity > 0 else 0
+            fill_rate = (
+                round((event.confirmed_registrations / event.capacity) * 100, 1)
+                if event.capacity > 0 and not event.unlimited_capacity
+                else ''
+            )
             cancellation_rate = round((event.cancelled_registrations / event.total_registrations) * 100, 1) if event.total_registrations > 0 else 0
             writer.writerow([
                 event.title,
@@ -289,7 +360,7 @@ class CompanyDashboardPerformanceExportView(APIView):
                 event.date_start.strftime('%Y-%m-%d %H:%M'),
                 event.format,
                 event.view_count,
-                event.capacity,
+                'Unlimited' if event.unlimited_capacity else event.capacity,
                 event.total_registrations,
                 event.confirmed_registrations,
                 event.pending_registrations,
@@ -377,7 +448,11 @@ class EventStatsView(APIView):
         )
 
         confirmed = stats['confirmed']
-        occupation_rate = round((confirmed / event.capacity) * 100, 1) if event.capacity > 0 else 0
+        occupation_rate = (
+            round((confirmed / event.capacity) * 100, 1)
+            if event.capacity > 0 and not event.unlimited_capacity
+            else None
+        )
 
         return Response({
             'event': {
@@ -388,6 +463,7 @@ class EventStatsView(APIView):
                 'date_start': event.date_start,
                 'date_end': event.date_end,
                 'capacity': event.capacity,
+                'unlimited_capacity': event.unlimited_capacity,
                 'registration_mode': event.registration_mode,
             },
             'registrations': {

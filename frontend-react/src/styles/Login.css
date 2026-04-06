@@ -18,6 +18,10 @@
   min-height: 72px;
 }
 
+.login-top-brand__controls {
+  justify-self: end;
+}
+
 .login-brand,
 .login-brand:visited {
   color: var(--text);
@@ -65,7 +69,7 @@
 .login-mode-slider--lab {
   transform: translateX(100%);
   background: var(--secondary);
-  box-shadow: 0 10px 24px rgba(255, 200, 80, 0.18);
+  box-shadow: 0 10px 24px rgba(255, 200, 80, 0.2);
 }
 
 .login-mode-btn {
@@ -140,14 +144,29 @@
   font-family: var(--font-display);
   letter-spacing: -0.03em;
   line-height: 1.0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.login-heading {
+  min-height: 158px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  margin-bottom: 36px;
+}
+
+.login-title--organization {
+  white-space: nowrap;
 }
 
 .login-subtitle {
   font-size: clamp(1.08rem, 1rem + 0.3vw, 1.2rem);
   color: var(--text-secondary);
-  margin-bottom: 28px;
+  margin-bottom: 0;
   line-height: 1.65;
   font-weight: 400;
+  text-align: center;
 }
 
 .login-card .form-label {
@@ -217,15 +236,23 @@
     padding: 12px var(--page-gutter);
   }
 
+  .login-top-brand__controls {
+    width: auto;
+  }
+
   .login-mode-selector { max-width: 100%; border-radius: 8px; }
 
   .login-card { padding: 24px 20px; border-radius: 12px; }
+  .login-heading { min-height: 144px; }
 }
 
 /* iPhone 14 Pro Max (430px) */
 @media (max-width: 430px) {
   .login-page { padding: 0; }
   .login-card { padding: 22px 16px; }
+  .login-heading { min-height: 0; margin-bottom: 32px; }
+  .login-title { white-space: normal; }
+  .login-title--organization { white-space: normal; }
   .login-password-row {
     align-items: flex-start;
     flex-direction: column;

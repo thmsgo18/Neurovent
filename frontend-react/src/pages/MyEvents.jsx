@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { getMyEventsApi } from "../api/events";
+import { usePreferences } from "../context/PreferencesContext";
 import "../styles/Dashboard.css";
 
 export default function MyEvents() {
   const navigate = useNavigate();
+  const { t } = usePreferences();
   const [myEvents, setMyEvents] = useState([]);
   const [viewMode, setViewMode] = useState("current");
   const [isSwitchMoving, setIsSwitchMoving] = useState(false);
@@ -38,10 +40,9 @@ export default function MyEvents() {
             <div className="my-events-static">
               <section className="dashboard-org-events-header">
                 <div className="dashboard-org-events-copyblock">
-                  <p className="dashboard-org-hero-eyebrow">Organization events</p>
-                  <h1 className="dashboard-org-events-title">My Events</h1>
+                  <h1 className="dashboard-org-events-title">{t("My Events")}</h1>
                   <p className="dashboard-org-events-copy">
-                    Access every event you have created, review registration volume, and jump into details.
+                    {t("Access every event you have created, review registration volume, and jump into details.")}
                   </p>
                 </div>
                 <button
@@ -50,7 +51,7 @@ export default function MyEvents() {
                   onClick={() => navigate("/events/create")}
                 >
                   <Plus size={15} />
-                  Create New Event
+                  {t("Create New Event")}
                 </button>
               </section>
 
@@ -58,7 +59,7 @@ export default function MyEvents() {
                 <div
                   className={`my-events-view-switch${isSwitchMoving ? " my-events-view-switch--moving" : ""}`}
                   role="tablist"
-                  aria-label="Event history filter"
+                  aria-label={t("Event history filter")}
                   style={{ "--active-index": viewMode === "history" ? 1 : 0 }}
                 >
                   <span className="my-events-view-indicator" aria-hidden="true" />
@@ -67,29 +68,29 @@ export default function MyEvents() {
                     className={`my-events-view-btn${viewMode === "current" ? " my-events-view-btn--active" : ""}`}
                     onClick={() => setViewMode("current")}
                   >
-                    Current Events
+                    {t("Current Events")}
                   </button>
                   <button
                     type="button"
                     className={`my-events-view-btn${viewMode === "history" ? " my-events-view-btn--active" : ""}`}
                     onClick={() => setViewMode("history")}
                   >
-                    History
+                    {t("History")}
                   </button>
                 </div>
               </div>
             </div>
 
             {visibleEvents.length === 0 ? (
-              <div className="dashboard-empty my-events-empty">
+                <div className="dashboard-empty my-events-empty">
                 <p className="dashboard-empty-copy">
                   {viewMode === "history"
-                    ? "No past events yet."
-                    : "You have not created any current events yet."}
+                    ? t("No past events yet.")
+                    : t("You have not created any current events yet.")}
                 </p>
                 {viewMode === "current" && (
                   <button className="btn btn-primary" onClick={() => navigate("/events/create")}>
-                    Create your first event
+                    {t("Create your first event")}
                   </button>
                 )}
               </div>
@@ -105,7 +106,7 @@ export default function MyEvents() {
                       <div className="dashboard-registration-info">
                         <p className="dashboard-registration-title">{ev.title}</p>
                         <p className="dashboard-registration-organizer">
-                          {ev.organizer || "Your organization"}
+                          {ev.organizer || t("Your organization")}
                         </p>
                         <div className="dashboard-registration-meta">
                           {ev.date && (
@@ -115,7 +116,12 @@ export default function MyEvents() {
                             <span className="dashboard-registration-meta-item">{ev.location}</span>
                           )}
                           <span className="dashboard-registration-meta-item">
-                            {ev.registered_count || 0}/{ev.max_participants || 0} registered
+                            {ev.unlimited_capacity
+                              ? t("{{count}} registered", { count: ev.registered_count || 0 })
+                              : t("{{count}} / {{max}} registered", {
+                                  count: ev.registered_count || 0,
+                                  max: ev.max_participants || 0,
+                                })}
                           </span>
                           {(ev.tags || []).slice(0, 2).map((tag) => (
                             <span key={tag} className="dashboard-registration-tag">
@@ -147,7 +153,7 @@ export default function MyEvents() {
                                     : "var(--accent)",
                           }}
                         >
-                          {ev.status_label || ev.status}
+                          {t(ev.status_label || ev.status)}
                         </span>
                       </div>
                     </div>

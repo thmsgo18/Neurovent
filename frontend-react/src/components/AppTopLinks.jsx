@@ -2,21 +2,29 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { getRole, getCompanyName, isAuthed } from "../store/authStore";
 import { getEvent } from "../api/events";
+import { usePreferences } from "../context/PreferencesContext";
 import "../styles/AppTopLinks.css";
 
 export default function AppTopLinks({ className = "" }) {
   const authed = isAuthed();
+  const { t } = usePreferences();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const [isMoving, setIsMoving] = useState(false);
   const [ownsCurrentEvent, setOwnsCurrentEvent] = useState(false);
   const prevActiveIndex = useRef(-1);
   const role = getRole();
-  const isOrg = role === "COMPANY" || role === "ADMIN";
+  const isAdmin = role === "ADMIN";
+  const isOrg = role === "COMPANY";
   const companyName = getCompanyName();
   const eventDetailId = location.pathname.match(/^\/events\/(\d+)$/)?.[1] ?? null;
+  const participantDetailId = location.pathname.match(/^\/participant\/(\d+)$/)?.[1] ?? null;
+  const eventMyEventsContext = Boolean(eventDetailId && searchParams.get("context") === "my-events");
   const isMyEventsContextRoute =
     location.pathname === "/events/create" ||
-    /^\/events\/\d+\/edit$/.test(location.pathname);
+    /^\/events\/\d+\/edit$/.test(location.pathname) ||
+    eventMyEventsContext ||
+    Boolean(participantDetailId && searchParams.get("context") === "my-events");
 
   useEffect(() => {
     let isCancelled = false;
@@ -44,11 +52,18 @@ export default function AppTopLinks({ className = "" }) {
   }, [isOrg, eventDetailId, companyName]);
 
   const links = authed
-    ? isOrg
+    ? isAdmin
+      ? [
+          { to: "/admin/participants", label: t("Participants"), match: () => location.pathname.startsWith("/admin/participants") },
+          { to: "/admin/companies", label: t("Organizations"), match: () => location.pathname.startsWith("/admin/companies") || location.pathname.startsWith("/company/") },
+          { to: "/admin/events", label: t("Events"), match: () => location.pathname.startsWith("/admin/events") || /^\/events\/\d+$/.test(location.pathname) },
+          { to: "/admin/statistics", label: t("Statistics"), match: () => location.pathname.startsWith("/admin/statistics") },
+        ]
+      : isOrg
       ? [
           {
             to: "/events",
-            label: "Events",
+            label: t("Search"),
             match: () =>
               location.pathname.startsWith("/events") &&
               !isMyEventsContextRoute &&
@@ -56,19 +71,19 @@ export default function AppTopLinks({ className = "" }) {
           },
           {
             to: "/my-events",
-            label: "My Events",
+            label: t("My Events"),
             match: () =>
               location.pathname.startsWith("/my-events") ||
               isMyEventsContextRoute ||
               Boolean(eventDetailId && ownsCurrentEvent),
           },
-          { to: "/dashboard", label: "Dashboard", match: () => location.pathname.startsWith("/dashboard") },
+          { to: "/dashboard", label: t("Dashboard"), match: () => location.pathname.startsWith("/dashboard") },
         ]
       : [
-          { to: "/events", label: "Events", match: () => location.pathname.startsWith("/events") },
-          { to: "/dashboard", label: "Dashboard", match: () => location.pathname.startsWith("/dashboard") },
+          { to: "/events", label: t("Search"), match: () => location.pathname.startsWith("/events") },
+          { to: "/dashboard", label: t("Dashboard"), match: () => location.pathname.startsWith("/dashboard") },
         ]
-    : [{ to: "/events", label: "Events", match: () => location.pathname.startsWith("/events") }];
+    : [{ to: "/events", label: t("Search"), match: () => location.pathname.startsWith("/events") }];
   const activeIndex = links.findIndex((link) => {
     if (typeof link.match === "function") return link.match();
     return location.pathname.startsWith(link.to);
@@ -90,7 +105,7 @@ export default function AppTopLinks({ className = "" }) {
   return (
     <nav
       className={`app-top-links${activeIndex >= 0 ? "" : " app-top-links--no-active"}${isMoving ? " app-top-links--moving" : ""} ${className}`.trim()}
-      aria-label="Primary"
+      aria-label={t("Primary")}
       style={{
         "--link-count": links.length,
         "--active-index": activeIndex >= 0 ? activeIndex : 0,

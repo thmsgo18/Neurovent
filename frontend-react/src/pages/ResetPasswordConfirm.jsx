@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { resetPasswordConfirmApi } from "../api/auth";
+import { usePreferences } from "../context/PreferencesContext";
 
 export default function ResetPasswordConfirm() {
+  const { t } = usePreferences();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const uid = searchParams.get("uid");
@@ -18,11 +20,11 @@ export default function ResetPasswordConfirm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      setStatus("Passwords do not match.");
+      setStatus(t("Passwords do not match."));
       return;
     }
     if (!uid || !token) {
-      setStatus("Invalid reset link. Please request a new one.");
+      setStatus(t("Invalid reset link. Please request a new one."));
       return;
     }
     setLoading(true);
@@ -31,7 +33,7 @@ export default function ResetPasswordConfirm() {
       await resetPasswordConfirmApi(uid, token, newPassword, confirmPassword);
       setStatus("ok");
     } catch (err) {
-      setStatus(err.message || "Something went wrong.");
+      setStatus(err.message || t("Something went wrong."));
     } finally {
       setLoading(false);
     }
@@ -53,21 +55,21 @@ export default function ResetPasswordConfirm() {
             <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "rgba(0,255,149,0.1)", border: "1px solid rgba(0,255,149,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--success)" }}>
               <CheckCircle size={26} />
             </div>
-            <p style={{ fontSize: "16px", fontWeight: "700", color: "var(--text)", marginBottom: "10px" }}>Password updated!</p>
+            <p style={{ fontSize: "16px", fontWeight: "700", color: "var(--text)", marginBottom: "10px" }}>{t("Password updated!")}</p>
             <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.6", marginBottom: "24px" }}>
-              Your password has been reset successfully.
+              {t("Your password has been reset successfully.")}
             </p>
             <button className="btn btn-primary" style={{ width: "100%", height: "48px", borderRadius: "10px" }} onClick={() => navigate("/login")}>
-              Sign In
+              {t("Sign In")}
             </button>
           </div>
         ) : (
           <>
             <h2 style={{ fontSize: "24px", fontWeight: "800", textAlign: "center", marginBottom: "10px", letterSpacing: "-0.03em" }}>
-              Set New Password
+              {t("Set New Password")}
             </h2>
             <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "14px", marginBottom: "32px", lineHeight: "1.5" }}>
-              Choose a strong password for your account.
+              {t("Choose a strong password for your account.")}
             </p>
 
             {status && (
@@ -79,7 +81,7 @@ export default function ResetPasswordConfirm() {
 
             <form onSubmit={handleSubmit}>
               <div className="form-field">
-                <label className="form-label">New Password</label>
+                <label className="form-label">{t("New Password")}</label>
                 <div style={{ position: "relative" }}>
                   <input
                     type={showPw ? "text" : "password"}
@@ -97,7 +99,7 @@ export default function ResetPasswordConfirm() {
               </div>
 
               <div className="form-field">
-                <label className="form-label">Confirm Password</label>
+                <label className="form-label">{t("Confirm Password")}</label>
                 <input
                   type={showPw ? "text" : "password"}
                   className="input"
@@ -115,7 +117,7 @@ export default function ResetPasswordConfirm() {
                 style={{ width: "100%", height: "50px", marginTop: "8px", borderRadius: "10px", fontSize: "15px", fontWeight: "700", background: "var(--accent)", color: "#000", border: "none", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1 }}
                 disabled={loading}
               >
-                {loading ? "Updating..." : "Update Password"}
+                {loading ? t("Updating...") : t("Update Password")}
               </button>
             </form>
           </>
@@ -123,7 +125,7 @@ export default function ResetPasswordConfirm() {
 
         <p style={{ textAlign: "center", fontSize: "13px", color: "var(--text-dim)", marginTop: "28px" }}>
           <Link to="/login" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: "700" }}>
-            ← Back to Login
+            ← {t("Back to Login")}
           </Link>
         </p>
       </div>

@@ -32,9 +32,9 @@
   transform: translateY(-50%);
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-soft);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -59,8 +59,8 @@
   min-width: 300px;
   padding: 18px;
   border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, rgba(16, 22, 38, 0.98), rgba(8, 12, 24, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(31, 45, 68, 0.98), rgba(18, 28, 44, 0.98));
   box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
   z-index: 30;
 }
@@ -85,9 +85,9 @@
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.11);
+  color: var(--text-soft);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,7 +116,7 @@
   justify-content: center;
   align-items: center;
   min-height: 28px;
-  color: rgba(236, 241, 255, 0.55);
+  color: rgba(236, 241, 255, 0.74);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 700;
@@ -137,16 +137,16 @@
 }
 
 .date-input-day:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .date-input-day--outside {
-  color: rgba(236, 241, 255, 0.34);
+  color: rgba(236, 241, 255, 0.46);
 }
 
 .date-input-day--today {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .date-input-day--selected {
@@ -156,7 +156,7 @@
 }
 
 .date-input-day:disabled {
-  color: rgba(236, 241, 255, 0.18);
+  color: rgba(236, 241, 255, 0.24);
   cursor: not-allowed;
 }
 

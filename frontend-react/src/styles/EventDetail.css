@@ -97,6 +97,12 @@
   font-family: var(--font-display);
 }
 
+.event-detail-icon--image {
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .event-detail-title {
   font-size: clamp(2.25rem, 2rem + 1.2vw, 3.35rem);
   font-weight: 800;
@@ -113,6 +119,19 @@
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.12em;
+}
+
+.event-detail-organizer-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.event-detail-organizer-btn:hover {
+  color: #b6fff3;
+  transform: translateX(2px);
 }
 
 .event-detail-datetime {
@@ -416,6 +435,7 @@
 }
 
 .event-detail-owner-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -424,6 +444,44 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
+}
+
+.event-detail-owner-item--interactive {
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 200ms ease, background 180ms ease;
+}
+
+.event-detail-owner-item--interactive::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at top right, rgba(126, 229, 216, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(126, 229, 216, 0.05), rgba(126, 229, 216, 0.01));
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.event-detail-owner-item--interactive:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, rgba(18, 28, 41, 0.98), rgba(13, 20, 32, 0.98));
+  border-color: rgba(126, 229, 216, 0.34);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(126, 229, 216, 0.08);
+}
+
+.event-detail-owner-item--interactive:hover::before {
+  opacity: 1;
+}
+
+.event-detail-owner-item--interactive:focus-visible {
+  outline: none;
+  border-color: rgba(126, 229, 216, 0.34);
+  background: linear-gradient(180deg, rgba(18, 28, 41, 0.98), rgba(13, 20, 32, 0.98));
+  box-shadow: 0 0 0 3px rgba(126, 229, 216, 0.12), 0 18px 34px rgba(0, 0, 0, 0.2);
 }
 
 .event-detail-owner-item-info {
@@ -435,6 +493,20 @@
   font-size: 1.22rem;
   font-weight: 600;
   color: var(--text);
+}
+
+.event-detail-owner-item-name--button {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.event-detail-owner-item-name--button:hover {
+  color: var(--accent);
+  transform: translateX(2px);
 }
 
 .event-detail-owner-item-date {

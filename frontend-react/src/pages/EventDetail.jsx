@@ -3,12 +3,24 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin, Lock, Download, Check, X, Users, Trash2 } from "lucide-react";
 import "../styles/EventDetail.css";
 import { getEvent, deleteEvent, getEventStats } from "../api/events";
+import { deleteAdminEvent, getAdminEvent } from "../api/admin";
 import { registerToEvent, cancelRegistration, getMyRegistrations, getEventRegistrations, updateRegistrationStatus, exportEventRegistrations, removeEventRegistration } from "../api/registrations";
-import { isAuthed, isCompany, getCompanyName } from "../store/authStore";
+import { getRole, isAuthed, isCompany, getCompanyName } from "../store/authStore";
+
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+
+const resolveMediaUrl = (value) => {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith("/")) return `${API_BASE}${value}`;
+  return `${API_BASE}/${value}`;
+};
 
 export default function EventDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const role = getRole();
+  const isAdmin = role === "ADMIN";
   const authed = isAuthed();
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());
 
@@ -29,13 +41,15 @@ export default function EventDetail() {
   const [cancelConfirm, setCancelConfirm] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [removingRegistrationId, setRemovingRegistrationId] = useState(null);
+  const [adminDeleteConfirm, setAdminDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    getEvent(id)
+    const loadEvent = isAdmin ? getAdminEvent : getEvent;
+    loadEvent(id)
       .then(setEvent)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, isAdmin]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -81,7 +95,7 @@ export default function EventDetail() {
         setEvent((prev) => prev ? {
           ...prev,
           registered_count: (prev.registered_count || 0) + 1,
-          spots_remaining: Math.max(0, (prev.spots_remaining ?? prev.max_participants ?? 0) - 1),
+          spots_remaining: prev.unlimited_capacity ? null : Math.max(0, (prev.spots_remaining ?? prev.max_participants ?? 0) - 1),
         } : prev);
       }
     } catch (err) {
@@ -116,7 +130,7 @@ export default function EventDetail() {
       setEvent((prev) => prev ? {
         ...prev,
         registered_count: Math.max(0, (prev.registered_count || 0) - 1),
-        spots_remaining: (prev.spots_remaining ?? 0) + 1,
+        spots_remaining: prev.unlimited_capacity ? null : (prev.spots_remaining ?? 0) + 1,
       } : prev);
     } catch (err) {
       setRegisterError(err.message || "Failed to cancel registration.");
@@ -176,6 +190,19 @@ export default function EventDetail() {
       navigate("/dashboard");
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleAdminDeleteEvent = async () => {
+    if (!adminDeleteConfirm) {
+      setAdminDeleteConfirm(true);
+      return;
+    }
+    try {
+      await deleteAdminEvent(id);
+      navigate("/admin/events");
+    } catch (err) {
+      alert(err.message || "Unable to delete this event.");
     }
   };
 
@@ -270,10 +297,13 @@ export default function EventDetail() {
 
   // Le backend retourne company_name dans les events (pas d'ID numérique company exposé).
   // On compare le company_name de l'event avec celui stocké au login.
-  const spotsLeft = event.spots_remaining ?? Math.max(0, (event.max_participants || 50) - (event.registered_count || 0));
-  const isFull = event.is_full ?? spotsLeft <= 0;
+  const spotsLeft = event.unlimited_capacity
+    ? null
+    : (event.spots_remaining ?? Math.max(0, (event.max_participants || 50) - (event.registered_count || 0)));
+  const isFull = event.unlimited_capacity ? false : (event.is_full ?? spotsLeft <= 0);
   const registrationOpen = event.registration_open !== false;
   const initials = (event.organizer || "NV").substring(0, 2).toUpperCase();
+  const companyLogoUrl = resolveMediaUrl(event.company_logo_url || event.company_logo || "");
   const isPast = event.status === "past" || event.status === "cancelled";
   const eventCountdown = formatRemainingTime(event.date_start, "Starts in", "Event started");
   const registrationCountdown = event.registration_deadline
@@ -305,18 +335,36 @@ export default function EventDetail() {
     <div className={`event-detail-page${isEventOwner ? " event-detail-page--owner-fixed" : ""}`}>
       <main className={`event-detail-main${isEventOwner ? " event-detail-main--owner" : ""}`}>
         <div className={`event-detail-left${isEventOwner ? " event-detail-left--owner" : ""}`}>
-          <button onClick={() => navigate(isEventOwner ? "/my-events" : "/events")} className="event-detail-back-btn event-detail-back-btn--inline">
+          <button onClick={() => navigate(isAdmin ? "/admin/events" : isEventOwner ? "/my-events" : "/events")} className="event-detail-back-btn event-detail-back-btn--inline">
             <ArrowLeft size={15} />
-            {isEventOwner ? "Back to my events" : "Back to discovery"}
+            {isAdmin ? "Back to admin events" : isEventOwner ? "Back to my events" : "Back to discovery"}
           </button>
 
           <div className="event-detail-title-row">
-            <div className="event-detail-icon" style={{ background: "var(--secondary)" }}>
-              {initials}
-            </div>
+            {companyLogoUrl ? (
+              <img
+                src={companyLogoUrl}
+                alt={event.company_name || event.organizer || "Organization"}
+                className="event-detail-icon event-detail-icon--image"
+              />
+            ) : (
+              <div className="event-detail-icon" style={{ background: "var(--secondary)" }}>
+                {initials}
+              </div>
+            )}
             <div>
               <h1 className="event-detail-title">{event.title}</h1>
-              <p className="event-detail-organizer">{event.organizer || "Unknown"}</p>
+              {event.company_id ? (
+                <button
+                  type="button"
+                  className="event-detail-organizer event-detail-organizer-btn"
+                  onClick={() => navigate(isEventOwner ? "/profile" : `/company/${event.company_id}`)}
+                >
+                  {event.organizer || "Unknown"}
+                </button>
+              ) : (
+                <p className="event-detail-organizer">{event.organizer || "Unknown"}</p>
+              )}
               {eventDateLabel && (
                 <div className="event-detail-datetime">
                   <span className="event-detail-datetime-pill">{eventDateLabel}</span>
@@ -330,37 +378,41 @@ export default function EventDetail() {
             </div>
           </div>
 
-          <p className="event-detail-description">
-            {event.description || "No description available."}
-          </p>
-
-          {event.location && (
-            <div className="event-detail-location">
-              <MapPin size={16} color="var(--accent)" style={{ marginTop: "2px", flexShrink: 0 }} />
-              <div>
-                <p className="event-detail-location-name">{event.location}</p>
-                {event.city && (
-                  <p className="event-detail-location-meta">
-                    {event.city}, {event.country}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {(event.tags || []).length > 0 && (
-            <div className="event-detail-tags-section">
-              <p className="event-detail-tags-label">
-                Tags
+          {!(isEventOwner && showRegistrations) && (
+            <>
+              <p className="event-detail-description">
+                {event.description || "No description available."}
               </p>
-              <div className="event-detail-tags">
-                {event.tags.map((tag) => (
-                  <span key={tag} className="event-detail-tag">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
+
+              {event.location && (
+                <div className="event-detail-location">
+                  <MapPin size={16} color="var(--accent)" style={{ marginTop: "2px", flexShrink: 0 }} />
+                  <div>
+                    <p className="event-detail-location-name">{event.location}</p>
+                    {event.city && (
+                      <p className="event-detail-location-meta">
+                        {event.city}, {event.country}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(event.tags || []).length > 0 && (
+                <div className="event-detail-tags-section">
+                  <p className="event-detail-tags-label">
+                    Tags
+                  </p>
+                  <div className="event-detail-tags">
+                    {event.tags.map((tag) => (
+                      <span key={tag} className="event-detail-tag">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {isEventOwner && showRegistrations && (
@@ -370,7 +422,7 @@ export default function EventDetail() {
                   Registrations
                   {stats && (
                     <span className="event-detail-owner-meta">
-                      {stats.registrations?.confirmed || 0} confirmed · {stats.registrations?.pending || 0} pending · {stats.spots_remaining ?? 0} spots left
+                      {stats.registrations?.confirmed || 0} confirmed · {stats.registrations?.pending || 0} pending · {stats.event?.unlimited_capacity ? "Unlimited capacity" : `${stats.spots_remaining ?? 0} spots left`}
                     </span>
                   )}
                 </h3>
@@ -393,10 +445,41 @@ export default function EventDetail() {
                     {registrations.map((reg) => {
                       const name = reg.participant_name || `#${reg.id}`;
                       const regDate = reg.created_at ? new Date(reg.created_at).toLocaleDateString() : null;
+                      const participantProfileTarget = reg.participant_id
+                        ? `/participant/${reg.participant_id}?context=my-events&from_event=${id}&registration_id=${reg.id}`
+                        : null;
                       return (
-                        <div key={reg.id} className="event-detail-owner-item">
+                        <div
+                          key={reg.id}
+                          className={`event-detail-owner-item${participantProfileTarget ? " event-detail-owner-item--interactive" : ""}`}
+                          onClick={() => {
+                            if (participantProfileTarget) navigate(participantProfileTarget);
+                          }}
+                          onKeyDown={(event) => {
+                            if (!participantProfileTarget) return;
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              navigate(participantProfileTarget);
+                            }
+                          }}
+                          role={participantProfileTarget ? "button" : undefined}
+                          tabIndex={participantProfileTarget ? 0 : undefined}
+                        >
                           <div className="event-detail-owner-item-info">
-                            <p className="event-detail-owner-item-name">{name}</p>
+                            {reg.participant_id ? (
+                              <button
+                                type="button"
+                                className="event-detail-owner-item-name event-detail-owner-item-name--button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  navigate(participantProfileTarget);
+                                }}
+                              >
+                                {name}
+                              </button>
+                            ) : (
+                              <p className="event-detail-owner-item-name">{name}</p>
+                            )}
                             {regDate && (
                               <p className="event-detail-owner-item-date">Registered {regDate}</p>
                             )}
@@ -407,21 +490,30 @@ export default function EventDetail() {
                           {reg.status === "PENDING" && (
                             <div className="event-detail-owner-actions">
                               <button
-                                onClick={() => handleUpdateStatus(reg.id, "CONFIRMED")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleUpdateStatus(reg.id, "CONFIRMED");
+                                }}
                                 className="event-detail-icon-btn"
                                 style={{ border: "1px solid var(--success)", background: "rgba(0,255,149,0.08)", color: "var(--success)" }}
                               >
                                 <Check size={13} />
                               </button>
                               <button
-                                onClick={() => handleUpdateStatus(reg.id, "REJECTED")}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleUpdateStatus(reg.id, "REJECTED");
+                                }}
                                 className="event-detail-icon-btn"
                                 style={{ border: "1px solid var(--error)", background: "rgba(255,77,77,0.08)", color: "var(--error)" }}
                               >
                                 <X size={13} />
                               </button>
                               <button
-                                onClick={() => handleRemoveRegistration(reg.id)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleRemoveRegistration(reg.id);
+                                }}
                                 disabled={removingRegistrationId === reg.id}
                                 className="event-detail-icon-btn event-detail-icon-btn--danger"
                                 title="Remove registration"
@@ -433,7 +525,10 @@ export default function EventDetail() {
                           {reg.status !== "PENDING" && (
                             <div className="event-detail-owner-actions">
                               <button
-                                onClick={() => handleRemoveRegistration(reg.id)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleRemoveRegistration(reg.id);
+                                }}
                                 disabled={removingRegistrationId === reg.id}
                                 className="event-detail-icon-btn event-detail-icon-btn--danger"
                                 title="Remove registration"
@@ -494,7 +589,9 @@ export default function EventDetail() {
               <div className="event-detail-reg-stat">
                 <p className="event-detail-reg-stat-label">Capacity</p>
                 <p className="event-detail-reg-stat-value" style={{ color: "var(--text)" }}>
-                  {event.registered_count || 0} / {event.max_participants || 50}
+                  {event.unlimited_capacity
+                    ? `${event.registered_count || 0} registered`
+                    : `${event.registered_count || 0} / ${event.max_participants || 50}`}
                 </p>
               </div>
             </div>
@@ -530,6 +627,33 @@ export default function EventDetail() {
                 </button>
                 {cancelConfirm && (
                   <button onClick={() => setCancelConfirm(false)} className="event-detail-cancel-text">
+                    Cancel
+                  </button>
+                )}
+              </div>
+            ) : isAdmin ? (
+              <div className="event-detail-actions-stack">
+                <div className="event-detail-panel-note">
+                  <p className="event-detail-panel-note-copy">
+                    Admin moderation view for this event.
+                  </p>
+                </div>
+                <button
+                  onClick={handleAdminDeleteEvent}
+                  className="event-detail-delete-btn"
+                  style={{
+                    width: "100%",
+                    background: adminDeleteConfirm ? "rgba(255,77,77,0.2)" : "rgba(255,77,77,0.08)",
+                    border: "1px solid rgba(255,77,77,0.25)",
+                    color: "var(--error)",
+                  }}
+                  onMouseEnter={(e) => { if (!adminDeleteConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.15)"; }}
+                  onMouseLeave={(e) => { if (!adminDeleteConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
+                >
+                  {adminDeleteConfirm ? "Click again to confirm" : "Delete Event"}
+                </button>
+                {adminDeleteConfirm && (
+                  <button onClick={() => setAdminDeleteConfirm(false)} className="event-detail-cancel-text">
                     Cancel
                   </button>
                 )}
@@ -583,7 +707,17 @@ export default function EventDetail() {
                     style={{ width: "100%" }}
                     disabled={isPast || !registrationOpen || (isFull && event.validation === "manual")}
                   >
-                    {isPast ? "Event Ended" : !registrationOpen ? "Registration Closed" : isFull && event.validation === "manual" ? "Full" : isFull ? "Join Waitlist" : "Register to Event"}
+                    {isPast
+                      ? "Event Ended"
+                      : !registrationOpen
+                        ? "Registration Closed"
+                        : event.status === "live" && (event.format === "online" || event.format === "hybrid")
+                          ? "Join Live"
+                          : isFull && event.validation === "manual"
+                            ? "Full"
+                            : isFull
+                              ? "Join Waitlist"
+                              : "Register to Event"}
                   </button>
                 )}
               </>

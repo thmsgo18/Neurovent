@@ -1,27 +1,40 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Monitor, Moon, Sun } from "lucide-react";
 import "../styles/Login.css";
+import "../styles/AppHeader.css";
 import { loginParticipantApi, loginCompanyApi } from "../api/auth";
 import { decodeJWT } from "../api/client";
 import { setToken, setRefreshToken, setRole, setUsername, setDisplayName, setCompanyName, setUserId } from "../store/authStore";
+import { usePreferences } from "../context/PreferencesContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState("researcher"); // "researcher" | "lab"
+  const { t, locale, setLocale, themeMode, setThemeMode } = usePreferences();
+  const [mode, setMode] = useState("participant");
   const [form, setForm] = useState({ credential: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const isLab = mode === "lab";
+  const isOrganization = mode === "organization";
+  const themeOptions = [
+    { value: "system", label: t("System"), icon: Monitor },
+    { value: "light", label: t("Light"), icon: Sun },
+    { value: "dark", label: t("Dark"), icon: Moon },
+  ];
+
+  const localeOptions = [
+    { value: "en", label: "EN", fullLabel: t("English") },
+    { value: "fr", label: "FR", fullLabel: t("French") },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const data = isLab
+      const data = isOrganization
         ? await loginCompanyApi(form.credential, form.password)
         : await loginParticipantApi(form.credential, form.password);
       // Le vrai backend renvoie seulement {access, refresh} — le role et l'identifiant
@@ -39,7 +52,7 @@ export default function Login() {
       setDisplayName(displayName);
       if (payload?.company_name) setCompanyName(payload.company_name);
       if (payload?.user_id) setUserId(payload.user_id);
-      navigate("/dashboard");
+      navigate(role === "ADMIN" ? "/admin/participants" : "/dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,26 +68,65 @@ export default function Login() {
             Neuro<span style={{ color: "var(--accent)" }}>vent</span>
           </Link>
           <div aria-hidden="true" />
-          <div aria-hidden="true" />
+          <div className="app-header__right login-top-brand__controls">
+            <div className="app-header__preferences">
+              <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
+                <div className="app-header__segmented" role="group" aria-label={t("Language")}>
+                  {localeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`app-header__segmented-btn${locale === option.value ? " is-active" : ""}`}
+                      onClick={() => setLocale(option.value)}
+                      title={option.fullLabel}
+                      aria-pressed={locale === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="app-header__control" aria-label={t("Theme")}>
+                <div className="app-header__segmented app-header__segmented--theme" role="group" aria-label={t("Theme")}>
+                  {themeOptions.map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`app-header__segmented-btn app-header__segmented-btn--theme${themeMode === option.value ? " is-active" : ""}`}
+                        onClick={() => setThemeMode(option.value)}
+                        title={option.label}
+                        aria-pressed={themeMode === option.value}
+                      >
+                        <Icon size={15} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="login-shell">
       <div className="login-mode-selector">
         <span
-          className={`login-mode-slider${isLab ? " login-mode-slider--lab" : ""}`}
+          className={`login-mode-slider${isOrganization ? " login-mode-slider--lab" : ""}`}
           aria-hidden="true"
         />
         {[
-          { key: "researcher", label: "Participant" },
-          { key: "lab", label: "Organization" },
+          { key: "participant", label: t("Participant") },
+          { key: "organization", label: t("Organization") },
         ].map((m) => (
           <button
             key={m.key}
             onClick={() => { setMode(m.key); setError(""); }}
             className="login-mode-btn"
             style={{
-              color: mode === m.key ? (m.key === "lab" ? "#fff" : "#000") : "var(--text-muted)",
+              color: mode === m.key ? (m.key === "organization" ? "#fff" : "#000") : "var(--text-muted)",
             }}
           >
             {m.label}
@@ -82,24 +134,24 @@ export default function Login() {
         ))}
       </div>
 
-      <div
-        className="login-card"
-        style={{
-          background: "var(--surface)",
-          border: `1px solid ${isLab ? "var(--secondary)" : "var(--border-strong)"}`,
-          boxShadow: isLab
-            ? "0 0 40px rgba(168,85,247,0.08)"
-            : "0 0 40px rgba(0,0,0,0.4)",
-        }}
-      >
-        <h2 className="login-title" style={{ textAlign: "center", marginBottom: "10px" }}>
-          {isLab ? "Company Console" : "Welcome Back"}
-        </h2>
-        <p className="login-subtitle" style={{ textAlign: "center", marginBottom: "36px" }}>
-          {isLab
-            ? "Manage your events, registrations and verification workflow."
-            : "Sign in to manage your event registrations and discover new opportunities."}
-        </p>
+        <div
+          className="login-card"
+          style={{
+            background: "var(--surface)",
+            border: `1px solid ${isOrganization ? "var(--secondary)" : "var(--border-strong)"}`,
+            boxShadow: "0 0 40px rgba(0,0,0,0.4)",
+          }}
+        >
+        <div className="login-heading">
+          <h2 className={`login-title${isOrganization ? " login-title--organization" : ""}`}>
+            {isOrganization ? t("Organization Login") : t("Participant Login")}
+          </h2>
+          <p className="login-subtitle">
+            {isOrganization
+              ? t("Manage your events, registrations and verification workflow.")
+              : t("Sign in to manage your event registrations and discover new opportunities.")}
+          </p>
+        </div>
 
         {error && (
           <div className="login-error">
@@ -110,12 +162,12 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-field">
-            <label className="form-label">{isLab ? "Company Identifier" : "Email Address"}</label>
+            <label className="form-label">{isOrganization ? t("Company Identifier") : t("Email Address")}</label>
             <input
               type="text"
               className="input"
               style={{ height: "54px" }}
-              placeholder={isLab ? "your-lab-identifier" : "researcher@institution.edu"}
+              placeholder={isOrganization ? t("your-organization-identifier") : t("participant@institution.edu")}
               value={form.credential}
               onChange={(e) => setForm({ ...form, credential: e.target.value })}
               required
@@ -124,15 +176,13 @@ export default function Login() {
 
           <div className="form-field">
             <div className="login-password-row">
-              <label className="form-label" style={{ marginBottom: 0 }}>{isLab ? "Security Key" : "Password"}</label>
-              {!isLab && (
-                <Link
-                  to="/forgot-password"
-                  className="login-forgot-link"
-                >
-                  Forgot password?
-                </Link>
-              )}
+              <label className="form-label" style={{ marginBottom: 0 }}>{t("Password")}</label>
+              <Link
+                to="/forgot-password"
+                className="login-forgot-link"
+              >
+                {t("Forgot password?")}
+              </Link>
             </div>
             <div style={{ position: "relative" }}>
               <input
@@ -176,8 +226,8 @@ export default function Login() {
               borderRadius: "10px",
               fontSize: "16px",
               fontWeight: "700",
-              background: isLab ? "var(--secondary)" : "var(--accent)",
-              color: isLab ? "#fff" : "#000",
+              background: isOrganization ? "var(--secondary)" : "var(--accent)",
+              color: isOrganization ? "#fff" : "#000",
               border: "none",
               cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.7 : 1,
@@ -186,19 +236,19 @@ export default function Login() {
             disabled={loading}
           >
             {loading
-              ? "Connecting..."
-              : isLab
-              ? "Access Lab Dashboard"
-              : "Sign In to Dashboard"}
+              ? t("Connecting...")
+              : isOrganization
+              ? t("Access Organization Dashboard")
+              : t("Sign In to Dashboard")}
           </button>
         </form>
 
         <p className="login-footer">
-          {isLab ? "Not a lab?" : "No account yet?"}{" "}
+          {isOrganization ? t("Not an organization?") : t("No account yet?")}{" "}
           <Link
             to="/register"
           >
-            {isLab ? "Researcher signup" : "Register now"}
+            {isOrganization ? t("Participant sign up") : t("Register now")}
           </Link>
         </p>
       </div>

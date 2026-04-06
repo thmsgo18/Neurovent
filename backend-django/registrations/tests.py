@@ -36,6 +36,7 @@ def create_admin(email='admin@neurovent.com', password='Admin1234!'):
 
 def create_event(company, title='Conférence', days_from_now=10,
                  capacity=50, registration_mode=RegistrationMode.AUTO,
+                 fmt=EventFormat.ONSITE,
                  evt_status=EventStatus.PUBLISHED):
     now = timezone.now()
     return Event.objects.create(
@@ -46,7 +47,7 @@ def create_event(company, title='Conférence', days_from_now=10,
         date_end=now + timedelta(days=days_from_now, hours=4),
         capacity=capacity,
         status=evt_status,
-        format=EventFormat.ONSITE,
+        format=fmt,
         registration_mode=registration_mode,
         address_full='1 rue Test, 75001 Paris',
         address_city='Paris',
@@ -72,7 +73,8 @@ class AutoRegistrationTest(TestCase):
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r.data['status'], RegistrationStatus.CONFIRMED)
 
-    def test_register_auto_full_goes_to_waitlist(self):
+    @patch('registrations.views.send_registration_waitlist')
+    def test_register_auto_full_goes_to_waitlist(self, mock_waitlist):
         """Mode AUTO + event complet → WAITLIST (pas d'erreur)"""
         # Remplir l'event
         p2 = create_participant(email='b@test.com')
@@ -83,6 +85,7 @@ class AutoRegistrationTest(TestCase):
         r = self.client.post('/api/registrations/', {'event': self.event.id})
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r.data['status'], RegistrationStatus.WAITLIST)
+        mock_waitlist.assert_called_once()
 
     def test_cannot_register_twice_if_active(self):
         """Un participant ne peut pas s'inscrire deux fois si une inscription active existe"""
@@ -123,6 +126,70 @@ class AutoRegistrationTest(TestCase):
         r = self.client.post('/api/registrations/', {'event': past_event.id})
         self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_can_register_to_live_online_event(self):
+        """Un event online en cours reste inscriptible si l'option est activée"""
+        now = timezone.now()
+        live_online = create_event(self.company, fmt=EventFormat.ONLINE)
+        live_online.date_start = now - timedelta(minutes=30)
+        live_online.date_end = now + timedelta(hours=2)
+        live_online.registration_deadline = None
+        live_online.allow_registration_during_event = True
+        live_online.save()
+
+        r = self.client.post('/api/registrations/', {'event': live_online.id})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r.data['status'], RegistrationStatus.CONFIRMED)
+
+    def test_can_register_to_live_hybrid_event(self):
+        """Un event hybrid en cours reste inscriptible si l'option est activée"""
+        now = timezone.now()
+        live_hybrid = create_event(self.company, fmt=EventFormat.HYBRID)
+        live_hybrid.date_start = now - timedelta(minutes=30)
+        live_hybrid.date_end = now + timedelta(hours=2)
+        live_hybrid.registration_deadline = None
+        live_hybrid.allow_registration_during_event = True
+        live_hybrid.save()
+
+        r = self.client.post('/api/registrations/', {'event': live_hybrid.id})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r.data['status'], RegistrationStatus.CONFIRMED)
+
+    def test_unlimited_event_never_becomes_full(self):
+        """Un event illimité confirme les inscriptions sans passer en waitlist"""
+        unlimited_event = create_event(self.company, capacity=0, registration_mode=RegistrationMode.AUTO)
+        unlimited_event.unlimited_capacity = True
+        unlimited_event.save(update_fields=['unlimited_capacity'])
+
+        self.event = unlimited_event
+        r = self.client.post('/api/registrations/', {'event': unlimited_event.id})
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r.data['status'], RegistrationStatus.CONFIRMED)
+
+    def test_cannot_register_to_live_onsite_event(self):
+        """Un event présentiel en cours n'accepte pas de nouvelles inscriptions"""
+        now = timezone.now()
+        live_onsite = create_event(self.company, fmt=EventFormat.ONSITE)
+        live_onsite.date_start = now - timedelta(minutes=30)
+        live_onsite.date_end = now + timedelta(hours=2)
+        live_onsite.registration_deadline = None
+        live_onsite.save()
+
+        r = self.client.post('/api/registrations/', {'event': live_onsite.id})
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cannot_register_to_live_online_event_if_option_disabled(self):
+        """Un event online en cours reste fermé si l'organisateur n'a pas activé l'option"""
+        now = timezone.now()
+        live_online = create_event(self.company, fmt=EventFormat.ONLINE)
+        live_online.date_start = now - timedelta(minutes=30)
+        live_online.date_end = now + timedelta(hours=2)
+        live_online.registration_deadline = None
+        live_online.allow_registration_during_event = False
+        live_online.save()
+
+        r = self.client.post('/api/registrations/', {'event': live_online.id})
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_cannot_register_after_deadline(self):
         """Inscription refusée après la deadline"""
         event = create_event(self.company)
@@ -143,12 +210,14 @@ class ValidationRegistrationTest(TestCase):
         self.participant = create_participant()
         self.event = create_event(self.company, capacity=5, registration_mode=RegistrationMode.VALIDATION)
 
-    def test_register_validation_creates_pending(self):
+    @patch('registrations.views.send_registration_pending')
+    def test_register_validation_creates_pending(self, mock_pending):
         """Mode VALIDATION + place dispo → PENDING, attente de la company"""
         self.client.force_authenticate(user=self.participant)
         r = self.client.post('/api/registrations/', {'event': self.event.id})
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r.data['status'], RegistrationStatus.PENDING)
+        mock_pending.assert_called_once()
 
     def test_register_validation_full_returns_400(self):
         """Mode VALIDATION + event complet → erreur 400 (pas de waitlist en VALIDATION)"""

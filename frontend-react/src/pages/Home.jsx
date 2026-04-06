@@ -2,12 +2,13 @@ import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Zap, Users, BarChart2, Lock } from "lucide-react";
 import { isAuthed } from "../store/authStore";
+import { usePreferences } from "../context/PreferencesContext";
 import "../styles/Home.css";
 
 const STATS = [
   { value: "120+", label: "Events published" },
-  { value: "2 400+", label: "Researchers registered" },
-  { value: "38", label: "Partner labs" },
+  { value: "2 400+", label: "Participants registered" },
+  { value: "38", label: "Partner organizations" },
   { value: "12", label: "Countries" },
 ];
 
@@ -17,7 +18,7 @@ const HOW_IT_WORKS = [
   { step: "03", title: "Attend & connect", desc: "Join in person or online. Access the full address and link once confirmed." },
 ];
 
-const FOR_LABS = [
+const FOR_ORGANIZATIONS = [
   { Icon: Zap, title: "Publish in minutes", desc: "Create your event with title, description, tags, format and capacity. It goes live immediately." },
   { Icon: Users, title: "Manage registrations", desc: "Approve or reject participants individually. Auto-confirm mode available for open events." },
   { Icon: BarChart2, title: "Track attendance", desc: "Real-time stats: confirmed, pending, waitlist. Export the full list as CSV anytime." },
@@ -26,6 +27,7 @@ const FOR_LABS = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { t } = usePreferences();
   const authed = isAuthed();
   const statsRef = useRef(null);
 
@@ -68,24 +70,24 @@ export default function Home() {
       <main className="home-hero">
         <div className="home-hero-text">
           <h1 className="home-title">
-            THE FUTURE OF
+            {t("THE FUTURE OF")}
             <br />
             <span className="home-title-accent">
-              RESEARCH
+              {t("RESEARCH")}
               <br />
-              EVENTS.
+              {t("EVENTS.")}
             </span>
           </h1>
           <p className="home-subtitle">
-            Connect with global scientists. Host and join world-class conferences in AI, ML and Neuroscience.
+            {t("Connect with global scientists. Host and join world-class conferences in AI, ML and Neuroscience.")}
           </p>
           <div className="home-hero-cta">
             <button className="btn btn-primary" onClick={() => navigate("/events")}>
-              Explore Events
+              {t("Explore Events")}
             </button>
             {!authed && (
               <button className="btn btn-ghost" onClick={() => navigate("/register")} style={{ border: "1px solid var(--border-strong)" }}>
-                Create Account
+                {t("Create Account")}
               </button>
             )}
           </div>
@@ -98,7 +100,7 @@ export default function Home() {
         {STATS.map((s) => (
           <div key={s.label} className="home-stat-item">
             <p className="home-stat-value" data-target={s.value}>{s.value}</p>
-            <p className="home-stat-label">{s.label}</p>
+            <p className="home-stat-label">{t(s.label)}</p>
           </div>
         ))}
       </div>
@@ -107,9 +109,9 @@ export default function Home() {
       <div className="home-preview">
         <div className="home-preview-grid">
           {[
-            { label: "Upcoming", color: "var(--accent)", text: "Workshop FL & Privacy — Paris" },
-            { label: "Live", color: "var(--secondary)", text: "Multi-Agent Systems Practice" },
-            { label: "May 20", color: "var(--text-dim)", text: "ML Security Conference — Lyon" },
+            { label: t("Upcoming"), color: "var(--accent)", text: t("Workshop FL & Privacy — Paris") },
+            { label: t("Live"), color: "var(--secondary)", text: t("Multi-Agent Systems Practice") },
+            { label: t("May 20"), color: "var(--text-dim)", text: t("ML Security Conference — Lyon") },
           ].map((item, i) => (
             <div key={i} className="card card-hover home-preview-card" onClick={() => navigate("/events")}>
               <span className="home-preview-label" style={{ color: item.color }}>{item.label}</span>
@@ -122,33 +124,33 @@ export default function Home() {
       {/* How it works */}
       <section className="home-section">
         <div className="home-section-inner">
-          <p className="home-section-eyebrow">For researchers</p>
-          <h2 className="home-section-title">How it works</h2>
+          <p className="home-section-eyebrow">{t("For participants")}</p>
+          <h2 className="home-section-title">{t("How it works")}</h2>
           <div className="home-steps">
             {HOW_IT_WORKS.map((s) => (
               <div key={s.step} className="home-step">
                 <span className="home-step-number">{s.step}</span>
-                <h3 className="home-step-title">{s.title}</h3>
-                <p className="home-step-desc">{s.desc}</p>
+                <h3 className="home-step-title">{t(s.title)}</h3>
+                <p className="home-step-desc">{t(s.desc)}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* For Labs */}
+      {/* For Organizations */}
       <section className="home-section home-section-alt">
         <div className="home-section-inner">
-          <p className="home-section-eyebrow" style={{ color: "var(--secondary)" }}>For labs &amp; organizations</p>
-          <h2 className="home-section-title">Everything you need to organize research events</h2>
+          <p className="home-section-eyebrow" style={{ color: "var(--secondary)" }}>{t("For organizations")}</p>
+          <h2 className="home-section-title">{t("Everything you need to organize research events")}</h2>
           <div className="home-features">
-            {FOR_LABS.map(({ Icon, title, desc }) => (
+            {FOR_ORGANIZATIONS.map(({ Icon, title, desc }) => (
               <div key={title} className="home-feature-card">
                 <div className="home-feature-icon">
                   <Icon size={22} color="var(--accent)" strokeWidth={1.8} />
                 </div>
-                <h3 className="home-feature-title">{title}</h3>
-                <p className="home-feature-desc">{desc}</p>
+                <h3 className="home-feature-title">{t(title)}</h3>
+                <p className="home-feature-desc">{t(desc)}</p>
               </div>
             ))}
           </div>
@@ -160,17 +162,17 @@ export default function Home() {
         <section className="home-cta">
           <div className="home-section-inner" style={{ textAlign: "center" }}>
             <h2 className="home-section-title" style={{ marginBottom: "16px", maxWidth: "unset" }}>
-              Ready to join the community?
+              {t("Ready to join the community?")}
             </h2>
             <p className="home-cta-copy">
-              Register as a researcher to discover and attend events,<br />or create a lab account to publish your own.
+              {t("Register as a participant to discover and attend events,")}<br />{t("or create an organization account to publish your own.")}
             </p>
             <div className="home-cta-actions">
               <Link to="/register" className="btn btn-primary">
-                Register as Researcher
+                {t("Register as Participant")}
               </Link>
               <Link to="/login" className="btn btn-ghost" style={{ border: "1px solid var(--border-strong)" }}>
-                Lab Sign In
+                {t("Organization Sign In")}
               </Link>
             </div>
           </div>
@@ -179,11 +181,11 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="home-footer">
-        <p>© 2026 Neurovent — Scientific Event Platform</p>
+        <p>{t("© 2026 Neurovent — Scientific Event Platform")}</p>
         <div className="home-footer-links">
-          <Link to="/events" className="home-footer-link">Events</Link>
-          <Link to="/login" className="home-footer-link">Sign In</Link>
-          <Link to="/register" className="home-footer-link">Register</Link>
+          <Link to="/events" className="home-footer-link">{t("Events")}</Link>
+          <Link to="/login" className="home-footer-link">{t("Sign In")}</Link>
+          <Link to="/register" className="home-footer-link">{t("Register")}</Link>
         </div>
       </footer>
 

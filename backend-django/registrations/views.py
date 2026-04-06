@@ -11,9 +11,12 @@ from events.models import Event
 from users.models import UserRole
 from emails import (
     send_registration_confirmed,
+    send_registration_pending,
     send_registration_rejected,
     send_registration_removed_by_organizer,
+    send_registration_waitlist,
 )
+from events.notification_utils import notify_event_capacity_milestones
 
 
 def _promote_from_waitlist(event):
@@ -22,6 +25,15 @@ def _promote_from_waitlist(event):
     si une place vient de se libérer. Appelé après chaque annulation/rejet.
     Envoie un email de confirmation au participant promu.
     """
+    if event.unlimited_capacity:
+        promoted = None
+        for next_in_line in event.registrations.filter(status=RegistrationStatus.WAITLIST).order_by('created_at'):
+            next_in_line.status = RegistrationStatus.CONFIRMED
+            next_in_line.save()
+            send_registration_confirmed(next_in_line, from_waitlist=True)
+            promoted = next_in_line
+        return promoted
+
     confirmed_count = event.registrations.filter(status=RegistrationStatus.CONFIRMED).count()
     if confirmed_count < event.capacity:
         next_in_line = (
@@ -77,13 +89,17 @@ class RegisterToEventView(generics.CreateAPIView):
         if event.registration_deadline and now > event.registration_deadline:
             raise ValidationError("Les inscriptions pour cet événement sont closes.")
 
-        # Vérifier que l'event n'a pas encore commencé
-        if now >= event.date_start:
-            raise ValidationError("Cet événement a déjà commencé.")
+        # Vérifier que l'inscription est encore ouverte selon le format / les dates
+        if not event.registration_open:
+            if now >= event.date_end:
+                raise ValidationError("Cet événement est terminé.")
+            if now >= event.date_start and event.format == 'ONSITE':
+                raise ValidationError("Les inscriptions ne sont plus ouvertes une fois l'événement présentiel commencé.")
+            raise ValidationError("Les inscriptions pour cet événement sont closes.")
 
         # Vérifier la capacité
         confirmed_count = event.registrations.filter(status=RegistrationStatus.CONFIRMED).count()
-        is_full = confirmed_count >= event.capacity
+        is_full = False if event.unlimited_capacity else confirmed_count >= event.capacity
 
         # Déterminer le statut cible
         if is_full:
@@ -115,9 +131,15 @@ class RegisterToEventView(generics.CreateAPIView):
         else:
             registration = serializer.save(participant=user, status=new_status)
 
-        # Notifier le participant si confirmation immédiate (mode AUTO)
+        # Notifier le participant selon le statut obtenu
         if new_status == RegistrationStatus.CONFIRMED:
             send_registration_confirmed(registration)
+        elif new_status == RegistrationStatus.PENDING:
+            send_registration_pending(registration)
+        elif new_status == RegistrationStatus.WAITLIST:
+            send_registration_waitlist(registration)
+
+        notify_event_capacity_milestones(event)
 
 
 class MyRegistrationsView(generics.ListAPIView):
@@ -156,6 +178,7 @@ class CancelRegistrationView(generics.UpdateAPIView):
         instance = serializer.save(status=RegistrationStatus.CANCELLED)
         # Une place vient de se libérer → promouvoir le premier en liste d'attente
         _promote_from_waitlist(instance.event)
+        notify_event_capacity_milestones(instance.event)
 
 
 # --- Vues Company ---
@@ -201,6 +224,7 @@ class UpdateRegistrationStatusView(generics.UpdateAPIView):
         elif instance.status == RegistrationStatus.REJECTED:
             send_registration_rejected(instance)
             _promote_from_waitlist(instance.event)
+        notify_event_capacity_milestones(instance.event)
 
 
 class RemoveRegistrationView(APIView):
@@ -232,6 +256,7 @@ class RemoveRegistrationView(APIView):
 
         send_registration_removed_by_organizer(registration)
         _promote_from_waitlist(registration.event)
+        notify_event_capacity_milestones(registration.event)
 
         return HttpResponse(status=204)
 

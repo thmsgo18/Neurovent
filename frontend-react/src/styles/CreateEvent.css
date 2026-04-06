@@ -422,6 +422,15 @@
   padding: clamp(30px, 4vw, 54px) clamp(22px, 3vw, 36px) 72px;
 }
 
+.edit-event-content {
+  width: min(100%, 1460px);
+}
+
+.edit-event-main {
+  max-width: 1240px;
+  padding: clamp(34px, 4vw, 58px) clamp(26px, 3vw, 42px) 88px;
+}
+
 .create-event-topbar {
   display: flex;
   justify-content: flex-start;
@@ -447,6 +456,14 @@
   font-size: clamp(1.1rem, 1.03rem + 0.35vw, 1.35rem);
   color: var(--text-muted);
   font-weight: 500;
+}
+
+.edit-event-main .create-event-page-title {
+  font-size: clamp(3.1rem, 2.5rem + 1.8vw, 4.8rem);
+}
+
+.edit-event-main .create-event-page-state {
+  font-size: clamp(1.18rem, 1.08rem + 0.45vw, 1.48rem);
 }
 
 .create-event-stepper {
@@ -524,6 +541,15 @@
   margin-bottom: 22px;
 }
 
+.edit-event-main .create-event-card {
+  border-radius: 22px;
+  padding: clamp(28px, 4vw, 38px);
+}
+
+.edit-event-main .form-field {
+  margin-bottom: 26px;
+}
+
 .create-event-main--wide .form-label {
   display: block;
   margin-bottom: 10px;
@@ -531,9 +557,18 @@
   font-weight: 700;
 }
 
+.edit-event-main .form-label {
+  font-size: 1.08rem;
+}
+
 .create-event-main--wide .input {
   min-height: 58px;
   font-size: 1rem;
+}
+
+.edit-event-main .input {
+  min-height: 62px;
+  font-size: 1.06rem;
 }
 
 .create-event-main--wide .input.create-event-input--error,
@@ -596,6 +631,67 @@
   font-size: 0.98rem;
   line-height: 1.45;
   cursor: pointer;
+}
+
+.edit-event-main .create-event-step-title {
+  font-size: clamp(2rem, 1.85rem + 0.5vw, 2.4rem);
+}
+
+.edit-event-main .create-event-step-subtitle {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.edit-event-main .create-event-alert {
+  font-size: 0.98rem;
+}
+
+.edit-event-main .create-event-format-option {
+  min-height: 168px;
+}
+
+.edit-event-main .create-event-format-option p {
+  font-size: 1.02rem;
+}
+
+.edit-event-main .create-event-schedule-input,
+.edit-event-main .date-input-trigger {
+  min-height: 64px;
+  font-size: 1.08rem;
+}
+
+.edit-event-main .create-event-inline-help {
+  font-size: 0.98rem;
+  color: var(--text-muted);
+}
+
+.edit-event-main .create-event-tag {
+  min-height: 38px;
+  font-size: 0.96rem;
+}
+
+.edit-event-main .create-event-suggestion-btn,
+.edit-event-main .create-event-choice-chip {
+  font-size: 0.98rem;
+}
+
+.edit-event-main .create-event-duration-display {
+  min-height: 64px;
+  width: min(100%, 280px);
+  font-size: 1.04rem;
+}
+
+.edit-event-main .create-event-counter {
+  width: min(100%, 360px);
+}
+
+.edit-event-main .create-event-counter-input {
+  font-size: 1.16rem;
+}
+
+.edit-event-main textarea.input {
+  min-height: 220px;
+  font-size: 1.04rem;
 }
 
 .create-event-check-row input {
@@ -876,6 +972,27 @@
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.14);
   color: var(--text);
+}
+
+.edit-event-back-btn {
+  gap: 10px;
+  overflow: hidden;
+}
+
+.edit-event-back-btn__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.9em;
+  transform: translateX(6px);
+  opacity: 0;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.edit-event-back-btn:hover .edit-event-back-btn__arrow,
+.edit-event-back-btn:focus-visible .edit-event-back-btn__arrow {
+  transform: translateX(0);
+  opacity: 1;
 }
 
 .create-event-leave-actions .btn {

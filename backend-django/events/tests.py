@@ -3,14 +3,17 @@ Tests — App events
 Couvre : liste publique, CRUD, filtres, permissions, stats, recommandations
 """
 from django.test import TestCase
+from django.core.management import call_command
 from rest_framework.test import APIClient
 from rest_framework import status
 from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
 from .models import Event, EventStatus, EventFormat, RegistrationMode
 from users.models import CustomUser, UserRole
 from tags.models import Tag
 from registrations.models import Registration, RegistrationStatus
+from .notification_utils import notify_event_capacity_milestones
 
 
 def create_participant(email='alice@test.com', password='Test1234!'):
@@ -106,6 +109,59 @@ class EventListTest(TestCase):
         self.assertIn('Event Publié 1', titles)
         self.assertNotIn('Event Publié 2', titles)
 
+    def test_search_matches_partial_word_in_title(self):
+        create_event(self.company, title='Clinical NeuroAI Summit')
+        r = self.client.get('/api/events/?search=clini')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        titles = [e['title'] for e in r.data['results']]
+        self.assertIn('Clinical NeuroAI Summit', titles)
+
+    def test_search_matches_partial_word_in_description(self):
+        event = create_event(self.company, title='NeuroAI Summit')
+        event.description = 'Clinical applications of AI for neuro diagnostics'
+        event.save(update_fields=['description'])
+
+        r = self.client.get('/api/events/?search=diagnos')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        titles = [e['title'] for e in r.data['results']]
+        self.assertIn('NeuroAI Summit', titles)
+
+    def test_search_matches_company_name(self):
+        create_event(self.company, title='Neuro Vision Day')
+        r = self.client.get('/api/events/?search=Brain')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        titles = [e['title'] for e in r.data['results']]
+        self.assertIn('Neuro Vision Day', titles)
+
+    def test_filter_by_exact_organization_name(self):
+        other_company = create_company(identifier='atlas', company_name='Atlas Neuro Labs')
+        create_event(self.company, title='Brain Event')
+        create_event(other_company, title='Atlas Event')
+        r = self.client.get('/api/events/?organization=Atlas%20Neuro%20Labs')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        titles = [e['title'] for e in r.data['results']]
+        self.assertIn('Atlas Event', titles)
+        self.assertNotIn('Brain Event', titles)
+
+    def test_upcoming_only_excludes_live_events(self):
+        Event.objects.create(
+            company=self.company,
+            title='Live Organization Event',
+            description='Live now',
+            date_start=timezone.now() - timedelta(hours=1),
+            date_end=timezone.now() + timedelta(hours=2),
+            capacity=40,
+            status=EventStatus.PUBLISHED,
+            format=EventFormat.ONLINE,
+            registration_mode=RegistrationMode.AUTO,
+            online_link='https://zoom.us/j/123456789',
+        )
+        r = self.client.get('/api/events/?upcoming_only=true')
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        titles = [e['title'] for e in r.data['results']]
+        self.assertNotIn('Live Organization Event', titles)
+        self.assertIn('Event Publié 1', titles)
+
     def test_admin_can_filter_by_status(self):
         """Un admin peut voir les DRAFT avec ?status=DRAFT"""
         admin = create_admin()
@@ -135,6 +191,7 @@ class EventCRUDTest(TestCase):
         self.company = create_company()
         self.other_company = create_company(identifier='other-corp', company_name='OtherCorp')
         self.participant = create_participant()
+        self.admin = create_admin()
         self.now = timezone.now()
 
     def _event_payload(self, title='Test Event'):
@@ -146,6 +203,7 @@ class EventCRUDTest(TestCase):
             'capacity': 30,
             'format': 'ONSITE',
             'registration_mode': 'AUTO',
+            'allow_registration_during_event': False,
             'address_full': '1 rue Test, 75001 Paris',
             'address_city': 'Paris',
             'address_country': 'France',
@@ -157,6 +215,114 @@ class EventCRUDTest(TestCase):
         self.assertEqual(r.status_code, status.HTTP_201_CREATED)
         self.assertEqual(r.data['title'], 'Test Event')
         self.assertEqual(r.data['status'], EventStatus.DRAFT)
+
+    def test_company_can_create_online_event_with_live_registration_enabled(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Live Online Event')
+        payload.update({
+            'format': 'ONLINE',
+            'allow_registration_during_event': True,
+            'online_platform': 'Zoom',
+            'online_link': 'https://zoom.us/j/123456789',
+        })
+        payload.pop('address_full', None)
+        payload.pop('address_city', None)
+        payload.pop('address_country', None)
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(r.data['allow_registration_during_event'])
+
+    def test_company_can_create_event_with_unlimited_capacity(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Unlimited Event')
+        payload.update({
+            'capacity': 0,
+            'unlimited_capacity': True,
+        })
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(r.data['unlimited_capacity'])
+
+    def test_limited_event_requires_capacity_above_one(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Tiny Event')
+        payload.update({
+            'capacity': 1,
+            'unlimited_capacity': False,
+        })
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('capacity', r.data)
+
+    def test_cannot_create_event_with_start_datetime_in_past(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Past Start Event')
+        payload.update({
+            'date_start': (self.now - timedelta(minutes=30)).isoformat(),
+            'date_end': (self.now + timedelta(hours=2)).isoformat(),
+        })
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('date_start', r.data)
+
+    def test_live_registration_requires_auto_confirm(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Invalid Live Event')
+        payload.update({
+            'format': 'ONLINE',
+            'allow_registration_during_event': True,
+            'registration_mode': 'VALIDATION',
+            'online_platform': 'Zoom',
+            'online_link': 'https://zoom.us/j/123456789',
+        })
+        payload.pop('address_full', None)
+        payload.pop('address_city', None)
+        payload.pop('address_country', None)
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('registration_mode', r.data)
+
+    def test_live_registration_cannot_hide_online_link(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Invalid Hidden Link Event')
+        payload.update({
+            'format': 'ONLINE',
+            'allow_registration_during_event': True,
+            'registration_mode': 'AUTO',
+            'online_platform': 'Zoom',
+            'online_link': 'https://zoom.us/j/123456789',
+            'online_visibility': 'PARTIAL',
+        })
+        payload.pop('address_full', None)
+        payload.pop('address_city', None)
+        payload.pop('address_country', None)
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('online_visibility', r.data)
+
+    def test_live_registration_cannot_define_registration_deadline(self):
+        self.client.force_authenticate(user=self.company)
+        payload = self._event_payload(title='Invalid Live Deadline Event')
+        payload.update({
+            'format': 'ONLINE',
+            'allow_registration_during_event': True,
+            'registration_mode': 'AUTO',
+            'online_link': 'https://zoom.us/j/123456789',
+            'registration_deadline': (self.now + timedelta(days=1)).isoformat(),
+        })
+        payload.pop('address_full', None)
+        payload.pop('address_city', None)
+        payload.pop('address_country', None)
+
+        r = self.client.post('/api/events/create/', payload)
+        self.assertEqual(r.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('registration_deadline', r.data)
 
     def test_participant_cannot_create_event(self):
         self.client.force_authenticate(user=self.participant)
@@ -195,6 +361,13 @@ class EventCRUDTest(TestCase):
         r = self.client.delete(f'/api/events/{event.id}/delete/')
         self.assertIn(r.status_code, [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND])
         self.assertTrue(Event.objects.filter(id=event.id).exists())
+
+    def test_admin_can_delete_any_event(self):
+        self.client.force_authenticate(user=self.admin)
+        event = create_event(self.company)
+        r = self.client.delete(f'/api/events/admin/{event.id}/delete/')
+        self.assertEqual(r.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Event.objects.filter(id=event.id).exists())
 
     def test_event_date_end_before_start_rejected(self):
         """date_end < date_start doit être rejeté"""
@@ -349,6 +522,109 @@ class CompanyDashboardStatsTest(TestCase):
         self.client.force_authenticate(user=self.participant)
         r = self.client.get('/api/events/dashboard-stats/')
         self.assertEqual(r.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class EventEmailNotificationsTest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.company = create_company()
+        self.participant = create_participant()
+
+    @patch('events.views.send_event_updated')
+    def test_updating_event_schedule_notifies_confirmed_participants(self, mock_send_event_updated):
+        event = create_event(self.company)
+        Registration.objects.create(
+            participant=self.participant,
+            event=event,
+            status=RegistrationStatus.CONFIRMED,
+        )
+
+        self.client.force_authenticate(user=self.company)
+        response = self.client.patch(
+            f'/api/events/{event.id}/update/',
+            {'date_start': (event.date_start + timedelta(days=1)).isoformat()},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_send_event_updated.assert_called_once()
+        changes = mock_send_event_updated.call_args.args[1]
+        self.assertTrue(any("date ou l'horaire" in change for change in changes))
+
+    @patch('events.notification_utils.send_event_capacity_alert')
+    def test_capacity_alert_sent_when_event_becomes_almost_full(self, mock_capacity_alert):
+        event = create_event(self.company, capacity=5)
+        for index in range(3):
+            Registration.objects.create(
+                participant=create_participant(email=f'p{index}@test.com'),
+                event=event,
+                status=RegistrationStatus.CONFIRMED,
+            )
+
+        Registration.objects.create(
+            participant=self.participant,
+            event=event,
+            status=RegistrationStatus.CONFIRMED,
+        )
+
+        notify_event_capacity_milestones(event)
+
+        event.refresh_from_db()
+        mock_capacity_alert.assert_called_once_with(event, 'ALMOST_FULL')
+        self.assertIsNotNone(event.almost_full_notified_at)
+
+
+class EventNotificationCommandTest(TestCase):
+    def setUp(self):
+        self.company = create_company()
+        self.participant = create_participant()
+
+    @patch('events.management.commands.send_event_notifications.send_event_organizer_digest')
+    @patch('events.management.commands.send_event_notifications.send_event_access_revealed')
+    @patch('events.management.commands.send_event_notifications.send_event_reminder')
+    def test_command_sends_reminders_reveals_and_digest(
+        self,
+        mock_send_event_reminder,
+        mock_send_event_access_revealed,
+        mock_send_event_organizer_digest,
+    ):
+        now = timezone.now()
+        event = Event.objects.create(
+            company=self.company,
+            title='Event Notifications',
+            description='Test notifications planifiées',
+            date_start=now + timedelta(hours=2),
+            date_end=now + timedelta(hours=5),
+            capacity=10,
+            status=EventStatus.PUBLISHED,
+            format=EventFormat.HYBRID,
+            registration_mode=RegistrationMode.AUTO,
+            address_full='1 rue Reveal, 75001 Paris',
+            address_city='Paris',
+            address_country='France',
+            address_visibility='PARTIAL',
+            address_reveal_date=now - timedelta(minutes=5),
+            online_platform='Zoom',
+            online_link='https://zoom.us/j/123456789',
+            online_visibility='PARTIAL',
+            online_reveal_date=now - timedelta(minutes=5),
+        )
+        Registration.objects.create(
+            participant=self.participant,
+            event=event,
+            status=RegistrationStatus.CONFIRMED,
+            accessibility_needs='Accès PMR',
+        )
+
+        call_command('send_event_notifications')
+
+        event.refresh_from_db()
+        mock_send_event_reminder.assert_called_once()
+        mock_send_event_access_revealed.assert_called_once()
+        mock_send_event_organizer_digest.assert_called_once_with(event)
+        self.assertIsNotNone(event.reminder_3h_sent_at)
+        self.assertIsNotNone(event.address_reveal_email_sent_at)
+        self.assertIsNotNone(event.online_reveal_email_sent_at)
+        self.assertIsNotNone(event.organizer_digest_sent_at)
 
     def test_company_can_export_dashboard_summary(self):
         self.client.force_authenticate(user=self.company)

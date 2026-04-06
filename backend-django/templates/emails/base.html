@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }}</title>
+  </head>
+  <body style="margin:0; padding:0; background:{{ palette.bg }}; font-family:Arial, Helvetica, sans-serif; color:{{ palette.text }};">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">
+      {{ preheader }}
+    </div>
+
+    <table
+      role="presentation"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      width="100%"
+      style="background:
+        radial-gradient(circle at top left, {{ palette.accent_soft }} 0%, transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255, 213, 107, 0.10) 0%, transparent 24%),
+        {{ palette.bg }};
+        margin:0; padding:28px 0;"
+    >
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:640px; margin:0 auto;">
+            <tr>
+              <td style="padding:0 20px 20px;">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                  style="background:
+                    radial-gradient(circle at top right, {{ palette.accent_soft }} 0%, transparent 34%),
+                    linear-gradient(135deg, {{ palette.bg_alt }} 0%, {{ palette.surface }} 58%, {{ palette.surface_high }} 100%);
+                    border:1px solid {{ palette.border }};
+                    border-radius:28px;
+                    overflow:hidden;
+                    box-shadow:0 24px 60px rgba(0, 0, 0, 0.42);"
+                >
+                  <tr>
+                    <td style="padding:32px 32px 28px;">
+                      <div style="font-size:12px; line-height:18px; letter-spacing:0.18em; text-transform:uppercase; color:{{ palette.text_muted }}; font-weight:700;">
+                        {{ brand_name }}
+                      </div>
+                      <div style="margin-top:18px; display:inline-block; padding:7px 12px; border-radius:999px; background:{{ palette.accent_soft }}; border:1px solid {{ palette.border_strong }}; color:{{ palette.text }}; font-size:12px; font-weight:700;">
+                        {{ eyebrow }}
+                      </div>
+                      <h1 style="margin:18px 0 0; color:{{ palette.text }}; font-size:32px; line-height:1.12; font-weight:800; letter-spacing:-0.03em;">
+                        {{ title }}
+                      </h1>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:0 20px;">
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  width="100%"
+                  style="background:
+                    linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0)),
+                    {{ palette.surface }};
+                    border:1px solid {{ palette.border }};
+                    border-radius:28px;
+                    overflow:hidden;
+                    box-shadow:0 18px 50px rgba(0, 0, 0, 0.35);"
+                >
+                  <tr>
+                    <td style="padding:32px;">
+                      <p style="margin:0 0 16px; font-size:16px; line-height:26px; color:{{ palette.text }};">
+                        Hello{% if greeting_name %} {{ greeting_name }}{% endif %},
+                      </p>
+
+                      {% for line in intro_lines %}
+                        <p style="margin:0 0 14px; font-size:16px; line-height:26px; color:{{ palette.text_muted }};">
+                          {{ line }}
+                        </p>
+                      {% endfor %}
+
+                      {% if detail_items %}
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:26px; border:1px solid {{ palette.border }}; border-radius:20px; background:{{ palette.surface_high }};">
+                          <tr>
+                            <td style="padding:22px 22px 8px;">
+                              {% if detail_title %}
+                                <div style="font-size:13px; line-height:20px; font-weight:700; color:{{ palette.accent }}; text-transform:uppercase; letter-spacing:0.14em; margin-bottom:14px;">
+                                  {{ detail_title }}
+                                </div>
+                              {% endif %}
+                              {% for label, value in detail_items %}
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:12px;">
+                                  <tr>
+                                    <td valign="top" style="width:160px; padding:0 12px 0 0; font-size:13px; line-height:22px; color:{{ palette.text_dim }}; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">
+                                      {{ label }}
+                                    </td>
+                                    <td valign="top" style="font-size:14px; line-height:22px; color:{{ palette.text }};">
+                                      {{ value }}
+                                    </td>
+                                  </tr>
+                                </table>
+                              {% endfor %}
+                            </td>
+                          </tr>
+                        </table>
+                      {% endif %}
+
+                      {% if stats_items %}
+                        <table
+                          role="presentation"
+                          cellpadding="0"
+                          cellspacing="0"
+                          border="0"
+                          width="100%"
+                          style="margin-top:26px; border-radius:20px; background:
+                            radial-gradient(circle at top right, {{ palette.accent_soft }} 0%, transparent 45%),
+                            {{ palette.surface_raised }};
+                            border:1px solid {{ palette.border }};"
+                        >
+                          <tr>
+                            <td style="padding:22px;">
+                              {% if stats_title %}
+                                <div style="font-size:13px; line-height:20px; font-weight:700; color:{{ palette.secondary }}; text-transform:uppercase; letter-spacing:0.14em; margin-bottom:14px;">
+                                  {{ stats_title }}
+                                </div>
+                              {% endif %}
+                              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                                <tr>
+                                  {% for label, value in stats_items %}
+                                    <td style="padding:0 12px 0 0;" valign="top">
+                                      <div style="font-size:26px; line-height:32px; font-weight:800; color:{{ palette.text }};">{{ value }}</div>
+                                      <div style="margin-top:4px; font-size:13px; line-height:18px; color:{{ palette.text_muted }};">{{ label }}</div>
+                                    </td>
+                                  {% endfor %}
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      {% endif %}
+
+                      {% if bullet_items %}
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:26px; border:1px solid {{ palette.border }}; border-radius:20px; background:{{ palette.surface_high }};">
+                          <tr>
+                            <td style="padding:22px 22px 10px;">
+                              {% if bullet_title %}
+                                <div style="font-size:13px; line-height:20px; font-weight:700; color:{{ palette.accent }}; text-transform:uppercase; letter-spacing:0.14em; margin-bottom:14px;">
+                                  {{ bullet_title }}
+                                </div>
+                              {% endif %}
+                              <ul style="margin:0; padding-left:20px; color:{{ palette.text_muted }};">
+                                {% for item in bullet_items %}
+                                  <li style="margin:0 0 10px; font-size:15px; line-height:24px;">{{ item }}</li>
+                                {% endfor %}
+                              </ul>
+                            </td>
+                          </tr>
+                        </table>
+                      {% endif %}
+
+                      {% if cta_url and cta_label %}
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:28px;">
+                          <tr>
+                            <td align="center" bgcolor="{{ palette.button }}" style="border-radius:14px; box-shadow:0 0 24px {{ palette.accent_soft }};">
+                              <a
+                                href="{{ cta_url }}"
+                                style="display:inline-block; padding:15px 24px; font-size:15px; line-height:20px; font-weight:700; color:{{ palette.button_text }}; text-decoration:none;"
+                              >
+                                {{ cta_label }}
+                              </a>
+                            </td>
+                          </tr>
+                        </table>
+                      {% endif %}
+
+                      {% if note_lines %}
+                        <div style="margin-top:28px; padding:18px 20px; border-radius:18px; background:rgba(255,255,255,0.03); border:1px solid {{ palette.border }};">
+                          {% for line in note_lines %}
+                            <p style="margin:0 0 10px; font-size:14px; line-height:22px; color:{{ palette.text_muted }};">
+                              {{ line }}
+                            </p>
+                          {% endfor %}
+                        </div>
+                      {% endif %}
+
+                      <p style="margin:28px 0 0; font-size:15px; line-height:24px; color:{{ palette.text_muted }};">
+                        See you soon,<br />
+                        <strong style="color:{{ palette.text }};">{{ brand_name }}</strong>
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 28px 0; text-align:center;">
+                <p style="margin:0; font-size:12px; line-height:20px; color:{{ palette.text_dim }};">
+                  This email was sent automatically by {{ brand_name }}.
+                </p>
+                <p style="margin:6px 0 0; font-size:12px; line-height:20px; color:{{ palette.text_dim }};">
+                  You can reply to this email if you need help: {{ reply_to_email }}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

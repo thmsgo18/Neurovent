@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from users.views import CompanyPublicView
+from users.views import CompanyPublicView, CompanyPublicListView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 urlpatterns = [
@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/events/', include('events.urls')),
     path('api/registrations/', include('registrations.urls')),
     path('api/tags/', include('tags.urls')),
+    path('api/companies/', CompanyPublicListView.as_view(), name='company-public-list'),
     path('api/companies/<int:pk>/', CompanyPublicView.as_view(), name='company-public'),
 
     # ── Documentation API (Swagger / ReDoc) ──

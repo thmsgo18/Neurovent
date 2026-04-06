@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { resetPasswordApi } from "../api/auth";
+import { usePreferences } from "../context/PreferencesContext";
 
 export default function ForgotPassword() {
+  const { t } = usePreferences();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // null | "ok" | error string
@@ -16,7 +18,7 @@ export default function ForgotPassword() {
       await resetPasswordApi(email);
       setStatus("ok");
     } catch (err) {
-      setStatus(err.message || "Something went wrong.");
+      setStatus(err.message || t("Something went wrong."));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function ForgotPassword() {
             letterSpacing: "-0.03em",
           }}
         >
-          Reset Password
+          {t("Reset Password")}
         </h2>
         <p
           style={{
@@ -80,7 +82,7 @@ export default function ForgotPassword() {
             lineHeight: "1.5",
           }}
         >
-          Enter your email and we will send you a password reset link.
+          {t("Enter your email and we will send you a password reset link.")}
         </p>
 
         {status === "ok" ? (
@@ -107,10 +109,10 @@ export default function ForgotPassword() {
               <CheckCircle size={26} />
             </div>
             <p style={{ fontSize: "16px", fontWeight: "700", color: "var(--text)", marginBottom: "10px" }}>
-              Check your inbox
+              {t("Check your inbox")}
             </p>
             <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.6", marginBottom: "8px" }}>
-              If an account exists for
+              {t("If an account exists for")}
             </p>
             <p
               style={{
@@ -129,7 +131,7 @@ export default function ForgotPassword() {
               {email}
             </p>
             <p style={{ fontSize: "13px", color: "var(--text-muted)", lineHeight: "1.6" }}>
-              a reset link has been sent.
+              {t("a reset link has been sent.")}
             </p>
           </div>
         ) : (
@@ -155,12 +157,12 @@ export default function ForgotPassword() {
               </div>
             )}
             <div className="form-field">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">{t("Email Address")}</label>
               <input
                 type="email"
                 className="input"
                 style={{ height: "48px" }}
-                placeholder="researcher@institution.edu"
+                placeholder={t("participant@institution.edu")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -185,7 +187,7 @@ export default function ForgotPassword() {
               }}
               disabled={loading}
             >
-              {loading ? "Sending..." : "Send Reset Link"}
+              {loading ? t("Sending...") : t("Send Reset Link")}
             </button>
           </form>
         )}
@@ -199,7 +201,7 @@ export default function ForgotPassword() {
           }}
         >
           <Link to="/login" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: "700" }}>
-            ← Back to Login
+            ← {t("Back to Login")}
           </Link>
         </p>
       </div>

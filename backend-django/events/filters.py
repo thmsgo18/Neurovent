@@ -1,5 +1,7 @@
 import django_filters
+import re
 from django.db.models import Q
+from django.utils import timezone
 from .models import Event, EventFormat, EventStatus
 from tags.models import Tag
 
@@ -63,18 +65,47 @@ class EventFilter(django_filters.FilterSet):
         lookup_expr='icontains',
         label='Pays'
     )
+    organization = django_filters.CharFilter(
+        method='filter_organization',
+        label='Organisation'
+    )
 
     # Recherche libre dans le titre et la description
     search = django_filters.CharFilter(
         method='filter_search',
         label='Recherche (titre ou description)'
     )
+    upcoming_only = django_filters.BooleanFilter(
+        method='filter_upcoming_only',
+        label='Événements à venir uniquement'
+    )
 
     def filter_search(self, queryset, name, value):
-        return queryset.filter(
-            Q(title__icontains=value) | Q(description__icontains=value)
-        )
+        terms = [term.strip() for term in re.split(r"\s+", value or "") if term.strip()]
+        if not terms:
+            return queryset
+
+        query = Q()
+        for term in terms:
+            query &= (
+                Q(title__icontains=term) |
+                Q(description__icontains=term) |
+                Q(company__company_name__icontains=term)
+            )
+
+        return queryset.filter(query).distinct()
+
+    def filter_upcoming_only(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(date_start__gt=timezone.now())
+
+    def filter_organization(self, queryset, name, value):
+        normalized_value = (value or "").strip()
+        if not normalized_value:
+            return queryset
+        return queryset.filter(company__company_name__iexact=normalized_value)
 
     class Meta:
         model = Event
-        fields = ['status', 'format', 'tags', 'date_after', 'date_before', 'city', 'country', 'search']
+        fields = ['status', 'format', 'tags', 'date_after', 'date_before', 'city', 'country', 'organization', 'search', 'upcoming_only']

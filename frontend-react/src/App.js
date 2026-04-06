@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { prefetchTags } from "./api/tags";
 import AdminRoute from "./components/AdminRoute";
+import CompanyRoute from "./components/CompanyRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppHeader from "./components/AppHeader";
 import Login from "./pages/Login";
@@ -17,12 +18,20 @@ import EditEvent from "./pages/EditEvent";
 import Dashboard from "./pages/Dashboard";
 import MyEvents from "./pages/MyEvents";
 import Profile from "./pages/Profile";
+import ProfileOverview from "./pages/ProfileOverview";
+import ParticipantProfile from "./pages/ParticipantProfile";
 import CompanyProfile from "./pages/CompanyProfile";
+import AdminParticipants from "./pages/AdminParticipants";
+import AdminParticipantProfile from "./pages/AdminParticipantProfile";
+import AdminCompanies from "./pages/AdminCompanies";
+import AdminEvents from "./pages/AdminEvents";
+import AdminStatistics from "./pages/AdminStatistics";
 
 export default function App() {
   const location = useLocation();
   const hideGlobalHeader = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);
   const fixedViewportContent =
+    location.pathname === "/events" ||
     location.pathname === "/events/results" ||
     location.pathname === "/dashboard" ||
     location.pathname === "/my-events";
@@ -69,9 +78,9 @@ export default function App() {
           <Route
             path="/my-events"
             element={
-              <AdminRoute>
+              <CompanyRoute>
                 <MyEvents />
-              </AdminRoute>
+              </CompanyRoute>
             }
           />
 
@@ -79,7 +88,24 @@ export default function App() {
             path="/profile"
             element={
               <ProtectedRoute>
+                <ProfileOverview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile/edit"
+            element={
+              <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/participant/:id"
+            element={
+              <ProtectedRoute>
+                <ParticipantProfile />
               </ProtectedRoute>
             }
           />
@@ -88,20 +114,63 @@ export default function App() {
           <Route path="/events/results" element={<EventsResults />} />
           <Route path="/company/:id" element={<CompanyProfile />} />
 
+          <Route path="/admin" element={<Navigate to="/admin/participants" replace />} />
+
+          <Route
+            path="/admin/participants"
+            element={
+              <AdminRoute>
+                <AdminParticipants />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/participants/:id"
+            element={
+              <AdminRoute>
+                <AdminParticipantProfile />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/companies"
+            element={
+              <AdminRoute>
+                <AdminCompanies />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/events"
+            element={
+              <AdminRoute>
+                <AdminEvents />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/statistics"
+            element={
+              <AdminRoute>
+                <AdminStatistics />
+              </AdminRoute>
+            }
+          />
+
           <Route
             path="/events/create"
             element={
-              <AdminRoute>
+              <CompanyRoute>
                 <CreateEvent />
-              </AdminRoute>
+              </CompanyRoute>
             }
           />
           <Route
             path="/events/:id/edit"
             element={
-              <AdminRoute>
+              <CompanyRoute>
                 <EditEvent />
-              </AdminRoute>
+              </CompanyRoute>
             }
           />
 

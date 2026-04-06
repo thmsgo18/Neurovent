@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, CheckCircle, Eye, EyeOff, Monitor, Moon, Sun } from "lucide-react";
 import "../styles/Register.css";
+import "../styles/AppHeader.css";
 import { registerParticipantApi, registerCompanyApi } from "../api/auth";
+import { usePreferences } from "../context/PreferencesContext";
 
 const PW_RULES = [
   { key: "len",     label: "At least 8 characters",         test: (p) => p.length >= 8 },
@@ -11,7 +13,7 @@ const PW_RULES = [
   { key: "special", label: "One special character (!@#…)",   test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-function PasswordRules({ password }) {
+function PasswordRules({ password, t }) {
   if (!password) return null;
   return (
     <div className="pw-rules">
@@ -20,7 +22,7 @@ function PasswordRules({ password }) {
         return (
           <div key={key} className={`pw-rule pw-rule--${ok ? "ok" : "fail"}`}>
             <span className="pw-rule-icon">{ok ? "✓" : "·"}</span>
-            {label}
+            {t(label)}
           </div>
         );
       })}
@@ -42,13 +44,12 @@ function formatSiret(value) {
 
 export default function Register() {
   const navigate = useNavigate();
+  const { t, locale, setLocale, themeMode, setThemeMode } = usePreferences();
   const [activeTab, setActiveTab] = useState("participant");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
-    institution: "",
-    company: "",
     password: "",
     confirmPassword: "",
     // org fields
@@ -66,6 +67,16 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const themeOptions = [
+    { value: "system", label: t("System"), icon: Monitor },
+    { value: "light", label: t("Light"), icon: Sun },
+    { value: "dark", label: t("Dark"), icon: Moon },
+  ];
+
+  const localeOptions = [
+    { value: "en", label: "EN", fullLabel: t("English") },
+    { value: "fr", label: "FR", fullLabel: t("French") },
+  ];
 
   const passwordsMatch =
     form.confirmPassword !== "" && form.password === form.confirmPassword;
@@ -74,28 +85,28 @@ export default function Register() {
   const passwordValid = PW_RULES.every(({ test }) => test(form.password));
   const siretDigits = form.siret.replace(/\D/g, "");
   const identifierHelp =
-    "Letters, numbers and hyphens only. This identifier will be used for company login.";
+    t("Letters, numbers and hyphens only. This identifier will be used for organization login.");
   const isCompanyTab = activeTab === "organization";
   const sideHighlights = isCompanyTab
     ? [
-        "Enter your SIRET and legal representative details.",
-        "Automatic verification runs right after account creation.",
-        "Use your company identifier to sign in later.",
+        t("Enter your SIRET and legal representative details."),
+        t("Automatic verification runs right after account creation."),
+        t("Use your organization identifier to sign in later."),
       ]
     : [
-        "Create your attendee profile in a few fields.",
-        "Track registrations and confirmations from one dashboard.",
-        "Discover events in AI, ML and neuroscience.",
+        t("Create your attendee profile in a few fields."),
+        t("Track registrations and confirmations from one dashboard."),
+        t("Discover events in AI, ML and neuroscience."),
       ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("Passwords do not match."));
       return;
     }
     if (activeTab === "organization" && siretDigits.length !== 14) {
-      setError("Le SIRET doit contenir exactement 14 chiffres.");
+      setError(t("SIRET must contain exactly 14 digits."));
       return;
     }
     setError("");
@@ -108,7 +119,6 @@ export default function Register() {
           lastName: form.lastName,
           password: form.password,
           passwordConfirm: form.confirmPassword,
-          employerName: form.institution || form.company,
         });
       } else {
         await registerCompanyApi({
@@ -138,12 +148,12 @@ export default function Register() {
             <CheckCircle size={36} color="var(--success)" />
           </div>
           <h2 className="register-success-title">
-            {activeTab === "participant" ? "Profile Created!" : "Company Account Created!"}
+            {activeTab === "participant" ? t("Profile Created!") : t("Organization Account Created!")}
           </h2>
           <p className="register-success-copy">
             {activeTab === "participant"
-              ? "Redirecting to login..."
-              : "We have started the company verification checks. Redirecting to login..."}
+              ? t("Redirecting to login...")
+              : t("We have started the organization verification checks. Redirecting to login...")}
           </p>
         </div>
       </div>
@@ -152,35 +162,78 @@ export default function Register() {
 
   return (
     <div className="register-page">
-      <div className="register-left">
-        <Link to="/" className="register-brand">
-          <span className="register-brand-text">
+      <div className="register-top-brand">
+        <div className="app-header__inner register-top-brand__inner">
+          <Link to="/" className="app-header__brand register-brand register-brand--header">
             Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </span>
-        </Link>
+          </Link>
+          <div aria-hidden="true" />
+          <div className="app-header__right register-top-brand__controls">
+            <div className="app-header__preferences">
+              <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
+                <div className="app-header__segmented" role="group" aria-label={t("Language")}>
+                  {localeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`app-header__segmented-btn${locale === option.value ? " is-active" : ""}`}
+                      onClick={() => setLocale(option.value)}
+                      title={option.fullLabel}
+                      aria-pressed={locale === option.value}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
+              <div className="app-header__control" aria-label={t("Theme")}>
+                <div className="app-header__segmented app-header__segmented--theme" role="group" aria-label={t("Theme")}>
+                  {themeOptions.map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`app-header__segmented-btn app-header__segmented-btn--theme${themeMode === option.value ? " is-active" : ""}`}
+                        onClick={() => setThemeMode(option.value)}
+                        title={option.label}
+                        aria-pressed={themeMode === option.value}
+                      >
+                        <Icon size={15} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="register-left">
         <div className="register-left-copy">
           <h1 className="register-left-title">
             {isCompanyTab ? (
               <>
-                Empower your
+                {t("Empower your")}
                 <br />
-                organization.
+                {t("organization.")}
               </>
             ) : (
               <>
-                Start your
+                {t("Start your")}
                 <br />
-                scientific
+                {t("scientific")}
                 <br />
-                journey.
+                {t("journey.")}
               </>
             )}
           </h1>
           <p className="register-left-desc">
             {isCompanyTab
-              ? "Create your company account and submit the legal details needed for verification."
-              : "Connect with top labs and researchers worldwide."}
+              ? t("Create your organization account and submit the legal details needed for verification.")
+              : t("Connect with top organizations and participants worldwide.")}
           </p>
         </div>
 
@@ -198,8 +251,8 @@ export default function Register() {
         <div className="register-form-wrap">
           <div className="register-tab-switcher">
             {[
-              { key: "participant", label: "Participant" },
-              { key: "organization", label: "Company" },
+              { key: "participant", label: t("Participant") },
+              { key: "organization", label: t("Organization") },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -227,12 +280,12 @@ export default function Register() {
                 <div className="register-form-row">
                   <div className="form-field">
                     <label className="form-label">
-                      First Name <span style={{ color: "var(--error)" }}>*</span>
+                      {t("First Name")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="text"
                       className="input"
-                      placeholder="Given name"
+                      placeholder={t("Given name")}
                       value={form.firstName}
                       onChange={(e) => set("firstName", e.target.value)}
                       required
@@ -240,12 +293,12 @@ export default function Register() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      Last Name <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Last Name")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="text"
                       className="input"
-                      placeholder="Family name"
+                      placeholder={t("Family name")}
                       value={form.lastName}
                       onChange={(e) => set("lastName", e.target.value)}
                       required
@@ -255,60 +308,29 @@ export default function Register() {
 
                 <div className="form-field">
                   <label className="form-label">
-                    Academic Email <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Email Address")} <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="email"
                     className="input"
-                    placeholder="researcher@institution.edu"
+                    placeholder={t("participant@institution.edu")}
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
                     required
                   />
                 </div>
 
-                <div className="form-field">
-                  <label className="form-label">
-                    Institution{" "}
-                    <span style={{ color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="e.g. Sorbonne Université, CNRS"
-                    value={form.institution}
-                    onChange={(e) => set("institution", e.target.value)}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label">
-                    Company{" "}
-                    <span style={{ color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="e.g. Neuralink, DeepMind"
-                    value={form.company}
-                    onChange={(e) => set("company", e.target.value)}
-                  />
-                </div>
               </>
             ) : (
               <>
-                <div className="register-note">
-                  Your company account is checked using the declared SIRET and the legal representative name.
-                </div>
-
                 <div className="form-field">
                   <label className="form-label">
-                    Organization Name <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Organization Name")} <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="input"
-                    placeholder="e.g. INRIA Paris, NeuroSpin Lab"
+                    placeholder={t("e.g. INRIA Paris, NeuroSpin Organization")}
                     value={form.orgName}
                     onChange={(e) => set("orgName", e.target.value)}
                     required
@@ -317,12 +339,12 @@ export default function Register() {
 
                 <div className="form-field">
                   <label className="form-label">
-                    Recovery Email <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Recovery Email")} <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="email"
                     className="input"
-                    placeholder="contact@organization.com"
+                    placeholder={t("contact@organization.com")}
                     value={form.recoveryEmail}
                     onChange={(e) => set("recoveryEmail", e.target.value)}
                     required
@@ -332,18 +354,18 @@ export default function Register() {
                 <div className="register-form-row">
                   <div className="form-field">
                     <label className="form-label">
-                      Identifier <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Identifier")} <span style={{ color: "var(--error)" }}>*</span>
                     </label>
                     <input
                       type="text"
                       className="input"
-                      placeholder="e.g. neurocog-lab-paris"
+                      placeholder={t("e.g. neurocog-organization-paris")}
                       value={form.identifier}
                       onChange={(e) => set("identifier", e.target.value)}
                       minLength={3}
                       maxLength={50}
                       pattern="^[A-Za-z0-9-]+$"
-                      title="Use only letters, numbers, and hyphens."
+                      title={t("Use only letters, numbers, and hyphens.")}
                       autoCapitalize="off"
                       autoCorrect="off"
                       required
@@ -366,26 +388,26 @@ export default function Register() {
                     />
                     <p className={`register-help${siretDigits.length === 14 || form.siret.length === 0 ? "" : " register-help--error"}`}>
                       {siretDigits.length === 0
-                        ? "14 digits required for automatic company verification."
-                        : `${siretDigits.length}/14 digits entered`}
+                        ? t("14 digits required for automatic company verification.")
+                        : t("{{count}}/14 digits entered", { count: siretDigits.length })}
                     </p>
                   </div>
                 </div>
 
                 <div className="form-field">
                   <label className="form-label">
-                    Legal Representative <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Legal Representative")} <span style={{ color: "var(--error)" }}>*</span>
                   </label>
                   <input
                     type="text"
                     className="input"
-                    placeholder="e.g. Marie Dupont"
+                    placeholder={t("e.g. Marie Dupont")}
                     value={form.legalRepresentative}
                     onChange={(e) => set("legalRepresentative", e.target.value)}
                     required
                   />
                   <p className="register-help">
-                    Enter the name of the person who legally represents the company.
+                    {t("Enter the name of the person who legally represents the company.")}
                   </p>
                 </div>
               </>
@@ -394,7 +416,7 @@ export default function Register() {
             {/* Password */}
             <div className="form-field">
               <label className="form-label">
-                Password <span style={{ color: "var(--error)" }}>*</span>
+                {t("Password")} <span style={{ color: "var(--error)" }}>*</span>
               </label>
               <div className="register-password-wrap">
                 <input
@@ -414,13 +436,13 @@ export default function Register() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <PasswordRules password={form.password} />
+              <PasswordRules password={form.password} t={t} />
             </div>
 
             {/* Confirm password */}
             <div className="form-field">
               <label className="form-label">
-                Confirm Password <span style={{ color: "var(--error)" }}>*</span>
+                {t("Confirm Password")} <span style={{ color: "var(--error)" }}>*</span>
               </label>
               <div className="register-password-wrap">
                 <input
@@ -455,7 +477,7 @@ export default function Register() {
 
               {form.confirmPassword !== "" && (
                 <p className={`register-match${passwordsMatch ? " register-match--ok" : " register-match--error"}`}>
-                  {passwordsMatch ? "Passwords match" : "Passwords do not match"}
+                  {passwordsMatch ? t("Passwords match") : t("Passwords do not match")}
                 </p>
               )}
             </div>
@@ -466,17 +488,17 @@ export default function Register() {
               disabled={loading || passwordsMismatch || !passwordValid}
             >
               {loading
-                ? "Processing..."
+                ? t("Processing...")
                 : activeTab === "participant"
-                ? "Create Profile"
-                : "Register Company"}
+                ? t("Create Profile")
+                : t("Register Organization")}
             </button>
           </form>
 
           <div className="register-footer">
             <p>
-              Already have an account?{" "}
-              <Link to="/login">Log In</Link>
+              {t("Already have an account?")}{" "}
+              <Link to="/login">{t("Log In")}</Link>
             </p>
           </div>
         </div>

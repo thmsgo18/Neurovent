@@ -1,122 +1,107 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Globe, Youtube, Linkedin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { getCompanyProfile } from "../api/companies";
 import { normalizeEvent } from "../api/events";
+import { OrganizationProfileOverviewContent } from "./ProfileOverview";
+import { deleteAdminUser, getAdminEvents, getAdminUserProfile } from "../api/admin";
+import { getRole } from "../store/authStore";
+import "../styles/Admin.css";
 
 export default function CompanyProfile() {
-  const { id } = useParams();
   const navigate = useNavigate();
-
+  const { id } = useParams();
   const [company, setCompany] = useState(null);
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isAdmin = getRole() === "ADMIN";
 
   useEffect(() => {
-    getCompanyProfile(id)
-      .then(setCompany)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [id]);
+    const load = async () => {
+      try {
+        if (isAdmin) {
+          const adminCompany = await getAdminUserProfile(id);
+          setCompany(adminCompany);
+          if (adminCompany.company_name) {
+            const adminEvents = await getAdminEvents({ organization: adminCompany.company_name });
+            setEvents(adminEvents.results || []);
+          } else {
+            setEvents([]);
+          }
+        } else {
+          const publicCompany = await getCompanyProfile(id);
+          setCompany(publicCompany);
+          setEvents((publicCompany.events || []).map(normalizeEvent));
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--text-dim)", fontSize: "12px", fontFamily: "var(--font-mono)" }}>{"// loading..."}</p>
-      </div>
-    );
-  }
+    load();
+  }, [id, isAdmin]);
 
-  if (!company) {
-    return (
-      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "var(--text-muted)" }}>Organization not found.</p>
-      </div>
-    );
-  }
+  if (loading) return null;
+  if (!company) return null;
 
-  const events = (company.events || []).map(normalizeEvent);
-  const initials = (company.company_name || "NV").substring(0, 2).toUpperCase();
+  const handleDelete = async () => {
+    const isPendingCompany = company.verification_status !== "VERIFIED";
+    const confirmMessage = isPendingCompany
+      ? "Delete this organization account while it is still pending verification? This action cannot be undone."
+      : "Delete this verified organization account? This action cannot be undone.";
+    if (!window.confirm(confirmMessage)) return;
+    try {
+      await deleteAdminUser(company.id);
+      navigate("/admin/companies");
+    } catch (error) {
+      alert(error.message || "Unable to delete this organization.");
+    }
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
-      <main style={{ maxWidth: "900px", margin: "0 auto", width: "100%", padding: "48px 32px" }}>
-        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", padding: 0, marginBottom: "24px" }}>
-          <ArrowLeft size={15} /> Back
-        </button>
-
-        {/* Company header */}
-        <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", marginBottom: "40px" }}>
-          {company.company_logo ? (
-            <img src={company.company_logo} alt={company.company_name} style={{ width: "80px", height: "80px", borderRadius: "16px", objectFit: "cover", border: "1px solid var(--border)" }} />
-          ) : (
-            <div style={{ width: "80px", height: "80px", borderRadius: "16px", background: "var(--secondary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px", fontWeight: "800", color: "#fff", flexShrink: 0 }}>
-              {initials}
+    <div className="admin-page">
+      {isAdmin ? (
+        <div className="admin-shell">
+          <div className="admin-stack admin-stack--tight">
+            <div className="admin-header admin-header--detail">
+              <button type="button" className="admin-back-btn admin-back-btn--animated" onClick={() => navigate("/admin/companies")}>
+                <span className="admin-back-btn__arrow" aria-hidden="true">←</span>
+                Back to Organizations
+              </button>
+              <div className="admin-actions">
+                <button type="button" className="admin-danger-btn" onClick={handleDelete}>
+                  Delete Organization
+                </button>
+              </div>
             </div>
-          )}
-          <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: "32px", fontWeight: "800", marginBottom: "8px" }}>{company.company_name}</h1>
-            {company.company_description && (
-              <p style={{ fontSize: "15px", color: "var(--text-muted)", lineHeight: "1.7", marginBottom: "16px" }}>
-                {company.company_description}
-              </p>
-            )}
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              {company.website_url && (
-                <a href={company.website_url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--accent)", textDecoration: "none" }}>
-                  <Globe size={14} /> Website
-                </a>
-              )}
-              {company.linkedin_url && (
-                <a href={company.linkedin_url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--accent)", textDecoration: "none" }}>
-                  <Linkedin size={14} /> LinkedIn
-                </a>
-              )}
-              {company.youtube_url && (
-                <a href={company.youtube_url} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--accent)", textDecoration: "none" }}>
-                  <Youtube size={14} /> YouTube
-                </a>
-              )}
-            </div>
+            {company.verification_status !== "VERIFIED" ? (
+              <div className="admin-empty admin-empty--review">
+                Review reason: {company.review_note || "This organization is waiting for manual validation because some company details are missing or inconsistent."}
+              </div>
+            ) : null}
           </div>
         </div>
+      ) : null}
 
-        {/* Events */}
-        <div>
-          <h2 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "20px" }}>
-            Events ({events.length})
-          </h2>
-          {events.length === 0 ? (
-            <p style={{ color: "var(--text-dim)", fontSize: "14px" }}>No published events yet.</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  onClick={() => navigate(`/events/${event.id}`)}
-                  style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "12px", padding: "18px 24px", cursor: "pointer", transition: "var(--transition)" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.background = "var(--surface-high)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.background = "var(--surface)"; }}
-                >
-                  <h3 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "6px" }}>{event.title}</h3>
-                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                      {event.city ? `${event.city}, ${event.country}` : event.format === "online" ? "Online" : "TBD"}
-                    </span>
-                    {event.date_start && (
-                      <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                        {new Date(event.date_start).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()}
-                      </span>
-                    )}
-                    <span style={{ fontSize: "13px", color: event.is_full ? "var(--error)" : "var(--accent)", fontFamily: "var(--font-mono)", fontWeight: "700" }}>
-                      {event.is_full ? "Full" : `${event.spots_remaining ?? "?"} spots left`}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+      <div className={isAdmin ? "admin-shell admin-shell--profile" : undefined}>
+        <OrganizationProfileOverviewContent
+          company={company}
+          events={events}
+          showEditButton={false}
+          showBadges={!isAdmin}
+          subtitle={isAdmin ? (company.recovery_email || "Organization profile") : "Public organization profile"}
+          wrapInShell={!isAdmin}
+          onOpenEvents={isAdmin ? ((companyName, mode) => {
+            const params = new URLSearchParams();
+            params.set("organization", companyName);
+            if (mode === "upcoming") {
+              params.set("scope", "future");
+            }
+            navigate(`/admin/events?${params.toString()}`);
+          }) : undefined}
+        />
+      </div>
     </div>
   );
 }
