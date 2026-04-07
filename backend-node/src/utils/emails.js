@@ -3,7 +3,10 @@
  * Miroir exact de backend-django/emails.py
  *
  * Fonctions disponibles :
+ *   - sendAccountCreated(user)
  *   - sendRegistrationConfirmed(registration, fromWaitlist = false)
+ *   - sendRegistrationPending(registration)
+ *   - sendRegistrationWaitlist(registration)
  *   - sendRegistrationRejected(registration)
  *   - sendEventCancelled(event, registrations)
  *   - sendPasswordReset(recipientEmail, resetLink)
@@ -79,7 +82,35 @@ function formatEventDetails(event) {
   return lines.join('\n');
 }
 
+function getProfileLink(user) {
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (user.role === 'COMPANY') return `${baseUrl}/login`;
+  return `${baseUrl}/login`;
+}
+
 // ─── Fonctions publiques ──────────────────────────────────────────────────────
+
+/**
+ * Email de création de compte.
+ */
+async function sendAccountCreated(user) {
+  const recipientEmail = user.role === 'COMPANY' ? user.recovery_email : user.email;
+  const profileLink = getProfileLink(user);
+  const isCompany = user.role === 'COMPANY';
+  const displayName = isCompany
+    ? (user.company_name || 'votre organisation')
+    : `${user.first_name || ''}`.trim() || 'there';
+
+  const subject = isCompany
+    ? 'Votre compte organisation a bien été créé — Neurovent'
+    : 'Votre compte Neurovent a bien été créé';
+
+  const textMessage = isCompany
+    ? `Bonjour,\n\nVotre compte organisation "${displayName}" a bien été créé sur Neurovent.\n\nVous pouvez désormais vous connecter pour compléter votre profil, suivre la vérification de votre organisation et commencer à publier des événements.\n\nSe connecter : ${profileLink}\n\n— L'équipe Neurovent`
+    : `Bonjour ${displayName},\n\nVotre compte Neurovent a bien été créé.\n\nVous pouvez maintenant vous connecter, compléter votre profil et vous inscrire aux événements disponibles sur la plateforme.\n\nSe connecter : ${profileLink}\n\nBienvenue sur Neurovent.\n\n— L'équipe Neurovent`;
+
+  await send(subject, textMessage, recipientEmail);
+}
 
 /**
  * Email de confirmation d'inscription.
@@ -98,6 +129,34 @@ async function sendRegistrationConfirmed(registration, fromWaitlist = false) {
   await send(
     `Inscription confirmée — ${event.title}`,
     `Bonjour ${participant.first_name},\n\n${intro}\n─── Détails de l'événement ───\n${details}\n\nVoir l'événement : ${eventLink}\n\nÀ bientôt sur Neurovent !\n\n— L'équipe Neurovent`,
+    participant.email,
+  );
+}
+
+/**
+ * Email d'inscription reçue, en attente de validation manuelle.
+ */
+async function sendRegistrationPending(registration) {
+  const { participant, event } = registration;
+  const eventLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${event.id}/`;
+
+  await send(
+    `Inscription reçue — en attente de validation — ${event.title}`,
+    `Bonjour ${participant.first_name},\n\nVotre demande d'inscription à "${event.title}" a bien été reçue.\n\nElle est actuellement en attente de validation par l'organisateur. Vous recevrez un nouvel email dès qu'une décision sera prise.\n\n─── Détails de l'événement ───\n${formatEventDetails(event)}\n\nVoir l'événement : ${eventLink}\n\n— L'équipe Neurovent`,
+    participant.email,
+  );
+}
+
+/**
+ * Email d'inscription placée en liste d'attente.
+ */
+async function sendRegistrationWaitlist(registration) {
+  const { participant, event } = registration;
+  const eventLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/events/${event.id}/`;
+
+  await send(
+    `Inscription en liste d'attente — ${event.title}`,
+    `Bonjour ${participant.first_name},\n\nL'événement "${event.title}" est actuellement complet. Votre inscription a bien été enregistrée sur la liste d'attente.\n\nSi une place se libère, nous vous enverrons automatiquement un email de confirmation.\n\n─── Détails de l'événement ───\n${formatEventDetails(event)}\n\nVoir l'événement : ${eventLink}\n\n— L'équipe Neurovent`,
     participant.email,
   );
 }
@@ -148,7 +207,10 @@ async function sendPasswordReset(recipientEmail, resetLink) {
 }
 
 module.exports = {
+  sendAccountCreated,
   sendRegistrationConfirmed,
+  sendRegistrationPending,
+  sendRegistrationWaitlist,
   sendRegistrationRejected,
   sendEventCancelled,
   sendPasswordReset,

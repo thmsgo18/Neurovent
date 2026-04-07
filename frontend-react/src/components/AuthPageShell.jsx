@@ -17,6 +17,7 @@ export default function AuthPageShell({
   brandClassName = "",
   brandMarkClassName = "",
   contentClassName = "",
+  lockViewport = true,
   children,
 }) {
   const { t, locale, setLocale, themeMode, setThemeMode } = usePreferences();
@@ -60,6 +61,8 @@ export default function AuthPageShell({
   }, [mobilePrefsOpen]);
 
   useEffect(() => {
+    if (!lockViewport) return undefined;
+
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
 
@@ -70,7 +73,7 @@ export default function AuthPageShell({
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, []);
+  }, [lockViewport]);
 
   useLayoutEffect(() => {
     const updateHeaderHeight = () => {

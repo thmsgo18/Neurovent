@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../db/database');
 const { generateTokens, verifyToken } = require('../utils/jwt');
-const { sendPasswordReset } = require('../utils/emails');
+const { sendAccountCreated, sendPasswordReset } = require('../utils/emails');
 const {
   serializeParticipantProfile,
   serializeCompanyProfile,
@@ -14,7 +14,7 @@ const {
 
 // ─── Inscription participant ──────────────────────────────────────────────────
 
-exports.registerParticipant = (req, res) => {
+exports.registerParticipant = async (req, res) => {
   const { email, password, password_confirm, first_name, last_name, employer_name } = req.body;
 
   if (!email || !password || !password_confirm || !first_name || !last_name) {
@@ -42,12 +42,13 @@ exports.registerParticipant = (req, res) => {
   `).run(email.toLowerCase(), hash, first_name, last_name, employer_name || '');
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+  await sendAccountCreated(user);
   return res.status(201).json(serializeParticipantProfile(user));
 };
 
 // ─── Inscription company ──────────────────────────────────────────────────────
 
-exports.registerCompany = (req, res) => {
+exports.registerCompany = async (req, res) => {
   const { company_identifier, password, password_confirm, company_name, recovery_email } = req.body;
 
   if (!company_identifier || !password || !password_confirm || !company_name || !recovery_email) {
@@ -79,6 +80,7 @@ exports.registerCompany = (req, res) => {
   `).run(company_identifier, hash, company_name, recovery_email.toLowerCase());
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+  await sendAccountCreated(user);
   return res.status(201).json(serializeCompanyProfile(user));
 };
 

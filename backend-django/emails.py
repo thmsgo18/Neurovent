@@ -10,6 +10,7 @@ Architecture prête pour le HTML :
   et de le passer à _send() — aucune autre modification nécessaire.
 
 Fonctions disponibles :
+  - send_account_created(user)
   - send_registration_confirmed(registration, from_waitlist=False)
   - send_registration_pending(registration)
   - send_registration_waitlist(registration)
@@ -342,6 +343,44 @@ def _format_practical_instructions(event):
         )
     return (
         "Practical note: check both your location details and your connection link, then plan to join a few minutes early."
+    )
+
+
+# ─────────────────────────────────────────
+#  Comptes
+# ─────────────────────────────────────────
+
+def send_account_created(user):
+    """
+    Email envoyé après la création d'un compte participant.
+    Les comptes company ont déjà un email dédié de vérification.
+    """
+    login_url = f"{settings.FRONTEND_URL}/login"
+    first_name = user.first_name or "there"
+
+    _send_branded_email(
+        subject="Your Neurovent account has been created",
+        text_message=(
+            f"Hello {first_name},\n\n"
+            f"Your Neurovent account has been created successfully.\n\n"
+            f"You can now sign in, complete your profile and register for events on the platform.\n\n"
+            f"Sign in: {login_url}\n\n"
+            f"Welcome to Neurovent.\n\n"
+            f"- The Neurovent team"
+        ),
+        recipient_email=user.email,
+        preheader="Your Neurovent account is ready.",
+        eyebrow="Account created",
+        title="Welcome to Neurovent",
+        greeting_name=first_name,
+        intro_lines=[
+            "Your account has been created successfully.",
+            "You can now sign in, complete your profile and start exploring events.",
+        ],
+        cta_label="Sign in",
+        cta_url=login_url,
+        note_lines=["We are happy to have you on board."],
+        tone='success',
     )
 
 

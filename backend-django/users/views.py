@@ -25,7 +25,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
-from emails import send_password_reset, send_company_verification_result
+from emails import send_account_created, send_password_reset, send_company_verification_result
 
 
 class CanViewParticipantProfile(permissions.BasePermission):
@@ -47,6 +47,10 @@ class RegisterParticipantView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = RegisterParticipantSerializer
     permission_classes = [permissions.AllowAny]
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_account_created(user)
 
 
 class RegisterCompanyView(generics.CreateAPIView):

@@ -1,7 +1,9 @@
 const db = require('../db/database');
 const {
   sendRegistrationConfirmed,
+  sendRegistrationPending,
   sendRegistrationRejected,
+  sendRegistrationWaitlist,
   sendEventCancelled,
 } = require('../utils/emails');
 const { serializeRegistration, PAGE_SIZE, paginatedResponse } = require('../utils/helpers');
@@ -115,6 +117,10 @@ exports.registerToEvent = async (req, res) => {
   // Notifier si confirmation immédiate
   if (newStatus === 'CONFIRMED') {
     await sendRegistrationConfirmed({ ...registration, participant: user, event });
+  } else if (newStatus === 'PENDING') {
+    await sendRegistrationPending({ ...registration, participant: user, event });
+  } else if (newStatus === 'WAITLIST') {
+    await sendRegistrationWaitlist({ ...registration, participant: user, event });
   }
 
   return res.status(201).json(serializeRegistration(registration));

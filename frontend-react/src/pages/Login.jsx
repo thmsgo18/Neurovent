@@ -57,6 +57,7 @@ export default function Login() {
       brandClassName="login-brand"
       brandMarkClassName="login-brand-mark"
       contentClassName="login-shell"
+      lockViewport={false}
     >
       <div className="login-mode-selector">
         <span

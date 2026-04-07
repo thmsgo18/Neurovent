@@ -1,10 +1,21 @@
 /* ===== LOGIN PAGE ===== */
 
-.login-page {
+.auth-page-shell.login-page {
+  --login-control-height: clamp(46px, 5.8svh, 54px);
+  --login-mode-padding-y: clamp(11px, 1.7svh, 15px);
+  --login-card-padding-y: clamp(22px, 3.2svh, 34px);
+  --login-card-padding-x: clamp(20px, 3vw, 36px);
+  --login-shell-gap-top: clamp(14px, 2.8svh, 24px);
+  --login-shell-gap-bottom: clamp(24px, 4svh, 40px);
+  --login-heading-height: clamp(96px, 18svh, 158px);
+  --login-heading-gap-bottom: clamp(22px, 4svh, 36px);
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: 100dvh;
+  height: auto;
   padding: var(--auth-header-height) 0 0;
+  overflow-y: auto;
+  overflow-x: clip;
 }
 
 .login-top-brand__controls {
@@ -22,8 +33,8 @@
 
 .login-shell {
   flex: 1;
-  min-height: 0;
-  height: calc(100dvh - var(--auth-header-height));
+  min-height: calc(100dvh - var(--auth-header-height));
+  height: auto;
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
@@ -31,10 +42,8 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  padding: 24px 0 40px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  padding: var(--login-shell-gap-top) max(var(--page-gutter), 16px) var(--login-shell-gap-bottom);
+  overflow: visible;
 }
 
 .login-shell > * {
@@ -81,7 +90,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 15px 14px;
+  padding: var(--login-mode-padding-y) 14px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -113,7 +122,7 @@
   max-width: 500px;
   margin: 0 auto auto;
   border-radius: var(--radius-md);
-  padding: 34px 36px;
+  padding: var(--login-card-padding-y) var(--login-card-padding-x);
   animation: fadeUp 0.5s 0.05s ease both;
 }
 
@@ -166,11 +175,11 @@
 }
 
 .login-heading {
-  min-height: 158px;
+  min-height: var(--login-heading-height);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  margin-bottom: 36px;
+  margin-bottom: var(--login-heading-gap-bottom);
 }
 
 .login-title--organization {
@@ -195,7 +204,7 @@
 }
 
 .login-input {
-  min-height: 54px;
+  min-height: var(--login-control-height);
 }
 
 .login-password-label {
@@ -207,7 +216,7 @@
 }
 
 .login-password-input {
-  min-height: 54px;
+  min-height: var(--login-control-height);
   padding-right: 48px;
 }
 
@@ -231,7 +240,7 @@
 
 .login-submit {
   width: 100%;
-  min-height: 54px;
+  min-height: var(--login-control-height);
   margin-top: 8px;
   border: none;
   border-radius: 10px;
@@ -299,16 +308,44 @@
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 480px) {
-  .login-page { padding: 0; }
+@media (max-height: 820px) {
+  .auth-page-shell.login-page {
+    --login-control-height: clamp(44px, 5.2svh, 50px);
+    --login-mode-padding-y: clamp(10px, 1.2svh, 13px);
+    --login-card-padding-y: clamp(20px, 2.4svh, 28px);
+    --login-shell-gap-top: clamp(12px, 2svh, 18px);
+    --login-shell-gap-bottom: clamp(18px, 3svh, 28px);
+    --login-heading-height: clamp(84px, 15svh, 126px);
+    --login-heading-gap-bottom: clamp(18px, 2.6svh, 28px);
+  }
+}
 
-  .login-page {
+@media (max-height: 700px) {
+  .auth-page-shell.login-page {
+    --login-control-height: clamp(42px, 4.8svh, 46px);
+    --login-mode-padding-y: 9px;
+    --login-card-padding-y: 18px;
+    --login-card-padding-x: clamp(18px, 2.4vw, 26px);
+    --login-shell-gap-top: 12px;
+    --login-shell-gap-bottom: 20px;
+    --login-heading-height: clamp(72px, 12svh, 104px);
+    --login-heading-gap-bottom: 16px;
+  }
+
+  .login-subtitle {
+    line-height: 1.5;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-page-shell.login-page {
     padding-top: var(--auth-header-height);
   }
 
   .login-shell {
     justify-content: flex-start;
-    padding: 18px 0 32px;
+    min-height: calc(100dvh - var(--auth-header-height));
+    padding: 18px max(var(--page-gutter), 16px) 32px;
   }
 
   .login-mode-selector {
