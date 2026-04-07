@@ -386,33 +386,26 @@
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 1024px) {
+@media (max-width: 920px) {
   .register-body {
-    flex-direction: column;
+    display: block;
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
 
   .register-left {
-    flex: 0 0 auto;
-    width: 100%;
-    min-width: 0;
-    min-height: auto;
-    padding-top: 84px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .register-left-features {
-    margin-top: 28px;
+    display: none;
   }
 
   .register-right {
-    flex: 0 0 auto;
+    width: 100%;
+    flex: 1 1 auto;
     min-height: 0;
     height: auto;
     justify-content: flex-start;
+    padding-left: clamp(1.25rem, 4vw, 2.5rem);
+    padding-right: clamp(1.25rem, 4vw, 2.5rem);
     padding-top: 24px;
     padding-bottom: 36px;
     overflow: visible;
@@ -425,11 +418,30 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-height: 700px) {
+  .register-body {
+    display: block;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .register-left {
     display: none;
   }
 
+  .register-right {
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    justify-content: flex-start;
+    padding-top: 20px;
+    padding-bottom: 28px;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
   .register-right,
   .register-left {
     padding-left: var(--page-gutter);

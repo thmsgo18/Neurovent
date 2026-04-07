@@ -33,10 +33,33 @@
   min-height: 72px;
   padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 12px));
   padding-bottom: 12px;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "brand right";
+  gap: 10px 12px;
+}
+
+.auth-page-shell__topbar-inner > :nth-child(2) {
+  display: none;
 }
 
 .auth-page-shell__controls {
   justify-self: end;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.auth-page-shell__controls .app-header__preferences {
+  flex-wrap: nowrap;
+}
+
+.auth-page-shell__brand {
+  grid-area: brand;
+  justify-self: start;
+}
+
+.auth-page-shell__controls {
+  grid-area: right;
 }
 
 .auth-page-shell__brand,
@@ -235,6 +258,13 @@
 }
 
 @media (max-width: 520px) {
+  .auth-page-shell__topbar-inner {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "brand right";
+    padding-top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px));
+    padding-bottom: 10px;
+  }
+
   .auth-shell {
     padding: 24px 16px;
   }
