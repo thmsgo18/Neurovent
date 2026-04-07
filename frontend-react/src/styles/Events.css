@@ -29,16 +29,17 @@
 }
 
 .events-page--results {
-  overflow: hidden;
-  height: calc(100dvh - 73px);
+  overflow-x: clip;
+  overflow-y: visible;
+  height: auto;
   min-height: calc(100dvh - 73px);
   background: var(--bg);
 }
 
 .events-page--results-simple {
   display: block;
-  height: 100%;
-  min-height: 0;
+  height: auto;
+  min-height: calc(100dvh - 73px);
 }
 
 .events-sidebar {
@@ -143,8 +144,8 @@
 .events-main--results {
   width: min(100%, 1520px);
   margin: 0 auto;
-  height: 100%;
-  min-height: 0;
+  height: auto;
+  min-height: calc(100dvh - 73px);
 }
 
 .events-topbar {
@@ -186,12 +187,11 @@
 }
 
 .events-content--results-fixed {
-  height: 100%;
+  height: auto;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 0;
+  overflow: visible;
+  display: block;
+  padding-bottom: clamp(28px, 5vw, 52px);
 }
 
 .events-results-static {
@@ -199,11 +199,11 @@
 }
 
 .events-results-list-scroll {
-  flex: 1;
+  flex: initial;
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 4px;
-  padding-bottom: clamp(20px, 3vw, 28px);
+  overflow: visible;
+  padding-right: 0;
+  padding-bottom: 0;
 }
 
 .events-discovery {
@@ -1073,29 +1073,38 @@
   flex-direction: column;
   gap: 12px;
   margin-bottom: 28px;
+  width: 100%;
 }
 
 .events-results-search-row {
-  display: flex;
-  align-items: center;
+  --events-results-control-height: clamp(48px, 5.6svh, 54px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
+  align-items: stretch;
   gap: 14px;
-  flex-wrap: wrap;
-  width: min(100%, calc(100vw - clamp(32px, 6vw, 112px)));
-  margin-inline: auto;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.events-search-with-suggestions__main--results {
+  flex: initial;
+  min-width: 0;
+  max-width: none;
 }
 
 .events-results-search-shell {
-  --events-search-height: clamp(46px, 5.6svh, 52px);
+  --events-search-height: var(--events-results-control-height);
   --events-search-icon-width: clamp(44px, 5.2svh, 54px);
   --events-search-padding-y: clamp(5px, 0.8svh, 9px);
   --events-search-padding-x: clamp(11px, 1.4vw, 16px);
   --events-search-input-size: clamp(0.9rem, 0.8rem + 0.2vw, 0.98rem);
   --events-search-placeholder-size: clamp(0.86rem, 0.75rem + 0.18vw, 0.92rem);
-  width: min(100%, 760px);
-  flex: 1 1 620px;
+  width: 100%;
+  max-width: none;
+  flex: initial;
   min-height: var(--events-search-height);
   height: var(--events-search-height);
-  max-height: 54px;
+  max-height: none;
   border-radius: 18px;
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.22);
 }
@@ -1156,8 +1165,8 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: center;
-  width: min(100%, 520px);
-  min-height: 54px;
+  width: 100%;
+  min-height: var(--events-results-control-height);
   padding: 4px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1210,7 +1219,7 @@
 .events-format-switch__option {
   position: relative;
   z-index: 1;
-  min-height: 46px;
+  min-height: calc(var(--events-results-control-height) - 8px);
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -1237,6 +1246,17 @@
 
 :root[data-theme="light"] .events-format-switch__option:hover {
   color: #102033;
+}
+
+@media (max-width: 1100px) {
+  .events-results-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .events-format-switch {
+    width: min(100%, 520px);
+    justify-self: center;
+  }
 }
 
 .events-topic-suggestions {
@@ -2361,11 +2381,12 @@
   }
 
   .events-results-search-shell {
-    width: min(100%, 520px);
+    width: 100%;
   }
 
   .events-format-switch {
-    width: 100%;
+    width: min(100%, 520px);
+    justify-self: center;
   }
 
   .events-topic-suggestions,
@@ -2451,16 +2472,18 @@
   .events-results-search-shell {
     width: 100%;
     flex: 1 1 100%;
-    min-height: 54px;
+    min-height: var(--events-results-control-height);
   }
 
   .events-results-search-row {
+    grid-template-columns: 1fr;
     gap: 12px;
   }
 
   .events-format-switch {
     width: 100%;
-    min-height: 50px;
+    min-height: clamp(48px, 5.2svh, 50px);
+    justify-self: center;
   }
 
   .events-format-switch__option {
