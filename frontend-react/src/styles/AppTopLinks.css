@@ -1,5 +1,5 @@
 .app-top-links {
-  --indicator-padding: 4px;
+  --indicator-padding: 3px;
   position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -137,7 +137,7 @@
   font-size: 0.94rem;
   font-weight: 700;
   text-align: center;
-  padding: 10px 16px;
+  padding: 8px 15px;
   border-radius: 999px;
   white-space: nowrap;
   transition:
@@ -148,7 +148,7 @@
 
 .app-top-links--count-4 .app-top-links__item {
   font-size: 0.84rem;
-  padding: 10px 12px;
+  padding: 8px 11px;
 }
 
 .app-top-links__item:hover {
@@ -212,7 +212,7 @@
 
   .app-top-links__item {
     font-size: 0.92rem;
-    padding: 10px 14px;
+    padding: 8px 13px;
   }
 
   .app-top-links--admin {
