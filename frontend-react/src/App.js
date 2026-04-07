@@ -26,9 +26,39 @@ import AdminParticipantProfile from "./pages/AdminParticipantProfile";
 import AdminCompanies from "./pages/AdminCompanies";
 import AdminEvents from "./pages/AdminEvents";
 import AdminStatistics from "./pages/AdminStatistics";
+import { usePreferences } from "./context/PreferencesContext";
+
+function buildDocumentTitle(pathname, t) {
+  const base = "Neurovent";
+
+  if (pathname === "/") return base;
+  if (pathname === "/login") return `${t("Sign In")} | ${base}`;
+  if (pathname === "/register") return `${t("Register")} | ${base}`;
+  if (pathname === "/forgot-password") return `${t("Forgot Password")} | ${base}`;
+  if (pathname.startsWith("/reset-password")) return `${t("Reset Password")} | ${base}`;
+  if (pathname === "/dashboard") return `${t("Dashboard")} | ${base}`;
+  if (pathname === "/my-events") return `${t("My Events")} | ${base}`;
+  if (pathname === "/profile") return `${t("My Profile")} | ${base}`;
+  if (pathname === "/profile/edit") return `${t("Edit Profile")} | ${base}`;
+  if (/^\/participant\/\d+$/.test(pathname)) return `${t("Participant Profile")} | ${base}`;
+  if (pathname === "/events") return `${t("Search")} | ${base}`;
+  if (pathname === "/events/results") return `${t("Events")} | ${base}`;
+  if (/^\/events\/\d+$/.test(pathname)) return `${t("Event Detail")} | ${base}`;
+  if (pathname === "/events/create") return `${t("Create Event")} | ${base}`;
+  if (/^\/events\/\d+\/edit$/.test(pathname)) return `${t("Edit Event")} | ${base}`;
+  if (/^\/company\/\d+$/.test(pathname)) return `${t("Organization Profile")} | ${base}`;
+  if (pathname === "/admin/participants") return `${t("Admin Participants")} | ${base}`;
+  if (/^\/admin\/participants\/\d+$/.test(pathname)) return `${t("Participant Profile")} | ${base}`;
+  if (pathname === "/admin/companies") return `${t("Admin Organizations")} | ${base}`;
+  if (pathname === "/admin/events") return `${t("Admin Events")} | ${base}`;
+  if (pathname === "/admin/statistics") return `${t("Admin Statistics")} | ${base}`;
+
+  return base;
+}
 
 export default function App() {
   const location = useLocation();
+  const { t } = usePreferences();
   const mainRef = useRef(null);
   const [isDesktopFixedViewport, setIsDesktopFixedViewport] = useState(() => window.innerWidth > 1024);
   const hideGlobalHeader =
@@ -65,6 +95,10 @@ export default function App() {
       document.body.style.overflow = previousOverflow;
     };
   }, [fixedViewportContent]);
+
+  useEffect(() => {
+    document.title = buildDocumentTitle(location.pathname, t);
+  }, [location.pathname, t]);
 
   return (
     <div className="app-layout">
