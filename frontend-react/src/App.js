@@ -32,7 +32,7 @@ export default function App() {
   const mainRef = useRef(null);
   const [isDesktopFixedViewport, setIsDesktopFixedViewport] = useState(() => window.innerWidth > 1024);
   const hideGlobalHeader = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);
-  const fixedViewportContent = isDesktopFixedViewport && ["/events", "/events/results", "/dashboard", "/my-events"].includes(location.pathname);
+  const fixedViewportContent = isDesktopFixedViewport && ["/events/results", "/dashboard", "/my-events"].includes(location.pathname);
 
   useEffect(() => { prefetchTags(); }, []);
 
