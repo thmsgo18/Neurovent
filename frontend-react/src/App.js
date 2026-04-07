@@ -31,7 +31,11 @@ export default function App() {
   const location = useLocation();
   const mainRef = useRef(null);
   const [isDesktopFixedViewport, setIsDesktopFixedViewport] = useState(() => window.innerWidth > 1024);
-  const hideGlobalHeader = ["/login", "/register", "/forgot-password", "/reset-password"].includes(location.pathname);
+  const hideGlobalHeader =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/forgot-password" ||
+    location.pathname.startsWith("/reset-password");
   const fixedViewportContent = isDesktopFixedViewport && ["/dashboard", "/my-events"].includes(location.pathname);
 
   useEffect(() => { prefetchTags(); }, []);
@@ -72,6 +76,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPasswordConfirm />} />
+          <Route path="/reset-password/:uid/:token" element={<ResetPasswordConfirm />} />
 
           <Route
             path="/dashboard"

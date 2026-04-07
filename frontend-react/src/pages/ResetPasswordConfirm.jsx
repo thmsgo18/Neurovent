@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSearchParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, Link, useNavigate } from "react-router-dom";
 import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { resetPasswordConfirmApi } from "../api/auth";
 import { usePreferences } from "../context/PreferencesContext";
@@ -7,10 +7,11 @@ import "../styles/Auth.css";
 
 export default function ResetPasswordConfirm() {
   const { t } = usePreferences();
+  const params = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const uid = searchParams.get("uid");
-  const token = searchParams.get("token");
+  const uid = params.uid || searchParams.get("uid");
+  const token = params.token || searchParams.get("token");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
