@@ -37,7 +37,7 @@ export default function AdminParticipantProfile() {
           <button type="button" className="admin-back-btn" onClick={() => navigate("/admin/participants")}>
             {t("Back to Participants")}
           </button>
-          <div className="admin-empty" style={{ marginTop: "18px" }}>
+          <div className="admin-empty admin-empty--spaced">
             {t("This participant profile could not be loaded.")}
           </div>
         </div>

@@ -317,6 +317,10 @@
   line-height: 1.55;
 }
 
+.admin-card-subtitle--spaced {
+  margin-top: 12px;
+}
+
 :root[data-theme="light"] .admin-card-subtitle {
   color: #42566f;
 }
@@ -596,6 +600,10 @@
   padding: 22px;
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-empty--spaced {
+  margin-top: 18px;
 }
 
 :root[data-theme="light"] .admin-empty {

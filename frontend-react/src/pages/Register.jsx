@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AlertCircle, CheckCircle, Eye, EyeOff, Languages, Moon, Settings2, Sun } from "lucide-react";
+import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import "../styles/Register.css";
-import "../styles/AppHeader.css";
 import { registerParticipantApi, registerCompanyApi } from "../api/auth";
 import { usePreferences } from "../context/PreferencesContext";
+import AuthPageShell from "../components/AuthPageShell";
 
 const PW_RULES = [
   { key: "len",     label: "At least 8 characters",         test: (p) => p.length >= 8 },
@@ -44,9 +44,8 @@ function formatSiret(value) {
 
 export default function Register() {
   const navigate = useNavigate();
-  const { t, locale, setLocale, themeMode, setThemeMode } = usePreferences();
+  const { t } = usePreferences();
   const [activeTab, setActiveTab] = useState("participant");
-  const [mobilePrefsOpen, setMobilePrefsOpen] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -66,128 +65,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const pageRef = useRef(null);
-  const headerRef = useRef(null);
-  const mobilePrefsRef = useRef(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-  const themeOptions = [
-    { value: "light", label: t("Light"), icon: Sun },
-    { value: "dark", label: t("Dark"), icon: Moon },
-  ];
-
-  const localeOptions = [
-    { value: "en", label: "EN", fullLabel: t("English") },
-    { value: "fr", label: "FR", fullLabel: t("French") },
-  ];
-
-  useEffect(() => {
-    if (!mobilePrefsOpen) return undefined;
-
-    const handlePointerDown = (event) => {
-      if (mobilePrefsRef.current && !mobilePrefsRef.current.contains(event.target)) {
-        setMobilePrefsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setMobilePrefsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [mobilePrefsOpen]);
-
-  useEffect(() => {
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    const updateHeaderHeight = () => {
-      if (!pageRef.current || !headerRef.current) return;
-      pageRef.current.style.setProperty("--auth-header-height", `${headerRef.current.offsetHeight}px`);
-    };
-
-    updateHeaderHeight();
-
-    const resizeObserver = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(() => updateHeaderHeight())
-      : null;
-
-    if (resizeObserver && headerRef.current) {
-      resizeObserver.observe(headerRef.current);
-    }
-
-    window.addEventListener("resize", updateHeaderHeight);
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", updateHeaderHeight);
-    };
-  }, []);
-
-  const renderLanguageControls = ({ mobile = false } = {}) => (
-    <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
-      <div className="app-header__segmented" role="group" aria-label={t("Language")}>
-        {localeOptions.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className={`app-header__segmented-btn${locale === option.value ? " is-active" : ""}`}
-            onClick={() => {
-              setLocale(option.value);
-              if (mobile) setMobilePrefsOpen(false);
-            }}
-            title={option.fullLabel}
-            aria-pressed={locale === option.value}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderThemeControls = ({ mobile = false } = {}) => (
-    <div className="app-header__control" aria-label={t("Theme")}>
-      <div className="app-header__segmented app-header__segmented--theme" role="group" aria-label={t("Theme")}>
-        {themeOptions.map((option) => {
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={`app-header__segmented-btn app-header__segmented-btn--theme${themeMode === option.value ? " is-active" : ""}`}
-              onClick={() => {
-                setThemeMode(option.value);
-                if (mobile) setMobilePrefsOpen(false);
-              }}
-              title={option.label}
-              aria-pressed={themeMode === option.value}
-            >
-              <Icon size={15} />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 
   const passwordsMatch =
     form.confirmPassword !== "" && form.password === form.confirmPassword;
@@ -272,56 +151,13 @@ export default function Register() {
   }
 
   return (
-    <div ref={pageRef} className="register-page">
-      <div ref={headerRef} className="register-top-brand">
-        <div className="app-header__inner register-top-brand__inner">
-          <Link to="/" className="app-header__brand register-brand register-brand--header">
-            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </Link>
-          <div aria-hidden="true" />
-          <div className="app-header__right register-top-brand__controls">
-            <div className="app-header__preferences">
-              {renderLanguageControls()}
-              {renderThemeControls()}
-            </div>
-
-            <div ref={mobilePrefsRef} className="app-header__mobile-prefs">
-              <button
-                type="button"
-                className={`app-header__mobile-prefs-toggle${mobilePrefsOpen ? " is-open" : ""}`}
-                aria-label={t("Display preferences")}
-                aria-haspopup="menu"
-                aria-expanded={mobilePrefsOpen}
-                onClick={() => setMobilePrefsOpen((value) => !value)}
-              >
-                <Settings2 size={16} />
-              </button>
-
-              {mobilePrefsOpen ? (
-                <div className="app-header__mobile-prefs-panel" role="menu" aria-label={t("Display preferences")}>
-                  <div className="app-header__mobile-prefs-section">
-                    <p className="app-header__mobile-prefs-title">
-                      <Languages size={14} />
-                      {t("Language")}
-                    </p>
-                    {renderLanguageControls({ mobile: true })}
-                  </div>
-
-                  <div className="app-header__mobile-prefs-section">
-                    <p className="app-header__mobile-prefs-title">
-                      <Settings2 size={14} />
-                      {t("Theme")}
-                    </p>
-                    {renderThemeControls({ mobile: true })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="register-body">
+    <AuthPageShell
+      pageClassName="register-page"
+      controlsClassName="register-top-brand__controls"
+      brandClassName="register-brand register-brand--header"
+      brandMarkClassName="register-brand-mark"
+      contentClassName="register-body"
+    >
         <div className="register-left">
           <div className="register-left-copy">
             <h1 className="register-left-title">
@@ -361,22 +197,22 @@ export default function Register() {
         <div className="register-right">
           <div className="register-form-wrap">
             <div className="register-tab-switcher">
-            {[
-              { key: "participant", label: t("Participant") },
-              { key: "organization", label: t("Organization") },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setActiveTab(tab.key);
-                  setError("");
-                }}
-                className={`register-tab-button${activeTab === tab.key ? " register-tab-button--active" : ""}`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+              {[
+                { key: "participant", label: t("Participant") },
+                { key: "organization", label: t("Organization") },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    setError("");
+                  }}
+                  className={`register-tab-button${activeTab === tab.key ? " register-tab-button--active" : ""}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
             {error && (
               <div className="register-error">
@@ -391,7 +227,7 @@ export default function Register() {
                 <div className="register-form-row">
                   <div className="form-field">
                     <label className="form-label">
-                      {t("First Name")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("First Name")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -404,7 +240,7 @@ export default function Register() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      {t("Last Name")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Last Name")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -419,7 +255,7 @@ export default function Register() {
 
                 <div className="form-field">
                   <label className="form-label">
-                    {t("Email Address")} <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Email Address")} <span className="form-required">*</span>
                   </label>
                   <input
                     type="email"
@@ -436,7 +272,7 @@ export default function Register() {
               <>
                 <div className="form-field">
                   <label className="form-label">
-                    {t("Organization Name")} <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Organization Name")} <span className="form-required">*</span>
                   </label>
                   <input
                     type="text"
@@ -450,7 +286,7 @@ export default function Register() {
 
                 <div className="form-field">
                   <label className="form-label">
-                    {t("Recovery Email")} <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Recovery Email")} <span className="form-required">*</span>
                   </label>
                   <input
                     type="email"
@@ -465,7 +301,7 @@ export default function Register() {
                 <div className="register-form-row">
                   <div className="form-field">
                     <label className="form-label">
-                      {t("Identifier")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Identifier")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -486,7 +322,7 @@ export default function Register() {
 
                   <div className="form-field">
                     <label className="form-label">
-                      SIRET <span style={{ color: "var(--error)" }}>*</span>
+                      SIRET <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
@@ -507,7 +343,7 @@ export default function Register() {
 
                 <div className="form-field">
                   <label className="form-label">
-                    {t("Legal Representative")} <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Legal Representative")} <span className="form-required">*</span>
                   </label>
                   <input
                     type="text"
@@ -527,13 +363,12 @@ export default function Register() {
             {/* Password */}
             <div className="form-field">
               <label className="form-label">
-                {t("Password")} <span style={{ color: "var(--error)" }}>*</span>
+                {t("Password")} <span className="form-required">*</span>
               </label>
               <div className="register-password-wrap">
                 <input
                   type={showPassword ? "text" : "password"}
-                  className="input"
-                  style={{ paddingRight: "48px" }}
+                  className="input register-password-input"
                   placeholder="••••••••"
                   value={form.password}
                   onChange={(e) => set("password", e.target.value)}
@@ -553,25 +388,12 @@ export default function Register() {
             {/* Confirm password */}
             <div className="form-field">
               <label className="form-label">
-                {t("Confirm Password")} <span style={{ color: "var(--error)" }}>*</span>
+                {t("Confirm Password")} <span className="form-required">*</span>
               </label>
               <div className="register-password-wrap">
                 <input
                   type={showConfirm ? "text" : "password"}
-                  className="input"
-                  style={{
-                    paddingRight: "48px",
-                    borderColor: passwordsMismatch
-                      ? "var(--error)"
-                      : passwordsMatch
-                      ? "var(--success)"
-                      : undefined,
-                    boxShadow: passwordsMismatch
-                      ? "0 0 0 1px var(--error)"
-                      : passwordsMatch
-                      ? "0 0 0 1px var(--success)"
-                      : undefined,
-                  }}
+                  className={`input register-password-input${passwordsMismatch ? " register-password-input--error" : ""}${passwordsMatch ? " register-password-input--match" : ""}`}
                   placeholder="••••••••"
                   value={form.confirmPassword}
                   onChange={(e) => set("confirmPassword", e.target.value)}
@@ -614,7 +436,6 @@ export default function Register() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </AuthPageShell>
   );
 }

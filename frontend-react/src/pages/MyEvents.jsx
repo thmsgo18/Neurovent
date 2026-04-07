@@ -57,10 +57,9 @@ export default function MyEvents() {
 
               <div className="my-events-toolbar">
                 <div
-                  className={`my-events-view-switch${isSwitchMoving ? " my-events-view-switch--moving" : ""}`}
+                  className={`my-events-view-switch${isSwitchMoving ? " my-events-view-switch--moving" : ""}${viewMode === "history" ? " my-events-view-switch--history" : ""}`}
                   role="tablist"
                   aria-label={t("Event history filter")}
-                  style={{ "--active-index": viewMode === "history" ? 1 : 0 }}
                 >
                   <span className="my-events-view-indicator" aria-hidden="true" />
                   <button
@@ -96,69 +95,52 @@ export default function MyEvents() {
               </div>
             ) : (
               <div className="dashboard-list-scroll my-events-list-scroll">
-                <div className="dashboard-list">
+                <ul className="dashboard-list collection-list">
                   {visibleEvents.map((ev) => (
-                    <div
-                      key={ev.id}
-                      onClick={() => navigate(`/events/${ev.id}`)}
-                      className="dashboard-registration-item"
-                    >
-                      <div className="dashboard-registration-info">
-                        <p className="dashboard-registration-title">{ev.title}</p>
-                        <p className="dashboard-registration-organizer">
-                          {ev.organizer || t("Your organization")}
-                        </p>
-                        <div className="dashboard-registration-meta">
-                          {ev.date && (
-                            <span className="dashboard-registration-meta-item">{ev.date}</span>
-                          )}
-                          {ev.location && (
-                            <span className="dashboard-registration-meta-item">{ev.location}</span>
-                          )}
-                          <span className="dashboard-registration-meta-item">
-                            {ev.unlimited_capacity
-                              ? t("{{count}} registered", { count: ev.registered_count || 0 })
-                              : t("{{count}} / {{max}} registered", {
-                                  count: ev.registered_count || 0,
-                                  max: ev.max_participants || 0,
-                                })}
-                          </span>
-                          {(ev.tags || []).slice(0, 2).map((tag) => (
-                            <span key={tag} className="dashboard-registration-tag">
-                              #{tag}
+                    <li key={ev.id} className="collection-list__item">
+                      <div
+                        onClick={() => navigate(`/events/${ev.id}`)}
+                        className="dashboard-registration-item"
+                      >
+                        <div className="dashboard-registration-info">
+                          <p className="dashboard-registration-title">{ev.title}</p>
+                          <p className="dashboard-registration-organizer">
+                            {ev.organizer || t("Your organization")}
+                          </p>
+                          <div className="dashboard-registration-meta">
+                            {ev.date && (
+                              <span className="dashboard-registration-meta-item">{ev.date}</span>
+                            )}
+                            {ev.location && (
+                              <span className="dashboard-registration-meta-item">{ev.location}</span>
+                            )}
+                            <span className="dashboard-registration-meta-item">
+                              {ev.unlimited_capacity
+                                ? t("{{count}} registered", { count: ev.registered_count || 0 })
+                                : t("{{count}} / {{max}} registered", {
+                                    count: ev.registered_count || 0,
+                                    max: ev.max_participants || 0,
+                                  })}
                             </span>
-                          ))}
+                            {(ev.tags || []).slice(0, 2).map((tag) => (
+                              <span key={tag} className="dashboard-registration-tag">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="dashboard-registration-right">
+                          <span
+                            className={`dashboard-org-event-status dashboard-org-event-status--${ev.status || "upcoming"}`}
+                          >
+                            {t(ev.status_label || ev.status)}
+                          </span>
                         </div>
                       </div>
-
-                      <div className="dashboard-registration-right">
-                        <span
-                          className="dashboard-org-event-status"
-                          style={{
-                            background:
-                              ev.status === "cancelled"
-                                ? "rgba(255, 77, 77, 0.1)"
-                                : ev.status === "live"
-                                  ? "rgba(16, 185, 129, 0.12)"
-                                  : ev.status === "past"
-                                    ? "rgba(255, 255, 255, 0.06)"
-                                    : "rgba(0, 229, 255, 0.1)",
-                            color:
-                              ev.status === "cancelled"
-                                ? "var(--error)"
-                                : ev.status === "live"
-                                  ? "var(--success)"
-                                  : ev.status === "past"
-                                    ? "var(--text-muted)"
-                                    : "var(--accent)",
-                          }}
-                        >
-                          {t(ev.status_label || ev.status)}
-                        </span>
-                      </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
             )}
           </div>

@@ -1,40 +1,10 @@
 /* ===== LOGIN PAGE ===== */
 
 .login-page {
-  --auth-header-height: calc(72px + env(safe-area-inset-top, 0px));
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: var(--bg-deep);
   display: flex;
   flex-direction: column;
   height: 100dvh;
   padding: var(--auth-header-height) 0 0;
-  position: relative;
-  overflow: hidden;
-}
-
-.login-top-brand {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 120;
-  width: 100%;
-  margin: 0;
-  background: rgba(13, 21, 34, 0.98);
-  border-bottom: 1px solid var(--border);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-:root[data-theme="light"] .login-top-brand {
-  background: rgba(238, 244, 251, 0.98);
-}
-
-.login-top-brand__inner {
-  min-height: 72px;
-  padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 12px));
-  padding-bottom: 12px;
 }
 
 .login-top-brand__controls {
@@ -44,6 +14,10 @@
 .login-brand,
 .login-brand:visited {
   color: var(--text);
+}
+
+.login-brand-mark {
+  color: var(--accent);
 }
 
 .login-shell {
@@ -126,6 +100,14 @@
   color: var(--text);
 }
 
+.login-mode-btn--active.login-mode-btn--participant {
+  color: var(--bg-deep);
+}
+
+.login-mode-btn--active.login-mode-btn--organization {
+  color: var(--text);
+}
+
 .login-card {
   width: 100%;
   max-width: 500px;
@@ -133,6 +115,10 @@
   border-radius: var(--radius-md);
   padding: 34px 36px;
   animation: fadeUp 0.5s 0.05s ease both;
+}
+
+.login-card--organization {
+  border-color: var(--secondary);
 }
 
 .login-password-row {
@@ -206,6 +192,63 @@
 
 .login-card .input {
   font-size: clamp(1rem, 0.98rem + 0.14vw, 1.08rem);
+}
+
+.login-input {
+  min-height: 54px;
+}
+
+.login-password-label {
+  margin-bottom: 0;
+}
+
+.login-password-field {
+  position: relative;
+}
+
+.login-password-input {
+  min-height: 54px;
+  padding-right: 48px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.login-password-toggle:hover {
+  color: var(--text);
+}
+
+.login-submit {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.login-submit--organization {
+  background: var(--secondary);
+  color: #fff;
+}
+
+.login-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .login-card .input::placeholder {

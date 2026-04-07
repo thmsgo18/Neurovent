@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Zap, Users, BarChart2, Lock } from "lucide-react";
 import { isAuthed } from "../store/authStore";
 import { usePreferences } from "../context/PreferencesContext";
+import PageShell from "../components/PageShell";
 import "../styles/Home.css";
 
 const STATS = [
@@ -65,9 +66,9 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="home-page">
+    <PageShell className="home-page">
       {/* Hero */}
-      <main className="home-hero">
+      <section className="home-hero">
         <div className="home-hero-text">
           <h1 className="home-title">
             {t("THE FUTURE OF")}
@@ -86,14 +87,13 @@ export default function Home() {
               {t("Explore Events")}
             </button>
             {!authed && (
-              <button className="btn btn-ghost" onClick={() => navigate("/register")} style={{ border: "1px solid var(--border-strong)" }}>
+              <button className="btn btn-ghost home-cta-btn" onClick={() => navigate("/register")}>
                 {t("Create Account")}
               </button>
             )}
           </div>
         </div>
-
-      </main>
+      </section>
 
       {/* Stats bar */}
       <div className="home-stats" ref={statsRef}>
@@ -108,13 +108,13 @@ export default function Home() {
       {/* Preview cards */}
       <div className="home-preview">
         <div className="home-preview-grid">
-          {[
-            { label: t("Upcoming"), color: "var(--accent)", text: t("Workshop FL & Privacy — Paris") },
-            { label: t("Live"), color: "var(--secondary)", text: t("Multi-Agent Systems Practice") },
-            { label: t("May 20"), color: "var(--text-dim)", text: t("ML Security Conference — Lyon") },
+            {[
+            { label: t("Upcoming"), tone: "accent", text: t("Workshop FL & Privacy — Paris") },
+            { label: t("Live"), tone: "secondary", text: t("Multi-Agent Systems Practice") },
+            { label: t("May 20"), tone: "dim", text: t("ML Security Conference — Lyon") },
           ].map((item, i) => (
             <div key={i} className="card card-hover home-preview-card" onClick={() => navigate("/events")}>
-              <span className="home-preview-label" style={{ color: item.color }}>{item.label}</span>
+              <span className={`home-preview-label home-preview-label--${item.tone}`}>{item.label}</span>
               <p className="home-preview-text">{item.text}</p>
             </div>
           ))}
@@ -141,7 +141,7 @@ export default function Home() {
       {/* For Organizations */}
       <section className="home-section home-section-alt">
         <div className="home-section-inner">
-          <p className="home-section-eyebrow" style={{ color: "var(--secondary)" }}>{t("For organizations")}</p>
+          <p className="home-section-eyebrow home-section-eyebrow--secondary">{t("For organizations")}</p>
           <h2 className="home-section-title">{t("Everything you need to organize research events")}</h2>
           <div className="home-features">
             {FOR_ORGANIZATIONS.map(({ Icon, title, desc }) => (
@@ -160,8 +160,8 @@ export default function Home() {
       {/* CTA */}
       {!authed && (
         <section className="home-cta">
-          <div className="home-section-inner" style={{ textAlign: "center" }}>
-            <h2 className="home-section-title" style={{ marginBottom: "16px", maxWidth: "unset" }}>
+          <div className="home-section-inner home-section-inner--centered">
+            <h2 className="home-section-title home-section-title--compact">
               {t("Ready to join the community?")}
             </h2>
             <p className="home-cta-copy">
@@ -171,7 +171,7 @@ export default function Home() {
               <Link to="/register" className="btn btn-primary">
                 {t("Register as Participant")}
               </Link>
-              <Link to="/login" className="btn btn-ghost" style={{ border: "1px solid var(--border-strong)" }}>
+              <Link to="/login" className="btn btn-ghost home-cta-btn">
                 {t("Organization Sign In")}
               </Link>
             </div>
@@ -189,6 +189,6 @@ export default function Home() {
         </div>
       </footer>
 
-    </div>
+    </PageShell>
   );
 }

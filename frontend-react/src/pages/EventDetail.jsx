@@ -287,14 +287,6 @@ export default function EventDetail() {
     };
   }, [shouldUseOwnerFixedLayout]);
 
-  const statusColor = {
-    CONFIRMED: "var(--success)",
-    PENDING: "#f5c400",
-    WAITLIST: "var(--accent)",
-    REJECTED: "var(--error)",
-    CANCELLED: "var(--text-dim)",
-  };
-
   const registrationBannerClass =
     registrationStatus === "WAITLIST"
       ? "event-detail-status-banner event-detail-status-banner--waitlist"
@@ -344,7 +336,7 @@ export default function EventDetail() {
   if (!event) {
     return (
       <div className="event-detail-center">
-        <p style={{ color: "var(--text-muted)" }}>{t("Event not found.")}</p>
+        <p className="text-muted">{t("Event not found.")}</p>
       </div>
     );
   }
@@ -403,7 +395,7 @@ export default function EventDetail() {
                 className="event-detail-icon event-detail-icon--image"
               />
             ) : (
-              <div className="event-detail-icon" style={{ background: "var(--secondary)" }}>
+              <div className="event-detail-icon event-detail-icon--fallback">
                 {initials}
               </div>
             )}
@@ -441,7 +433,7 @@ export default function EventDetail() {
 
               {event.location && (
                 <div className="event-detail-location">
-                  <MapPin size={16} color="var(--accent)" style={{ marginTop: "2px", flexShrink: 0 }} />
+                  <MapPin size={16} color="var(--accent)" className="event-detail-location-icon" />
                   <div>
                     <p className="event-detail-location-name">{event.location}</p>
                     {event.city && (
@@ -539,7 +531,7 @@ export default function EventDetail() {
                               <p className="event-detail-owner-item-date">{t("Registered {{date}}", { date: regDate })}</p>
                             )}
                           </div>
-                          <span className="event-detail-status-pill" style={{ color: statusColor[reg.status] || "var(--text-muted)", borderColor: statusColor[reg.status] || "var(--border)" }}>
+                          <span className={`event-detail-status-pill${reg.status === "CONFIRMED" ? " event-detail-status-pill--confirmed" : reg.status === "WAITLIST" ? " event-detail-status-pill--waitlist" : reg.status === "PENDING" ? " event-detail-status-pill--pending" : ""}`}>
                             {translateEventStatus(reg.status, t)}
                           </span>
                           {reg.status === "PENDING" && (
@@ -549,8 +541,7 @@ export default function EventDetail() {
                                   event.stopPropagation();
                                   handleUpdateStatus(reg.id, "CONFIRMED");
                                 }}
-                                className="event-detail-icon-btn"
-                                style={{ border: "1px solid var(--success)", background: "rgba(0,255,149,0.08)", color: "var(--success)" }}
+                                className="event-detail-icon-btn event-detail-icon-btn--success"
                               >
                                 <Check size={13} />
                               </button>
@@ -559,8 +550,7 @@ export default function EventDetail() {
                                   event.stopPropagation();
                                   handleUpdateStatus(reg.id, "REJECTED");
                                 }}
-                                className="event-detail-icon-btn"
-                                style={{ border: "1px solid var(--error)", background: "rgba(255,77,77,0.08)", color: "var(--error)" }}
+                                className="event-detail-icon-btn event-detail-icon-btn--reject"
                               >
                                 <X size={13} />
                               </button>
@@ -626,24 +616,14 @@ export default function EventDetail() {
               <div className="event-detail-reg-stat">
                 <p className="event-detail-reg-stat-label">{t("Status")}</p>
                 <p
-                  className="event-detail-reg-stat-value"
-                  style={{
-                    color:
-                      event.status === "live"
-                        ? "var(--success)"
-                        : event.status === "upcoming"
-                          ? "var(--accent)"
-                          : event.status === "cancelled"
-                            ? "var(--error)"
-                            : "var(--text-dim)",
-                  }}
+                  className={`event-detail-reg-stat-value ${event.status === "live" ? "event-detail-reg-stat-value--live" : event.status === "upcoming" ? "event-detail-reg-stat-value--upcoming" : event.status === "cancelled" ? "event-detail-reg-stat-value--cancelled" : "event-detail-reg-stat-value--muted"}`}
                 >
                   {translateEventStatus(event.status_label || event.status, t)}
                 </p>
               </div>
               <div className="event-detail-reg-stat">
                 <p className="event-detail-reg-stat-label">{t("Capacity")}</p>
-                <p className="event-detail-reg-stat-value" style={{ color: "var(--text)" }}>
+                <p className="event-detail-reg-stat-value event-detail-reg-stat-value--default">
                   {event.unlimited_capacity
                     ? t("{{count}} registered", { count: event.registered_count || 0 })
                     : `${event.registered_count || 0} / ${event.max_participants || 50}`}
@@ -654,8 +634,7 @@ export default function EventDetail() {
             {isEventOwner ? (
               <div className="event-detail-actions-stack">
                 <button
-                  className="btn btn-primary"
-                  style={{ width: "100%" }}
+                  className="btn btn-primary event-detail-btn-full"
                   onClick={() => navigate(`/events/${id}/edit`)}
                 >
                   {t("Edit Event")}
@@ -669,14 +648,7 @@ export default function EventDetail() {
                 </button>
                 <button
                   onClick={handleCancelEvent}
-                  className="event-detail-delete-btn"
-                  style={{
-                    background: cancelConfirm ? "rgba(255,77,77,0.2)" : "rgba(255,77,77,0.08)",
-                    border: "1px solid rgba(255,77,77,0.25)",
-                    color: "var(--error)",
-                  }}
-                  onMouseEnter={(e) => { if (!cancelConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.15)"; }}
-                  onMouseLeave={(e) => { if (!cancelConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
+                  className={`event-detail-delete-btn ${cancelConfirm ? "event-detail-delete-btn--confirm" : "event-detail-delete-btn--idle"}`}
                 >
                   {cancelConfirm ? t("Click again to confirm") : t("Delete Event")}
                 </button>
@@ -695,15 +667,7 @@ export default function EventDetail() {
                 </div>
                 <button
                   onClick={handleAdminDeleteEvent}
-                  className="event-detail-delete-btn"
-                  style={{
-                    width: "100%",
-                    background: adminDeleteConfirm ? "rgba(255,77,77,0.2)" : "rgba(255,77,77,0.08)",
-                    border: "1px solid rgba(255,77,77,0.25)",
-                    color: "var(--error)",
-                  }}
-                  onMouseEnter={(e) => { if (!adminDeleteConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.15)"; }}
-                  onMouseLeave={(e) => { if (!adminDeleteConfirm) e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
+                  className={`event-detail-delete-btn event-detail-btn-full ${adminDeleteConfirm ? "event-detail-delete-btn--confirm" : "event-detail-delete-btn--idle"}`}
                 >
                   {adminDeleteConfirm ? t("Click again to confirm") : t("Delete Event")}
                 </button>
@@ -742,24 +706,15 @@ export default function EventDetail() {
                     <button
                       onClick={handleCancelRegistration}
                       disabled={cancelLoading}
-                      className="event-detail-cancel-btn"
-                      style={{
-                        width: "100%",
-                        background: "transparent",
-                        cursor: cancelLoading ? "not-allowed" : "pointer",
-                        opacity: cancelLoading ? 0.6 : 1,
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,77,77,0.08)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      className="event-detail-cancel-btn event-detail-btn-full"
                     >
                       {cancelLoading ? t("Cancelling...") : t("Cancel Registration")}
                     </button>
                   </div>
                 ) : (
                   <button
-                    className="btn btn-primary"
                     onClick={handleRegister}
-                    style={{ width: "100%" }}
+                    className="btn btn-primary event-detail-btn-full"
                     disabled={isPast || !registrationOpen || (isFull && event.validation === "manual")}
                   >
                     {isPast
@@ -795,12 +750,14 @@ export default function EventDetail() {
             <p className="access-modal-text">
               {t("You must be logged in to register for scientific events.")}
             </p>
-            <button className="btn btn-primary" style={{ width: "100%", marginBottom: "12px" }} onClick={() => navigate("/login")}>
-              {t("Sign In to Account")}
-            </button>
-            <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => navigate("/register")}>
-              {t("Create New Identity")}
-            </button>
+            <div className="event-detail-actions-stack">
+              <button className="btn btn-primary event-detail-btn-full" onClick={() => navigate("/login")}>
+                {t("Sign In to Account")}
+              </button>
+              <button className="btn btn-secondary event-detail-btn-full" onClick={() => navigate("/register")}>
+                {t("Create New Identity")}
+              </button>
+            </div>
             <button onClick={() => setShowAccessModal(false)} className="access-modal-back-btn">
               {t("Back to event description")}
             </button>

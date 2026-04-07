@@ -570,22 +570,20 @@ export default function CreateEvent() {
       <div className="create-event-page">
         <div className="create-event-success-shell">
           <div className="create-event-success-card">
-          <div style={{ fontSize: "48px", marginBottom: "24px", color: "var(--success)" }}>✓</div>
-          <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>{t("Event Published!")}</h2>
-          <p style={{ color: "var(--text-muted)", fontSize: "15px", marginBottom: "36px", lineHeight: "1.6" }}>
+          <div className="create-event-success-icon">✓</div>
+          <h2 className="create-event-success-title">{t("Event Published!")}</h2>
+          <p className="create-event-success-copy">
             {t("Your event is now live and visible to the research community on Neurovent.")}
           </p>
           <div className="create-event-inline-actions">
             <button
-              className="btn btn-primary"
-              style={{ flex: 1, height: "48px" }}
+              className="btn btn-primary create-event-action-btn create-event-action-btn--grow"
               onClick={() => navigate(`/events/${published.id || ""}`)}
             >
               {t("View Event")}
             </button>
             <button
-              className="btn btn-secondary"
-              style={{ flex: 1, height: "48px" }}
+              className="btn btn-secondary create-event-action-btn create-event-action-btn--grow"
               onClick={() => navigate("/dashboard")}
             >
               {t("Back to Dashboard")}
@@ -635,18 +633,17 @@ export default function CreateEvent() {
             <>
               {stepErrorMessage && (
                 <div className="create-event-step-warning">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {stepErrorMessage}
                 </div>
               )}
               <div className="form-field">
                 <label className="form-label">
-                  {t("Event Title")} <span style={{ color: "var(--error)" }}>*</span>
+                  {t("Event Title")} <span className="form-required">*</span>
                 </label>
                 <input
                   type="text"
                   className={`input${getFieldErrorClass("title")}`}
-                  style={{ height: "58px" }}
                   placeholder={t("e.g. International Workshop on Neural Signal Processing")}
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
@@ -660,29 +657,17 @@ export default function CreateEvent() {
 
                 {/* Tags sélectionnés */}
                 {form.tagIds.length > 0 && (
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px", marginTop: "10px" }}>
+                  <div className="create-event-tags-list create-event-tags-list--spaced">
                     {availableTags.filter((t) => form.tagIds.includes(t.id)).map((tag) => (
                       <span
                         key={tag.id}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          padding: "6px 12px 6px 14px",
-                          borderRadius: "100px",
-                          background: "rgba(0,229,255,0.12)",
-                          border: "1px solid rgba(0,229,255,0.3)",
-                          color: "var(--accent)",
-                          fontSize: "13px",
-                          fontWeight: "600",
-                          fontFamily: "var(--font-mono)",
-                        }}
+                        className="create-event-tag create-event-tag--selected"
                       >
                         {tag.name}
                         <button
                           type="button"
                           onClick={() => toggleTag(tag.id)}
-                          style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
+                          className="create-event-tag-remove"
                         >
                           <X size={13} />
                         </button>
@@ -692,15 +677,14 @@ export default function CreateEvent() {
                 )}
 
                 {tagsLoading && (
-                  <p style={{ fontSize: "13px", color: "var(--text-dim)", margin: "0 0 10px" }}>{t("Loading tags...")}</p>
+                  <p className="create-event-inline-help create-event-inline-help--tight">{t("Loading tags...")}</p>
                 )}
 
                 {/* Input tags */}
-                <div style={{ marginBottom: "12px" }}>
+                <div className="create-event-tags-input-row">
                   <input
                     type="text"
-                    className="input"
-                    style={{ height: "48px", width: "100%" }}
+                    className="input create-event-input--full"
                     placeholder={availableTags.length ? t("Add a tag…") : t("No tags available")}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
@@ -710,7 +694,7 @@ export default function CreateEvent() {
 
                 {/* Suggestions filtrées selon ce qui est tapé */}
                 {tagInput.trim().length > 0 && (
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <div className="create-event-suggestions create-event-suggestions--spaced">
                     {availableTags
                       .filter((t) =>
                         !form.tagIds.includes(t.id) &&
@@ -721,20 +705,7 @@ export default function CreateEvent() {
                           key={tag.id}
                           type="button"
                           onClick={() => { toggleTag(tag.id); setTagInput(""); }}
-                          style={{
-                            padding: "7px 15px",
-                            borderRadius: "100px",
-                            border: "1px solid var(--border)",
-                            background: "var(--surface-high)",
-                            color: "var(--text-muted)",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            fontFamily: "var(--font-mono)",
-                            transition: "var(--transition)",
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.background = "rgba(0,229,255,0.06)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--surface-high)"; }}
+                          className="create-event-suggestion-btn create-event-suggestion-btn--inline"
                         >
                           {tag.name}
                         </button>
@@ -756,32 +727,12 @@ export default function CreateEvent() {
                       key={f.key}
                       type="button"
                       onClick={() => set("format", f.key)}
-                      style={{
-                        padding: "34px 22px",
-                        borderRadius: "14px",
-                        border: form.format === f.key ? "1px solid var(--accent)" : "1px solid var(--border)",
-                        background: form.format === f.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
-                        cursor: "pointer",
-                        textAlign: "center",
-                        transition: "var(--transition)",
-                      }}
+                      className={`create-event-format-option create-event-format-option--card${form.format === f.key ? " create-event-format-option--active" : ""}`}
                     >
-                      <div
-                        style={{
-                          fontSize: "28px",
-                          marginBottom: "12px",
-                          color: form.format === f.key ? "var(--accent)" : "var(--text-dim)",
-                        }}
-                      >
+                      <div className={`create-event-format-option-icon${form.format === f.key ? " create-event-format-option-icon--active" : ""}`}>
                         {f.icon}
                       </div>
-                      <p
-                        style={{
-                          fontWeight: "700",
-                          fontSize: "17px",
-                          color: form.format === f.key ? "var(--accent)" : "var(--text-muted)",
-                        }}
-                      >
+                      <p className={`create-event-format-option-title${form.format === f.key ? " create-event-format-option-title--active" : ""}`}>
                         {f.label}
                       </p>
                     </button>
@@ -805,18 +756,17 @@ export default function CreateEvent() {
             <>
               {stepErrorMessage && (
                 <div className="create-event-step-warning">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {stepErrorMessage}
                 </div>
               )}
               <div className="create-event-grid-2 create-event-grid-2--schedule-primary">
                 <div className="form-field">
                   <label className="form-label">
-                    {t("Start Date")} <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Start Date")} <span className="form-required">*</span>
                   </label>
                   <DateInput
                     className={`create-event-schedule-input${getFieldErrorClass("date")}`}
-                    style={{ height: "62px" }}
                     value={form.date}
                     min={todayInputValue}
                     onChange={(e) => set("date", e.target.value)}
@@ -859,12 +809,11 @@ export default function CreateEvent() {
                 </div>
                 <div className="form-field">
                   <label className="form-label">
-                    {t("Start Time")} <span style={{ color: "var(--error)" }}>*</span>
+                    {t("Start Time")} <span className="form-required">*</span>
                   </label>
                   <input
                     type="time"
                     className={`input create-event-schedule-input${getFieldErrorClass("time")}`}
-                    style={{ height: "62px" }}
                     value={form.time}
                     onChange={(e) => set("time", e.target.value)}
                   />
@@ -875,11 +824,10 @@ export default function CreateEvent() {
                 <div className="create-event-grid-2 create-event-grid-2--schedule-secondary">
                   <div className="form-field">
                     <label className="form-label">
-                      {t("End Date")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("End Date")} <span className="form-required">*</span>
                     </label>
                     <DateInput
                       className={`create-event-schedule-input${getFieldErrorClass("end_date")}`}
-                      style={{ height: "62px" }}
                       value={form.end_date}
                       min={form.date || undefined}
                       onChange={(e) => set("end_date", e.target.value)}
@@ -887,12 +835,11 @@ export default function CreateEvent() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      {t("End Time")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("End Time")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="time"
                       className={`input create-event-schedule-input${getFieldErrorClass("end_time")}`}
-                      style={{ height: "62px" }}
                       value={form.end_time}
                       onChange={(e) => set("end_time", e.target.value)}
                     />
@@ -902,12 +849,11 @@ export default function CreateEvent() {
                 <div className="create-event-grid-2 create-event-grid-2--schedule-summary">
                   <div className="form-field">
                     <label className="form-label">
-                      {t("End Time")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("End Time")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="time"
                       className={`input create-event-schedule-input${getFieldErrorClass("end_time")}`}
-                      style={{ height: "62px" }}
                       value={form.end_time}
                       onChange={(e) => set("end_time", e.target.value)}
                     />
@@ -926,28 +872,28 @@ export default function CreateEvent() {
 
               {hasEqualMultiDayDates && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {t("The end date cannot be the same as the start date when this option is enabled. If the event ends the same day, uncheck \"Ends on another day\".")}
                 </div>
               )}
 
               {hasEndDateBeforeStartDate && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {t("The end date must be after the start date for a multi-day event. If the event ends the same day, turn this option off.")}
                 </div>
               )}
 
               {hasPastStartDateTime && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {t("The start date and time cannot be in the past. Please choose a future time.")}
                 </div>
               )}
 
               {hasInvalidSameDayEndTime && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {t("For a same-day event, the end time must be after the start time. If it continues overnight, enable \"Ends on another day\".")}
                 </div>
               )}
@@ -957,12 +903,11 @@ export default function CreateEvent() {
                   <div className="create-event-grid-2">
                     <div className="form-field">
                       <label className="form-label">
-                        {t("City")} <span style={{ color: "var(--error)" }}>*</span>
+                        {t("City")} <span className="form-required">*</span>
                       </label>
                       <input
                         type="text"
                         className={`input${getFieldErrorClass("city")}`}
-                        style={{ height: "58px" }}
                         placeholder={t("e.g. Paris")}
                         value={form.city}
                         onChange={(e) => set("city", e.target.value)}
@@ -970,12 +915,11 @@ export default function CreateEvent() {
                     </div>
                     <div className="form-field">
                       <label className="form-label">
-                        {t("Country")} <span style={{ color: "var(--error)" }}>*</span>
+                        {t("Country")} <span className="form-required">*</span>
                       </label>
                       <input
                         type="text"
                         className={`input${getFieldErrorClass("country")}`}
-                        style={{ height: "58px" }}
                         placeholder={t("e.g. France")}
                         value={form.country}
                         onChange={(e) => set("country", e.target.value)}
@@ -984,12 +928,11 @@ export default function CreateEvent() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      {t("Full Address")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Full Address")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="text"
                       className={`input${getFieldErrorClass("address_full")}`}
-                      style={{ height: "58px" }}
                       placeholder={t("Full venue address including building and postal code")}
                       value={form.address_full}
                       onChange={(e) => set("address_full", e.target.value)}
@@ -1037,7 +980,6 @@ export default function CreateEvent() {
                     <input
                       type="text"
                       className="input"
-                      style={{ height: "58px" }}
                       placeholder={t("e.g. Zoom, Teams, Google Meet")}
                       value={form.online_platform}
                       onChange={(e) => {
@@ -1049,12 +991,11 @@ export default function CreateEvent() {
                   </div>
                   <div className="form-field">
                     <label className="form-label">
-                      {t("Online Link")} <span style={{ color: "var(--error)" }}>*</span>
+                      {t("Online Link")} <span className="form-required">*</span>
                     </label>
                     <input
                       type="url"
                       className={`input${getFieldErrorClass("online_link")}`}
-                      style={{ height: "58px" }}
                       placeholder={t("https://meeting-platform.com/your-link")}
                       value={form.online_link}
                       onChange={(e) => handleOnlineLinkChange(e.target.value)}
@@ -1081,14 +1022,10 @@ export default function CreateEvent() {
                   <div className="create-event-card create-event-card--soft">
                     <button
                       type="button"
-                      className={`create-event-switch${form.online_share_later ? " create-event-switch--active" : ""}`}
+                      className={`create-event-switch${form.online_share_later ? " create-event-switch--active" : ""}${form.allow_registration_during_event ? " create-event-switch--disabled" : ""}`}
                       onClick={() => {
                         if (form.allow_registration_during_event) return;
                         set("online_share_later", !form.online_share_later);
-                      }}
-                      style={{
-                        opacity: form.allow_registration_during_event ? 0.45 : 1,
-                        cursor: form.allow_registration_during_event ? "not-allowed" : "pointer",
                       }}
                       disabled={form.allow_registration_during_event}
                     >
@@ -1125,7 +1062,7 @@ export default function CreateEvent() {
 
               <div className="form-field create-event-form-field--capacity">
                 <label className="form-label">
-                  {t("Max Participants")} <span style={{ color: "var(--error)" }}>*</span>
+                  {t("Max Participants")} <span className="form-required">*</span>
                 </label>
                 <div className="create-event-grid-tight">
                   {[
@@ -1136,30 +1073,15 @@ export default function CreateEvent() {
                       key={String(option.key)}
                       type="button"
                       onClick={() => set("unlimited_capacity", option.key)}
-                      style={{
-                        padding: "18px",
-                        borderRadius: "12px",
-                        border:
-                          form.unlimited_capacity === option.key
-                            ? "1px solid var(--accent)"
-                            : "1px solid var(--border)",
-                        background:
-                          form.unlimited_capacity === option.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
-                        color: form.unlimited_capacity === option.key ? "var(--accent)" : "var(--text-muted)",
-                        fontSize: "15px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        transition: "var(--transition)",
-                        textAlign: "left",
-                      }}
+                      className={`create-event-format-option create-event-format-option--left${form.unlimited_capacity === option.key ? " create-event-format-option--active" : ""}`}
                     >
-                      <p style={{ fontWeight: "700", marginBottom: "6px" }}>{option.label}</p>
-                      <p style={{ fontSize: "13px", opacity: 0.7 }}>{option.desc}</p>
+                      <p className={`create-event-format-option-title${form.unlimited_capacity === option.key ? " create-event-format-option-title--active" : ""}`}>{option.label}</p>
+                      <p className="create-event-format-option-desc">{option.desc}</p>
                     </button>
                   ))}
                 </div>
                 {!form.unlimited_capacity ? (
-                  <div className={`create-event-counter${getFieldErrorClass("capacity")}`} style={{ marginTop: "14px" }}>
+                  <div className={`create-event-counter create-event-counter--spaced${getFieldErrorClass("capacity")}`}>
                     <button type="button" className="create-event-counter-btn" onClick={() => setCapacity(Number(form.capacity) - 1)}>
                       -
                     </button>
@@ -1218,27 +1140,11 @@ export default function CreateEvent() {
                         if (form.allow_registration_during_event && m.key === "VALIDATION") return;
                         set("registration_mode", m.key);
                       }}
-                      style={{
-                        padding: "18px",
-                        borderRadius: "12px",
-                        border:
-                          form.registration_mode === m.key
-                            ? "1px solid var(--accent)"
-                            : "1px solid var(--border)",
-                        background:
-                          form.registration_mode === m.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
-                        color: form.registration_mode === m.key ? "var(--accent)" : "var(--text-muted)",
-                        fontSize: "15px",
-                        fontWeight: "600",
-                        cursor: form.allow_registration_during_event && m.key === "VALIDATION" ? "not-allowed" : "pointer",
-                        transition: "var(--transition)",
-                        textAlign: "left",
-                        opacity: form.allow_registration_during_event && m.key === "VALIDATION" ? 0.45 : 1,
-                      }}
+                      className={`create-event-format-option create-event-format-option--left${form.registration_mode === m.key ? " create-event-format-option--active" : ""}${form.allow_registration_during_event && m.key === "VALIDATION" ? " create-event-format-option--disabled" : ""}`}
                       disabled={form.allow_registration_during_event && m.key === "VALIDATION"}
                     >
-                      <p style={{ fontWeight: "700", marginBottom: "6px" }}>{m.label}</p>
-                      <p style={{ fontSize: "13px", opacity: 0.7 }}>{m.desc}</p>
+                      <p className={`create-event-format-option-title${form.registration_mode === m.key ? " create-event-format-option-title--active" : ""}`}>{m.label}</p>
+                      <p className="create-event-format-option-desc">{m.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -1251,33 +1157,30 @@ export default function CreateEvent() {
 
               {!form.allow_registration_during_event && (
                 <div className="form-field">
-                  <label className="form-label">{t("Registration Deadline")} <span style={{ fontSize: "13px", color: "var(--text-dim)", fontWeight: "400" }}>({t("optional")})</span></label>
+                  <label className="form-label">{t("Registration Deadline")} <span className="form-optional">({t("optional")})</span></label>
                   <div className="create-event-grid-2">
                     <DateInput
                       className="create-event-schedule-input"
-                      style={{ height: "62px" }}
                       value={form.registration_deadline_date}
                       onChange={(e) => set("registration_deadline_date", e.target.value)}
                     />
                     <input
                       type="time"
                       className="input create-event-schedule-input"
-                      style={{ height: "62px" }}
                       value={form.registration_deadline_time}
                       onChange={(e) => set("registration_deadline_time", e.target.value)}
                     />
                   </div>
-                  <p style={{ fontSize: "13px", color: "var(--text-dim)", marginTop: "6px" }}>
+                  <p className="create-event-inline-help create-event-inline-help--tight">
                     {t("If empty, registrations close at event start.")}
                   </p>
                 </div>
               )}
 
               <div className="form-field">
-                <label className="form-label">{t("Description")} <span style={{ color: "var(--error)" }}>*</span></label>
+                <label className="form-label">{t("Description")} <span className="form-required">*</span></label>
                 <textarea
-                  className={`input${getFieldErrorClass("description")}`}
-                  style={{ height: "180px", resize: "vertical" }}
+                  className={`input textarea--lg${getFieldErrorClass("description")}`}
                   placeholder={t("Describe the scientific scope, agenda structure, and target audience…")}
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
@@ -1300,21 +1203,20 @@ export default function CreateEvent() {
             <>
               {stepErrorMessage && (
                 <div className="create-event-step-warning">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {stepErrorMessage}
                 </div>
               )}
               {error && (
                 <div className="create-event-alert">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   {error}
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", flexWrap: "wrap", marginBottom: "28px" }}>
+              <div className="create-event-submit-row">
                 <button
-                  className="btn btn-primary"
-                  style={{ padding: "14px 28px", fontSize: "16px" }}
+                  className="btn btn-primary create-event-primary-action--publish"
                   onClick={handlePublish}
                   disabled={loading}
                 >
@@ -1339,10 +1241,10 @@ export default function CreateEvent() {
                     </div>
                   )}
                   <div className="create-event-preview-heading">
-                    <h3 style={{ fontSize: "22px", fontWeight: "800", marginBottom: "6px" }}>
+                    <h3 className="create-event-preview-title">
                       {form.title || t("Event Title")}
                     </h3>
-                    <p style={{ fontSize: "14px", color: "var(--accent)" }}>{t("Organized by {{name}}", { name: organizer })}</p>
+                    <p className="create-event-preview-organizer">{t("Organized by {{name}}", { name: organizer })}</p>
                   </div>
                   <span className="create-event-preview-status">
                     {t("Upcoming").toUpperCase()}
@@ -1380,23 +1282,9 @@ export default function CreateEvent() {
                       value: form.registration_mode === "VALIDATION" ? t("Manual") : t("Auto-Confirm"),
                     },
                   ].map((item) => (
-                    <div
-                      key={item.label}
-                      style={{
-                        background: "var(--surface-high)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "10px",
-                        padding: "16px",
-                      }}
-                    >
-                      <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{item.label}</p>
-                      <p
-                        style={{
-                          fontSize: "15px",
-                          fontWeight: "700",
-                          color: item.label === t("Registration") ? "var(--accent)" : "var(--text)",
-                        }}
-                      >
+                    <div key={item.label} className="create-event-preview-item">
+                      <p className="create-event-preview-item-label">{item.label}</p>
+                      <p className={`create-event-preview-item-value${item.label === t("Registration") ? " create-event-preview-item-value--accent" : ""}`}>
                         {item.value}
                       </p>
                     </div>
@@ -1404,54 +1292,26 @@ export default function CreateEvent() {
                 </div>
 
                 <div className="create-event-preview-grid create-event-preview-grid--compact">
-                  <div
-                    style={{
-                      background: "var(--surface-high)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "10px",
-                      padding: "16px",
-                    }}
-                  >
-                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Capacity")}</p>
-                    <p style={{ fontSize: "15px", fontWeight: "700" }}>
+                  <div className="create-event-preview-item">
+                    <p className="create-event-preview-item-label">{t("Capacity")}</p>
+                    <p className="create-event-preview-item-value">
                       {form.unlimited_capacity ? t("Unlimited") : t("{{count}} participants", { count: form.capacity })}
                     </p>
                   </div>
-                  <div
-                    style={{
-                      background: "var(--surface-high)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "10px",
-                      padding: "16px",
-                    }}
-                  >
-                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Format")}</p>
-                    <p style={{ fontSize: "15px", fontWeight: "700", textTransform: "capitalize" }}>
+                  <div className="create-event-preview-item">
+                    <p className="create-event-preview-item-label">{t("Format")}</p>
+                    <p className="create-event-preview-item-value">
                       {formatLabels[form.format]}
                     </p>
                   </div>
-                  <div
-                    style={{
-                      background: "var(--surface-high)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "10px",
-                      padding: "16px",
-                    }}
-                  >
-                    <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Duration")}</p>
-                    <p style={{ fontSize: "15px", fontWeight: "700" }}>{computedDurationLabel}</p>
+                  <div className="create-event-preview-item">
+                    <p className="create-event-preview-item-label">{t("Duration")}</p>
+                    <p className="create-event-preview-item-value">{computedDurationLabel}</p>
                   </div>
                   {(form.format === "online" || form.format === "hybrid") && (
-                    <div
-                      style={{
-                        background: "var(--surface-high)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "10px",
-                        padding: "16px",
-                      }}
-                    >
-                      <p style={{ fontSize: "12px", color: "var(--text-dim)", marginBottom: "6px" }}>{t("Live registration")}</p>
-                      <p style={{ fontSize: "15px", fontWeight: "700", color: form.allow_registration_during_event ? "var(--accent)" : "var(--text)" }}>
+                    <div className="create-event-preview-item">
+                      <p className="create-event-preview-item-label">{t("Live registration")}</p>
+                      <p className={`create-event-preview-item-value${form.allow_registration_during_event ? " create-event-preview-item-value--active" : ""}`}>
                         {form.allow_registration_during_event ? t("Allowed while live") : t("Closes at start")}
                       </p>
                     </div>
@@ -1459,29 +1319,18 @@ export default function CreateEvent() {
                 </div>
 
                 {form.description && (
-                  <p style={{ fontSize: "15px", color: "var(--text-muted)", lineHeight: "1.7", marginBottom: "18px" }}>
+                  <p className="create-event-preview-description">
                     {form.description.substring(0, 220)}
                     {form.description.length > 220 ? "..." : ""}
                   </p>
                 )}
 
                 {form.tagIds.length > 0 && (
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <div className="create-event-preview-tags">
                     {availableTags
                       .filter((t) => form.tagIds.includes(t.id))
                       .map((tag) => (
-                        <span
-                          key={tag.id}
-                          style={{
-                            padding: "5px 12px",
-                            borderRadius: "100px",
-                            background: "rgba(0,229,255,0.08)",
-                            border: "1px solid rgba(0,229,255,0.2)",
-                            fontSize: "12px",
-                            color: "var(--accent)",
-                            fontFamily: "var(--font-mono)",
-                          }}
-                        >
+                        <span key={tag.id} className="create-event-preview-tag">
                           #{tag.name}
                         </span>
                       ))}

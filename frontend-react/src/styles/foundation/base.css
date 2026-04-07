@@ -1,0 +1,224 @@
+/* ============================================================
+   FOUNDATION BASE
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scroll-behavior: smooth;
+  font-size: 15px;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  margin: 0;
+}
+
+.list-reset {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list-content--disc,
+.list-content--decimal {
+  margin: 0;
+  padding-inline-start: 1.4rem;
+}
+
+.list-content--disc {
+  list-style: disc;
+}
+
+.list-content--decimal {
+  list-style: decimal;
+}
+
+.list-content--disc > li,
+.list-content--decimal > li {
+  list-style: inherit;
+}
+
+.list-content--disc > li + li,
+.list-content--decimal > li + li {
+  margin-top: 0.45rem;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-main);
+  font-size: var(--fs-base);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-attachment: fixed;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+:root[data-theme-switching="true"] body,
+:root[data-theme-switching="true"] body::after,
+:root[data-theme-switching="true"] #root,
+:root[data-theme-switching="true"] .app-layout,
+:root[data-theme-switching="true"] .app-layout__content,
+:root[data-theme-switching="true"] .app-header,
+:root[data-theme-switching="true"] .app-header__control-icon,
+:root[data-theme-switching="true"] .app-header__segmented,
+:root[data-theme-switching="true"] .app-header__segmented-btn,
+:root[data-theme-switching="true"] .card,
+:root[data-theme-switching="true"] .btn,
+:root[data-theme-switching="true"] .input,
+:root[data-theme-switching="true"] .events-hero-search-shell,
+:root[data-theme-switching="true"] .events-results-search-shell,
+:root[data-theme-switching="true"] .events-search-input-body,
+:root[data-theme-switching="true"] .events-search-format-wrap,
+:root[data-theme-switching="true"] .events-search-format-select,
+:root[data-theme-switching="true"] .events-spotlight,
+:root[data-theme-switching="true"] .events-spotlight-card,
+:root[data-theme-switching="true"] .event-card,
+:root[data-theme-switching="true"] .company-card,
+:root[data-theme-switching="true"] .dashboard-stat-card,
+:root[data-theme-switching="true"] .dashboard-inline-stat,
+:root[data-theme-switching="true"] .dashboard-org-stat-card,
+:root[data-theme-switching="true"] .my-events-view-switch,
+:root[data-theme-switching="true"] .my-events-view-indicator,
+:root[data-theme-switching="true"] .my-events-view-btn,
+:root[data-theme-switching="true"] .profile-badge-card,
+:root[data-theme-switching="true"] .profile-badge-status,
+:root[data-theme-switching="true"] .profile-badge-progress,
+:root[data-theme-switching="true"] .profile-links-grid a,
+:root[data-theme-switching="true"] .profile-stat-card,
+:root[data-theme-switching="true"] .profile-surface,
+:root[data-theme-switching="true"] [class*="modal"],
+:root[data-theme-switching="true"] [class*="popover"],
+:root[data-theme-switching="true"] [class*="drawer"] {
+  transition:
+    background-color var(--theme-switch-duration) var(--theme-switch-ease),
+    background var(--theme-switch-duration) var(--theme-switch-ease),
+    color var(--theme-switch-duration) var(--theme-switch-ease),
+    border-color calc(var(--theme-switch-duration) * 0.92) var(--theme-switch-ease),
+    box-shadow calc(var(--theme-switch-duration) * 1.05) var(--theme-switch-ease),
+    opacity calc(var(--theme-switch-duration) * 0.9) var(--theme-switch-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme-switching="true"] body,
+  :root[data-theme-switching="true"] body::after,
+  :root[data-theme-switching="true"] #root,
+  :root[data-theme-switching="true"] .app-layout,
+  :root[data-theme-switching="true"] .app-layout__content,
+  :root[data-theme-switching="true"] .app-header,
+  :root[data-theme-switching="true"] .app-header__control-icon,
+  :root[data-theme-switching="true"] .app-header__segmented,
+  :root[data-theme-switching="true"] .app-header__segmented-btn,
+  :root[data-theme-switching="true"] .card,
+  :root[data-theme-switching="true"] .btn,
+  :root[data-theme-switching="true"] .input,
+  :root[data-theme-switching="true"] .events-hero-search-shell,
+  :root[data-theme-switching="true"] .events-results-search-shell,
+  :root[data-theme-switching="true"] .events-search-input-body,
+  :root[data-theme-switching="true"] .events-search-format-wrap,
+  :root[data-theme-switching="true"] .events-search-format-select,
+  :root[data-theme-switching="true"] .events-spotlight,
+  :root[data-theme-switching="true"] .events-spotlight-card,
+  :root[data-theme-switching="true"] .event-card,
+  :root[data-theme-switching="true"] .company-card,
+  :root[data-theme-switching="true"] .dashboard-stat-card,
+  :root[data-theme-switching="true"] .dashboard-inline-stat,
+  :root[data-theme-switching="true"] .dashboard-org-stat-card,
+  :root[data-theme-switching="true"] .my-events-view-switch,
+  :root[data-theme-switching="true"] .my-events-view-indicator,
+  :root[data-theme-switching="true"] .my-events-view-btn,
+  :root[data-theme-switching="true"] .profile-badge-card,
+  :root[data-theme-switching="true"] .profile-badge-status,
+  :root[data-theme-switching="true"] .profile-badge-progress,
+  :root[data-theme-switching="true"] .profile-links-grid a,
+  :root[data-theme-switching="true"] .profile-stat-card,
+  :root[data-theme-switching="true"] .profile-surface,
+  :root[data-theme-switching="true"] [class*="modal"],
+  :root[data-theme-switching="true"] [class*="popover"],
+  :root[data-theme-switching="true"] [class*="drawer"] {
+    transition: none !important;
+  }
+}
+
+@supports (-webkit-touch-callout: none) {
+  body { background-attachment: scroll; }
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+}
+
+:root[data-theme="light"] body::after {
+  opacity: 0.018;
+}
+
+#root { position: relative; z-index: 1; }
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+.app-layout {
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-layout__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-layout__content--fixed {
+  height: calc(100dvh - var(--header-height));
+  overflow: hidden;
+  padding-top: 0;
+}
+
+@media (max-width: 1024px) {
+  .app-layout__content--fixed {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+}
+
+.logo { font-family: var(--font-display); }
+
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  font-size: 0.85em;
+}

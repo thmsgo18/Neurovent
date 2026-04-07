@@ -238,7 +238,7 @@ function UserProfile() {
         </div>
 
         <div className="profile-form-row">
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("First Name")}</label>
             <input
               type="text"
@@ -247,7 +247,7 @@ function UserProfile() {
               onChange={(e) => set("firstName", e.target.value)}
             />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Last Name")}</label>
             <input
               type="text"
@@ -279,7 +279,7 @@ function UserProfile() {
 
         {form.profileType === "STUDENT" ? (
           <div className="profile-form-row">
-            <div className="form-field" style={{ marginBottom: 0 }}>
+            <div className="form-field form-field--flush">
               <label className="form-label">{t("School")}</label>
               <input
                 type="text"
@@ -288,7 +288,7 @@ function UserProfile() {
                 onChange={(e) => set("schoolName", e.target.value)}
               />
             </div>
-            <div className="form-field" style={{ marginBottom: 0 }}>
+            <div className="form-field form-field--flush">
               <label className="form-label">{t("Study Level")}</label>
               <input
                 type="text"
@@ -302,7 +302,7 @@ function UserProfile() {
         ) : (
           <>
             <div className="profile-form-row">
-              <div className="form-field" style={{ marginBottom: 0 }}>
+              <div className="form-field form-field--flush">
                 <label className="form-label">{t("Company")}</label>
                 <input
                   type="text"
@@ -311,7 +311,7 @@ function UserProfile() {
                   onChange={(e) => set("professionalCompanyName", e.target.value)}
                 />
               </div>
-              <div className="form-field" style={{ marginBottom: 0 }}>
+              <div className="form-field form-field--flush">
                 <label className="form-label">{t("Job Title")}</label>
                 <input
                   type="text"
@@ -334,7 +334,7 @@ function UserProfile() {
         )}
 
         <div className="profile-form-row">
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Avatar URL")}</label>
             <input
               type="url"
@@ -344,7 +344,7 @@ function UserProfile() {
               onChange={(e) => set("avatarUrl", e.target.value)}
             />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Favorite Domain")}</label>
             <div className="profile-domain-select-shell">
               <select className="input profile-domain-select" value={form.favoriteDomain} onChange={(e) => set("favoriteDomain", e.target.value)}>
@@ -365,30 +365,29 @@ function UserProfile() {
         <div className="form-field">
           <label className="form-label">{t("Bio")}</label>
           <textarea
-            className="input"
-            style={{ minHeight: "140px", resize: "vertical" }}
+            className="input profile-textarea profile-textarea--md"
             value={form.bio}
             onChange={(e) => set("bio", e.target.value)}
           />
         </div>
 
         <div className="profile-form-row profile-form-row--triple">
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Personal Website")}</label>
             <input type="url" className="input" placeholder="https://..." value={form.websiteUrl} onChange={(e) => set("websiteUrl", e.target.value)} />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("GitHub")}</label>
             <input type="url" className="input" placeholder="https://github.com/..." value={form.githubUrl} onChange={(e) => set("githubUrl", e.target.value)} />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("LinkedIn")}</label>
             <input type="url" className="input" placeholder="https://linkedin.com/in/..." value={form.linkedinUrl} onChange={(e) => set("linkedinUrl", e.target.value)} />
           </div>
         </div>
 
         {/* Research interests */}
-        <div style={{ marginBottom: "32px" }}>
+        <div className="profile-section">
           <label className="form-label">{t("Research Interests")}</label>
           <div className="profile-tags-wrap">
             {allTags.map((tag) => {
@@ -402,12 +401,7 @@ function UserProfile() {
                       selected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
                     )
                   }
-                  className="profile-tag-btn"
-                  style={{
-                    border: selected ? "1px solid var(--accent)" : "1px solid var(--border)",
-                    background: selected ? "rgba(0,229,255,0.1)" : "transparent",
-                    color: selected ? "var(--accent)" : "var(--text-dim)",
-                  }}
+                  className={`profile-tag-btn${selected ? " profile-tag-btn--selected" : ""}`}
                 >
                   {tag.name} {selected ? "✓" : ""}
                 </button>
@@ -424,8 +418,8 @@ function UserProfile() {
         </button>
       </form>
 
-      <div className="profile-danger-zone" style={{ borderTopColor: "var(--border)" }}>
-        <h3 className="profile-danger-title" style={{ color: "var(--text)" }}>{t("Change Password")}</h3>
+      <div className="profile-danger-zone profile-danger-zone--neutral">
+        <h3 className="profile-danger-title profile-danger-title--neutral">{t("Change Password")}</h3>
         <form onSubmit={handlePasswordChange}>
           {pwStatus === "ok" && (
             <div className="profile-feedback profile-feedback--success">
@@ -451,7 +445,7 @@ function UserProfile() {
             />
           </div>
           <div className="profile-form-row">
-            <div className="form-field" style={{ marginBottom: 0 }}>
+            <div className="form-field form-field--flush">
               <label className="form-label">{t("New Password")}</label>
               <input
                 type="password"
@@ -462,7 +456,7 @@ function UserProfile() {
                 required
               />
             </div>
-            <div className="form-field" style={{ marginBottom: 0 }}>
+            <div className="form-field form-field--flush">
               <label className="form-label">{t("Confirm New Password")}</label>
               <input
                 type="password"
@@ -476,8 +470,7 @@ function UserProfile() {
           </div>
           <button
             type="submit"
-            className="btn btn-secondary"
-            style={{ marginTop: "20px" }}
+            className="btn btn-secondary form-field--spaced"
           >
             {t("Update Password")}
           </button>
@@ -493,8 +486,7 @@ function UserProfile() {
           <button
             onClick={handleDeleteAccount}
             disabled={deleteLoading}
-            className="profile-danger-btn"
-            style={{ background: deleteConfirm ? "rgba(255,77,77,0.15)" : "rgba(255,77,77,0.06)", cursor: deleteLoading ? "not-allowed" : "pointer" }}
+            className={`profile-danger-btn ${deleteConfirm ? "profile-danger-btn--confirm" : "profile-danger-btn--idle"}`}
           >
             {deleteLoading ? t("Deleting...") : deleteConfirm ? t("Confirm — delete my account") : t("Delete My Account")}
           </button>
@@ -680,8 +672,7 @@ function OrgProfile() {
         <div className="form-field">
           <label className="form-label">{t("Organization Description")}</label>
           <textarea
-            className="input"
-            style={{ minHeight: "110px", resize: "vertical" }}
+            className="input profile-textarea profile-textarea--sm"
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
           />
@@ -693,39 +684,39 @@ function OrgProfile() {
           <input type="url" className="input" placeholder="https://organization.example.com" value={form.website_url} onChange={(e) => set("website_url", e.target.value)} />
         </div>
         <div className="profile-form-row">
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("LinkedIn")}</label>
             <input type="url" className="input" placeholder="https://linkedin.com/company/organization" value={form.linkedin_url} onChange={(e) => set("linkedin_url", e.target.value)} />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("YouTube")}</label>
             <input type="url" className="input" placeholder="https://youtube.com/@your-channel" value={form.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} />
           </div>
         </div>
-        <div className="profile-form-row profile-form-row--triple" style={{ marginTop: "20px" }}>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+        <div className="profile-form-row profile-form-row--triple profile-form-row--spaced">
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Twitter / X")}</label>
             <input type="url" className="input" placeholder="https://x.com/your-handle" value={form.twitter_url} onChange={(e) => set("twitter_url", e.target.value)} />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Instagram")}</label>
             <input type="url" className="input" placeholder="https://instagram.com/your-page" value={form.instagram_url} onChange={(e) => set("instagram_url", e.target.value)} />
           </div>
-          <div className="form-field" style={{ marginBottom: 0 }}>
+          <div className="form-field form-field--flush">
             <label className="form-label">{t("Facebook")}</label>
             <input type="url" className="input" placeholder="https://facebook.com/your-page" value={form.facebook_url} onChange={(e) => set("facebook_url", e.target.value)} />
           </div>
         </div>
 
         {saveError && (
-          <div className="profile-feedback profile-feedback--error" style={{ marginTop: "20px" }}>
+          <div className="profile-feedback profile-feedback--error profile-feedback--spaced">
             <AlertCircle size={15} />
             {saveError}
           </div>
         )}
 
         {/* Research domains */}
-        <div style={{ marginBottom: "32px" }}>
+        <div className="profile-section">
           <label className="form-label">{t("Managed Research Domains")}</label>
           <div className="profile-tags-wrap">
             {allTags.map((tag) => {
@@ -739,12 +730,7 @@ function OrgProfile() {
                       selected ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]
                     )
                   }
-                  className="profile-tag-btn"
-                  style={{
-                    border: selected ? "1px solid var(--accent)" : "1px solid var(--border)",
-                    background: selected ? "rgba(0,229,255,0.1)" : "transparent",
-                    color: selected ? "var(--accent)" : "var(--text-dim)",
-                  }}
+                  className={`profile-tag-btn${selected ? " profile-tag-btn--selected" : ""}`}
                 >
                   {tag.name} {selected ? "✓" : ""}
                 </button>
@@ -770,8 +756,7 @@ function OrgProfile() {
           <button
             onClick={handleDeleteAccount}
             disabled={deleteLoading}
-            className="profile-danger-btn"
-            style={{ background: deleteConfirm ? "rgba(255,77,77,0.15)" : "rgba(255,77,77,0.06)", cursor: deleteLoading ? "not-allowed" : "pointer" }}
+            className={`profile-danger-btn ${deleteConfirm ? "profile-danger-btn--confirm" : "profile-danger-btn--idle"}`}
           >
             {deleteLoading ? t("Deleting...") : deleteConfirm ? t("Confirm — delete this account") : t("Delete Organization Account")}
           </button>

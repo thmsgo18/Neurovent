@@ -104,12 +104,8 @@ export default function AppTopLinks({ className = "" }) {
 
   return (
     <nav
-      className={`app-top-links${activeIndex >= 0 ? "" : " app-top-links--no-active"}${isMoving ? " app-top-links--moving" : ""}${isAdmin ? " app-top-links--admin" : ""} ${className}`.trim()}
+      className={`app-top-links app-top-links--count-${links.length}${activeIndex >= 0 ? ` app-top-links--index-${activeIndex}` : " app-top-links--no-active"}${isMoving ? " app-top-links--moving" : ""}${isAdmin ? " app-top-links--admin" : ""} ${className}`.trim()}
       aria-label={t("Primary")}
-      style={{
-        "--link-count": links.length,
-        "--active-index": activeIndex >= 0 ? activeIndex : 0,
-      }}
     >
       <span className="app-top-links__indicator" aria-hidden="true" />
       {links.map((link) => (

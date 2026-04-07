@@ -1,144 +1,23 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AlertCircle, Eye, EyeOff, Languages, Moon, Settings2, Sun } from "lucide-react";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import "../styles/Login.css";
-import "../styles/AppHeader.css";
 import { loginParticipantApi, loginCompanyApi } from "../api/auth";
 import { decodeJWT } from "../api/client";
 import { setToken, setRefreshToken, setRole, setUsername, setDisplayName, setCompanyName, setUserId } from "../store/authStore";
 import { usePreferences } from "../context/PreferencesContext";
+import AuthPageShell from "../components/AuthPageShell";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { t, locale, setLocale, themeMode, setThemeMode } = usePreferences();
+  const { t } = usePreferences();
   const [mode, setMode] = useState("participant");
-  const [mobilePrefsOpen, setMobilePrefsOpen] = useState(false);
   const [form, setForm] = useState({ credential: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const pageRef = useRef(null);
-  const headerRef = useRef(null);
-  const mobilePrefsRef = useRef(null);
 
   const isOrganization = mode === "organization";
-  const themeOptions = [
-    { value: "light", label: t("Light"), icon: Sun },
-    { value: "dark", label: t("Dark"), icon: Moon },
-  ];
-
-  const localeOptions = [
-    { value: "en", label: "EN", fullLabel: t("English") },
-    { value: "fr", label: "FR", fullLabel: t("French") },
-  ];
-
-  useEffect(() => {
-    if (!mobilePrefsOpen) return undefined;
-
-    const handlePointerDown = (event) => {
-      if (mobilePrefsRef.current && !mobilePrefsRef.current.contains(event.target)) {
-        setMobilePrefsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setMobilePrefsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [mobilePrefsOpen]);
-
-  useEffect(() => {
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    const updateHeaderHeight = () => {
-      if (!pageRef.current || !headerRef.current) return;
-      pageRef.current.style.setProperty("--auth-header-height", `${headerRef.current.offsetHeight}px`);
-    };
-
-    updateHeaderHeight();
-
-    const resizeObserver = typeof ResizeObserver !== "undefined"
-      ? new ResizeObserver(() => updateHeaderHeight())
-      : null;
-
-    if (resizeObserver && headerRef.current) {
-      resizeObserver.observe(headerRef.current);
-    }
-
-    window.addEventListener("resize", updateHeaderHeight);
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", updateHeaderHeight);
-    };
-  }, []);
-
-  const renderLanguageControls = ({ mobile = false } = {}) => (
-    <div className="app-header__control app-header__control--language" aria-label={t("Language")}>
-      <div className="app-header__segmented" role="group" aria-label={t("Language")}>
-        {localeOptions.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className={`app-header__segmented-btn${locale === option.value ? " is-active" : ""}`}
-            onClick={() => {
-              setLocale(option.value);
-              if (mobile) setMobilePrefsOpen(false);
-            }}
-            title={option.fullLabel}
-            aria-pressed={locale === option.value}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderThemeControls = ({ mobile = false } = {}) => (
-    <div className="app-header__control" aria-label={t("Theme")}>
-      <div className="app-header__segmented app-header__segmented--theme" role="group" aria-label={t("Theme")}>
-        {themeOptions.map((option) => {
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={`app-header__segmented-btn app-header__segmented-btn--theme${themeMode === option.value ? " is-active" : ""}`}
-              onClick={() => {
-                setThemeMode(option.value);
-                if (mobile) setMobilePrefsOpen(false);
-              }}
-              title={option.label}
-              aria-pressed={themeMode === option.value}
-            >
-              <Icon size={15} />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -172,56 +51,13 @@ export default function Login() {
   };
 
   return (
-    <div ref={pageRef} className="login-page">
-      <div ref={headerRef} className="login-top-brand">
-        <div className="app-header__inner login-top-brand__inner">
-          <Link to="/" className="app-header__brand login-brand">
-            Neuro<span style={{ color: "var(--accent)" }}>vent</span>
-          </Link>
-          <div aria-hidden="true" />
-          <div className="app-header__right login-top-brand__controls">
-            <div className="app-header__preferences">
-              {renderLanguageControls()}
-              {renderThemeControls()}
-            </div>
-
-            <div ref={mobilePrefsRef} className="app-header__mobile-prefs">
-              <button
-                type="button"
-                className={`app-header__mobile-prefs-toggle${mobilePrefsOpen ? " is-open" : ""}`}
-                aria-label={t("Display preferences")}
-                aria-haspopup="menu"
-                aria-expanded={mobilePrefsOpen}
-                onClick={() => setMobilePrefsOpen((value) => !value)}
-              >
-                <Settings2 size={16} />
-              </button>
-
-              {mobilePrefsOpen ? (
-                <div className="app-header__mobile-prefs-panel" role="menu" aria-label={t("Display preferences")}>
-                  <div className="app-header__mobile-prefs-section">
-                    <p className="app-header__mobile-prefs-title">
-                      <Languages size={14} />
-                      {t("Language")}
-                    </p>
-                    {renderLanguageControls({ mobile: true })}
-                  </div>
-
-                  <div className="app-header__mobile-prefs-section">
-                    <p className="app-header__mobile-prefs-title">
-                      <Settings2 size={14} />
-                      {t("Theme")}
-                    </p>
-                    {renderThemeControls({ mobile: true })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="login-shell">
+    <AuthPageShell
+      pageClassName="login-page"
+      controlsClassName="login-top-brand__controls"
+      brandClassName="login-brand"
+      brandMarkClassName="login-brand-mark"
+      contentClassName="login-shell"
+    >
       <div className="login-mode-selector">
         <span
           className={`login-mode-slider${isOrganization ? " login-mode-slider--lab" : ""}`}
@@ -234,23 +70,14 @@ export default function Login() {
           <button
             key={m.key}
             onClick={() => { setMode(m.key); setError(""); }}
-            className="login-mode-btn"
-            style={{
-              color: mode === m.key ? (m.key === "organization" ? "#fff" : "#000") : "var(--text-muted)",
-            }}
+            className={`login-mode-btn login-mode-btn--${m.key}${mode === m.key ? " login-mode-btn--active" : ""}`}
           >
             {m.label}
           </button>
         ))}
       </div>
 
-        <div
-          className="login-card"
-          style={{
-            background: "var(--surface)",
-            border: `1px solid ${isOrganization ? "var(--secondary)" : "var(--border-strong)"}`,
-          }}
-        >
+      <div className={`login-card${isOrganization ? " login-card--organization" : ""}`}>
         <div className="login-heading">
           <h2 className={`login-title${isOrganization ? " login-title--organization" : ""}`}>
             {isOrganization ? t("Organization Login") : t("Participant Login")}
@@ -264,7 +91,7 @@ export default function Login() {
 
         {error && (
           <div className="login-error">
-            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "1px" }} />
+            <AlertCircle size={16} className="icon-inline-start" />
             {error}
           </div>
         )}
@@ -274,8 +101,7 @@ export default function Login() {
             <label className="form-label">{isOrganization ? t("Company Identifier") : t("Email Address")}</label>
             <input
               type="text"
-              className="input"
-              style={{ height: "54px" }}
+              className="input login-input"
               placeholder={isOrganization ? t("your-organization-identifier") : t("participant@institution.edu")}
               value={form.credential}
               onChange={(e) => setForm({ ...form, credential: e.target.value })}
@@ -285,19 +111,15 @@ export default function Login() {
 
           <div className="form-field">
             <div className="login-password-row">
-              <label className="form-label" style={{ marginBottom: 0 }}>{t("Password")}</label>
-              <Link
-                to="/forgot-password"
-                className="login-forgot-link"
-              >
+              <label className="form-label login-password-label">{t("Password")}</label>
+              <Link to="/forgot-password" className="login-forgot-link">
                 {t("Forgot password?")}
               </Link>
             </div>
-            <div style={{ position: "relative" }}>
+            <div className="login-password-field">
               <input
                 type={showPassword ? "text" : "password"}
-                className="input"
-                style={{ height: "54px", paddingRight: "48px" }}
+                className="input login-password-input"
                 placeholder="••••••••"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -306,19 +128,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: "absolute",
-                  right: "16px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-dim)",
-                  cursor: "pointer",
-                  padding: 0,
-                  display: "flex",
-                  alignItems: "center",
-                }}
+                className="login-password-toggle"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -327,41 +137,24 @@ export default function Login() {
 
           <button
             type="submit"
-            className="btn"
-            style={{
-              width: "100%",
-              height: "54px",
-              marginTop: "8px",
-              borderRadius: "10px",
-              fontSize: "16px",
-              fontWeight: "700",
-              background: isOrganization ? "var(--secondary)" : "var(--accent)",
-              color: isOrganization ? "#fff" : "#000",
-              border: "none",
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-              transition: "var(--transition)",
-            }}
+            className={`btn login-submit${isOrganization ? " login-submit--organization" : ""}`}
             disabled={loading}
           >
             {loading
               ? t("Connecting...")
               : isOrganization
-              ? t("Access Organization Dashboard")
-              : t("Sign In to Dashboard")}
+                ? t("Access Organization Dashboard")
+                : t("Sign In to Dashboard")}
           </button>
         </form>
 
         <p className="login-footer">
           {isOrganization ? t("Not an organization?") : t("No account yet?")}{" "}
-          <Link
-            to="/register"
-          >
+          <Link to="/register">
             {isOrganization ? t("Participant sign up") : t("Register now")}
           </Link>
         </p>
       </div>
-      </div>
-    </div>
+    </AuthPageShell>
   );
 }

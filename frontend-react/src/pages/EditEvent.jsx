@@ -536,7 +536,7 @@ export default function EditEvent() {
     return (
       <div className="create-event-page">
         <div className="create-event-success-shell">
-          <p style={{ color: "var(--text-dim)", fontSize: "12px", fontFamily: "var(--font-mono)" }}>{"// loading..."}</p>
+          <p className="create-event-loading-copy">{"// loading..."}</p>
         </div>
       </div>
     );
@@ -547,16 +547,16 @@ export default function EditEvent() {
       <div className="create-event-page">
         <div className="create-event-success-shell">
           <div className="create-event-success-card">
-            <div style={{ fontSize: "48px", marginBottom: "24px", color: "var(--success)" }}>✓</div>
-            <h2 style={{ fontSize: "28px", fontWeight: "800", marginBottom: "12px" }}>Changes Saved!</h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "15px", marginBottom: "36px", lineHeight: "1.6" }}>
+            <div className="create-event-success-icon">✓</div>
+            <h2 className="create-event-success-title">Changes Saved!</h2>
+            <p className="create-event-success-copy">
               Your event has been updated successfully.
             </p>
             <div className="create-event-inline-actions">
-              <button className="btn btn-primary" style={{ flex: 1, height: "48px" }} onClick={() => navigate(`/events/${id}`)}>
+              <button className="btn btn-primary create-event-action-btn create-event-action-btn--grow" onClick={() => navigate(`/events/${id}`)}>
                 View Event
               </button>
-              <button className="btn btn-secondary" style={{ flex: 1, height: "48px" }} onClick={() => navigate("/my-events")}>
+              <button className="btn btn-secondary create-event-action-btn create-event-action-btn--grow" onClick={() => navigate("/my-events")}>
                 My Events
               </button>
             </div>
@@ -584,7 +584,7 @@ export default function EditEvent() {
 
           {error && (
             <div className="create-event-alert">
-              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: "1px" }} />
+              <AlertCircle size={16} className="icon-inline-start" />
               {error}
             </div>
           )}
@@ -595,25 +595,25 @@ export default function EditEvent() {
               handleSave();
             }}
           >
-            <section className="create-event-card" style={{ marginBottom: "22px" }}>
+            <section className="create-event-card create-event-section-card">
               <div className="create-event-section-header">
                 <div>
-                  <h2 className="create-event-step-title" style={{ marginBottom: "8px" }}>Basic Info</h2>
-                  <p className="create-event-step-subtitle" style={{ marginBottom: 0 }}>
+                  <h2 className="create-event-step-title">Basic Info</h2>
+                  <p className="create-event-step-subtitle">
                     Update the title, topics and format of the event.
                   </p>
                 </div>
               </div>
 
               <div className="form-field">
-                <label className="form-label">Event Title <span style={{ color: "var(--error)" }}>*</span></label>
+                <label className="form-label">Event Title <span className="form-required">*</span></label>
                 <input type="text" className={`input${getFieldErrorClass("title")}`} value={form.title} onChange={(e) => set("title", e.target.value)} />
               </div>
 
               <div className="form-field">
                 <label className="form-label">Research Tags</label>
                 {form.tagIds.length > 0 && (
-                  <div className="create-event-tags-list" style={{ marginBottom: "12px" }}>
+                  <div className="create-event-tags-list create-event-tags-list--spaced">
                     {availableTags.filter((tag) => form.tagIds.includes(tag.id)).map((tag) => (
                       <span key={tag.id} className="create-event-tag">
                         {tag.name}
@@ -626,7 +626,7 @@ export default function EditEvent() {
                 )}
 
                 {tagsLoading && (
-                  <p style={{ fontSize: "13px", color: "var(--text-dim)", margin: "0 0 10px" }}>Loading tags...</p>
+                  <p className="create-event-inline-help create-event-inline-help--tight">Loading tags...</p>
                 )}
 
                 <div className="create-event-tags-input-row">
@@ -680,18 +680,13 @@ export default function EditEvent() {
                     <button
                       key={option.key}
                       type="button"
-                      className="create-event-format-option"
+                      className={`create-event-format-option create-event-format-option--card${form.format === option.key ? " create-event-format-option--active" : ""}`}
                       onClick={() => set("format", option.key)}
-                      style={{
-                        padding: "34px 22px",
-                        border: form.format === option.key ? "1px solid var(--accent)" : "1px solid var(--border)",
-                        background: form.format === option.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
-                      }}
                     >
-                      <div style={{ fontSize: "28px", marginBottom: "12px", color: form.format === option.key ? "var(--accent)" : "var(--text-dim)" }}>
+                      <div className={`create-event-format-option-icon${form.format === option.key ? " create-event-format-option-icon--active" : ""}`}>
                         {option.icon}
                       </div>
-                      <p style={{ fontWeight: "700", fontSize: "17px", color: form.format === option.key ? "var(--accent)" : "var(--text-muted)" }}>
+                      <p className={`create-event-format-option-title${form.format === option.key ? " create-event-format-option-title--active" : ""}`}>
                         {option.label}
                       </p>
                     </button>
@@ -700,11 +695,11 @@ export default function EditEvent() {
               </div>
             </section>
 
-            <section className="create-event-card" style={{ marginBottom: "22px" }}>
+            <section className="create-event-card create-event-section-card">
               <div className="create-event-section-header">
                 <div>
-                  <h2 className="create-event-step-title" style={{ marginBottom: "8px" }}>Schedule & Location</h2>
-                  <p className="create-event-step-subtitle" style={{ marginBottom: 0 }}>
+                  <h2 className="create-event-step-title">Schedule & Location</h2>
+                  <p className="create-event-step-subtitle">
                     Adjust date, time and venue details for the event.
                   </p>
                 </div>
@@ -712,7 +707,7 @@ export default function EditEvent() {
 
               <div className="create-event-grid-2">
                 <div className="form-field">
-                  <label className="form-label">Start Date <span style={{ color: "var(--error)" }}>*</span></label>
+                  <label className="form-label">Start Date <span className="form-required">*</span></label>
                   <DateInput
                     className={`create-event-schedule-input${getFieldErrorClass("date")}`}
                     value={form.date}
@@ -756,7 +751,7 @@ export default function EditEvent() {
                 </div>
 
                 <div className="form-field">
-                  <label className="form-label">Start Time <span style={{ color: "var(--error)" }}>*</span></label>
+                  <label className="form-label">Start Time <span className="form-required">*</span></label>
                   <input
                     type="time"
                     className={`input create-event-schedule-input${getFieldErrorClass("time")}`}
@@ -769,7 +764,7 @@ export default function EditEvent() {
               {form.ends_next_day ? (
                 <div className="create-event-grid-2">
                   <div className="form-field">
-                    <label className="form-label">End Date <span style={{ color: "var(--error)" }}>*</span></label>
+                    <label className="form-label">End Date <span className="form-required">*</span></label>
                     <DateInput
                       className={`create-event-schedule-input${getFieldErrorClass("end_date")}`}
                       value={form.end_date}
@@ -778,7 +773,7 @@ export default function EditEvent() {
                     />
                   </div>
                   <div className="form-field">
-                    <label className="form-label">End Time <span style={{ color: "var(--error)" }}>*</span></label>
+                    <label className="form-label">End Time <span className="form-required">*</span></label>
                     <input
                       type="time"
                       className={`input create-event-schedule-input${getFieldErrorClass("end_time")}`}
@@ -790,7 +785,7 @@ export default function EditEvent() {
               ) : (
                 <div className="create-event-grid-2">
                   <div className="form-field">
-                    <label className="form-label">End Time <span style={{ color: "var(--error)" }}>*</span></label>
+                    <label className="form-label">End Time <span className="form-required">*</span></label>
                     <input
                       type="time"
                       className={`input create-event-schedule-input${getFieldErrorClass("end_time")}`}
@@ -807,9 +802,9 @@ export default function EditEvent() {
               )}
 
               {form.ends_next_day && (
-                <div className="form-field" style={{ marginTop: "-4px" }}>
+                <div className="form-field create-event-form-field--compact">
                   <label className="form-label">Calculated Duration</label>
-                  <div className="create-event-duration-display" style={{ width: "min(100%, 320px)" }}>
+                  <div className="create-event-duration-display">
                     {computedDurationLabel}
                   </div>
                 </div>
@@ -817,28 +812,28 @@ export default function EditEvent() {
 
               {hasEqualMultiDayDates && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   The end date cannot be the same as the start date when this option is enabled. If the event ends the same day, disable “Ends on another day”.
                 </div>
               )}
 
               {hasEndDateBeforeStartDate && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   The end date must be after the start date for a multi-day event.
                 </div>
               )}
 
               {hasPastStartDateTime && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   The start date and time cannot be in the past. Please choose a future time.
                 </div>
               )}
 
               {hasInvalidSameDayEndTime && (
                 <div className="create-event-step-warning create-event-step-warning--sticky">
-                  <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "1px" }} />
+                  <AlertCircle size={18} className="icon-inline-start" />
                   For a same-day event, the end time must be after the start time. If it continues overnight, enable “Ends on another day”.
                 </div>
               )}
@@ -847,17 +842,17 @@ export default function EditEvent() {
                 <>
                   <div className="create-event-grid-2">
                     <div className="form-field">
-                      <label className="form-label">City <span style={{ color: "var(--error)" }}>*</span></label>
+                      <label className="form-label">City <span className="form-required">*</span></label>
                       <input type="text" className={`input${getFieldErrorClass("city")}`} value={form.city} onChange={(e) => set("city", e.target.value)} />
                     </div>
                     <div className="form-field">
-                      <label className="form-label">Country <span style={{ color: "var(--error)" }}>*</span></label>
+                      <label className="form-label">Country <span className="form-required">*</span></label>
                       <input type="text" className={`input${getFieldErrorClass("country")}`} value={form.country} onChange={(e) => set("country", e.target.value)} />
                     </div>
                   </div>
 
                   <div className="form-field">
-                    <label className="form-label">Full Address <span style={{ color: "var(--error)" }}>*</span></label>
+                    <label className="form-label">Full Address <span className="form-required">*</span></label>
                     <input type="text" className={`input${getFieldErrorClass("address_full")}`} value={form.address_full} onChange={(e) => set("address_full", e.target.value)} />
                   </div>
 
@@ -913,7 +908,7 @@ export default function EditEvent() {
                   </div>
 
                   <div className="form-field">
-                    <label className="form-label">Online Link <span style={{ color: "var(--error)" }}>*</span></label>
+                    <label className="form-label">Online Link <span className="form-required">*</span></label>
                     <input
                       type="url"
                       className={`input${getFieldErrorClass("online_link")}`}
@@ -945,14 +940,10 @@ export default function EditEvent() {
                   <div className="create-event-card create-event-card--soft">
                     <button
                       type="button"
-                      className={`create-event-switch${form.online_share_later ? " create-event-switch--active" : ""}`}
+                      className={`create-event-switch${form.online_share_later ? " create-event-switch--active" : ""}${form.allow_registration_during_event ? " create-event-switch--disabled" : ""}`}
                       onClick={() => {
                         if (form.allow_registration_during_event) return;
                         set("online_share_later", !form.online_share_later);
-                      }}
-                      style={{
-                        opacity: form.allow_registration_during_event ? 0.45 : 1,
-                        cursor: form.allow_registration_during_event ? "not-allowed" : "pointer",
                       }}
                       disabled={form.allow_registration_during_event}
                     >
@@ -988,11 +979,11 @@ export default function EditEvent() {
               )}
             </section>
 
-            <section className="create-event-card" style={{ marginBottom: "22px" }}>
+            <section className="create-event-card create-event-section-card">
               <div className="create-event-section-header">
                 <div>
-                  <h2 className="create-event-step-title" style={{ marginBottom: "8px" }}>Registration & Capacity</h2>
-                  <p className="create-event-step-subtitle" style={{ marginBottom: 0 }}>
+                  <h2 className="create-event-step-title">Registration & Capacity</h2>
+                  <p className="create-event-step-subtitle">
                     Control capacity, validation rules and registration deadline.
                   </p>
                 </div>
@@ -1008,19 +999,13 @@ export default function EditEvent() {
                     <button
                       key={String(option.key)}
                       type="button"
-                      className="create-event-format-option"
+                      className={`create-event-format-option create-event-format-option--left${form.unlimited_capacity === option.key ? " create-event-format-option--active" : ""}`}
                       onClick={() => set("unlimited_capacity", option.key)}
-                      style={{
-                        padding: "18px",
-                        textAlign: "left",
-                        border: form.unlimited_capacity === option.key ? "1px solid var(--accent)" : "1px solid var(--border)",
-                        background: form.unlimited_capacity === option.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
-                      }}
                     >
-                      <p style={{ fontWeight: "700", marginBottom: "6px", color: form.unlimited_capacity === option.key ? "var(--accent)" : "var(--text)" }}>
+                      <p className={`create-event-format-option-title${form.unlimited_capacity === option.key ? " create-event-format-option-title--active" : ""}`}>
                         {option.label}
                       </p>
-                      <p style={{ fontSize: "13px", opacity: 0.78, color: "var(--text-muted)" }}>
+                      <p className="create-event-format-option-desc">
                         {option.desc}
                       </p>
                     </button>
@@ -1028,7 +1013,7 @@ export default function EditEvent() {
                 </div>
 
                 {!form.unlimited_capacity ? (
-                  <div className={`create-event-counter${getFieldErrorClass("capacity")}`} style={{ marginTop: "14px" }}>
+                  <div className={`create-event-counter create-event-counter--spaced${getFieldErrorClass("capacity")}`}>
                     <button type="button" className="create-event-counter-btn" onClick={() => setCapacity(Number(form.capacity) - 1)}>
                       -
                     </button>
@@ -1082,25 +1067,17 @@ export default function EditEvent() {
                     <button
                       key={option.key}
                       type="button"
-                      className="create-event-format-option"
+                      className={`create-event-format-option create-event-format-option--left${form.registration_mode === option.key ? " create-event-format-option--active" : ""}${form.allow_registration_during_event && option.key === "VALIDATION" ? " create-event-format-option--disabled" : ""}`}
                       onClick={() => {
                         if (form.allow_registration_during_event && option.key === "VALIDATION") return;
                         set("registration_mode", option.key);
                       }}
-                      style={{
-                        padding: "18px",
-                        textAlign: "left",
-                        border: form.registration_mode === option.key ? "1px solid var(--accent)" : "1px solid var(--border)",
-                        background: form.registration_mode === option.key ? "rgba(0,229,255,0.06)" : "var(--surface-high)",
-                        opacity: form.allow_registration_during_event && option.key === "VALIDATION" ? 0.45 : 1,
-                        cursor: form.allow_registration_during_event && option.key === "VALIDATION" ? "not-allowed" : "pointer",
-                      }}
                       disabled={form.allow_registration_during_event && option.key === "VALIDATION"}
                     >
-                      <p style={{ fontWeight: "700", marginBottom: "6px", color: form.registration_mode === option.key ? "var(--accent)" : "var(--text)" }}>
+                      <p className={`create-event-format-option-title${form.registration_mode === option.key ? " create-event-format-option-title--active" : ""}`}>
                         {option.label}
                       </p>
-                      <p style={{ fontSize: "13px", opacity: 0.78, color: "var(--text-muted)" }}>
+                      <p className="create-event-format-option-desc">
                         {option.desc}
                       </p>
                     </button>
@@ -1115,7 +1092,7 @@ export default function EditEvent() {
 
               {!form.allow_registration_during_event && (
                 <div className="form-field">
-                  <label className="form-label">Registration Deadline <span style={{ fontSize: "13px", color: "var(--text-dim)", fontWeight: "400" }}>(optional)</span></label>
+                  <label className="form-label">Registration Deadline <span className="form-optional">(optional)</span></label>
                   <div className="create-event-grid-2">
                     <DateInput className="create-event-schedule-input" value={form.registration_deadline_date} onChange={(e) => set("registration_deadline_date", e.target.value)} />
                     <input
@@ -1133,50 +1110,33 @@ export default function EditEvent() {
             <section className="create-event-card">
               <div className="create-event-section-header">
                 <div>
-                  <h2 className="create-event-step-title" style={{ marginBottom: "8px" }}>Description</h2>
-                  <p className="create-event-step-subtitle" style={{ marginBottom: 0 }}>
+                  <h2 className="create-event-step-title">Description</h2>
+                  <p className="create-event-step-subtitle">
                     Keep the event summary clear, useful and up to date.
                   </p>
                 </div>
               </div>
 
               <div className="form-field">
-                <label className="form-label">Description <span style={{ color: "var(--error)" }}>*</span></label>
+                <label className="form-label">Description <span className="form-required">*</span></label>
                 <textarea
-                  className={`input${getFieldErrorClass("description")}`}
+                  className={`input textarea--lg${getFieldErrorClass("description")}`}
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
                 />
               </div>
 
-              <div className="create-event-inline-actions" style={{ marginTop: "18px" }}>
+              <div className="create-event-inline-actions create-event-inline-actions--spaced">
                 <button
                   type="submit"
-                  className="btn btn-primary"
-                  style={{
-                    flex: 1,
-                    minHeight: "58px",
-                    borderRadius: "12px",
-                    fontSize: "1rem",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className="btn btn-primary create-event-primary-action create-event-action-btn--grow"
                   disabled={loading}
                 >
                   {loading ? "Saving..." : "Save Changes"}
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{
-                    minHeight: "58px",
-                    padding: "0 24px",
-                    borderRadius: "12px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className="btn btn-secondary create-event-primary-action create-event-action-btn--secondary"
                   onClick={() => requestNavigation(`/events/${id}`)}
                 >
                   Cancel

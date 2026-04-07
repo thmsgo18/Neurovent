@@ -370,6 +370,10 @@
   line-height: 1;
 }
 
+.dashboard-inline-stat-value--success { color: var(--success); }
+.dashboard-inline-stat-value--warning { color: var(--warning); }
+.dashboard-inline-stat-value--accent { color: var(--accent); }
+
 .dashboard-empty {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -385,9 +389,7 @@
 }
 
 .dashboard-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .dashboard-registration-item {
@@ -511,6 +513,21 @@
   border-radius: 999px;
 }
 
+.dashboard-status-badge--confirmed {
+  background: rgba(0,255,149,0.1);
+  color: var(--success);
+}
+
+.dashboard-status-badge--pending {
+  background: rgba(245,196,0,0.1);
+  color: var(--warning);
+}
+
+.dashboard-status-badge--waitlist {
+  background: rgba(168,85,247,0.1);
+  color: var(--secondary);
+}
+
 .dashboard-icon-btn {
   background: none;
   border: 1px solid var(--border);
@@ -527,6 +544,10 @@
 .dashboard-icon-btn:hover {
   border-color: var(--error);
   color: var(--error);
+}
+
+.dashboard-icon-btn--disabled {
+  opacity: 0.5;
 }
 
 .dashboard-create-btn {
@@ -548,6 +569,26 @@
   padding: 6px 12px;
   border-radius: 999px;
   text-transform: uppercase;
+}
+
+.dashboard-org-event-status--cancelled {
+  background: rgba(255, 77, 77, 0.1);
+  color: var(--error);
+}
+
+.dashboard-org-event-status--live {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--success);
+}
+
+.dashboard-org-event-status--past {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+
+.dashboard-org-event-status--upcoming {
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--accent);
 }
 
 .dashboard-org-layout {
@@ -624,13 +665,17 @@
     linear-gradient(135deg, rgba(0, 240, 200, 0.18) 0%, rgba(0, 240, 200, 0.12) 100%);
   box-shadow:
     inset 0 0 0 1px rgba(0, 240, 200, 0.14);
-  transform: translateX(calc(var(--active-index) * 100%));
+  transform: translateX(0);
   transition:
     transform 0.46s cubic-bezier(0.22, 1, 0.2, 1),
     filter 0.3s ease,
     box-shadow 0.3s ease;
   z-index: 0;
   pointer-events: none;
+}
+
+.my-events-view-switch--history .my-events-view-indicator {
+  transform: translateX(100%);
 }
 
 :root[data-theme="light"] .my-events-view-indicator {

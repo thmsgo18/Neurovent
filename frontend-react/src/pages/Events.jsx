@@ -370,67 +370,68 @@ export default function Events() {
               <p className="mono text-xs text-dim">{"// loading..."}</p>
             </div>
           ) : spotlightEvents.length > 0 ? (
-            <div className={`events-spotlight-cards${isSpotlightTransitioning ? " events-spotlight-cards--transitioning" : ""}`}>
+            <ul className={`events-spotlight-cards card-grid-list${isSpotlightTransitioning ? " events-spotlight-cards--transitioning" : ""}`}>
               {spotlightEvents.map((event, index) => (
                 (() => {
                   const primaryStatus = getPrimaryStatusDisplay(event, t);
                   const spotlightBadge = getSpotlightBadge(event, index, popularEvents);
 
                   return (
-                    <button
-                      key={`${event.id}-${index}`}
-                      type="button"
-                      className="events-spotlight-card"
-                      onClick={() => navigate(`/events/${event.id}`)}
-                    >
-                      <div className="events-spotlight-card-statuses">
-                        <span className={`events-spotlight-card-status ${primaryStatus.className}`}>
-                          {primaryStatus.label}
-                        </span>
-                      </div>
-                      {spotlightBadge ? (
-                        <span className="events-spotlight-card-badge">
-                          <TrendingUp size={13} />
-                          {t(spotlightBadge)}
-                        </span>
-                      ) : null}
-                      <h3>{event.title}</h3>
-                      <p className="events-spotlight-card-desc">
-                        {truncateText(event.description, 118)}
-                      </p>
-                      <div className="events-spotlight-card-meta">
-                        <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--organizer">
-                          {event.organizer || t("Organizer")}
-                        </span>
-                        <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--date">
-                          {event.date_start
-                            ? new Date(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
-                            : t("TBD")}
-                        </span>
-                      </div>
-                      <div className="events-spotlight-tags">
-                        <span className="events-spotlight-tag events-spotlight-tag--location">
-                          {event.format === "online" ? t("Online") : event.city || t("TBD")}
-                        </span>
-                        <span className="events-spotlight-tag events-spotlight-tag--registered">
-                          {t("{{count}} registered", { count: event.registered_count || 0 })}
-                        </span>
-                        <span className="events-spotlight-tag events-spotlight-tag--deadline events-spotlight-tags-deadline">
-                          {event.registration_deadline
-                            ? t("Closes {{date}}", {
-                                date: new Date(event.registration_deadline).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric" }).toUpperCase(),
-                              })
-                            : t("Open until start")}
-                        </span>
-                        {(event.tags || []).slice(0, 1).map((tag) => (
-                          <span key={tag} className="events-spotlight-tag events-spotlight-tag--topic">#{tag}</span>
-                        ))}
-                      </div>
-                    </button>
+                    <li key={`${event.id}-${index}`} className="card-grid-list__item">
+                      <button
+                        type="button"
+                        className="events-spotlight-card"
+                        onClick={() => navigate(`/events/${event.id}`)}
+                      >
+                        <div className="events-spotlight-card-statuses">
+                          <span className={`events-spotlight-card-status ${primaryStatus.className}`}>
+                            {primaryStatus.label}
+                          </span>
+                        </div>
+                        {spotlightBadge ? (
+                          <span className="events-spotlight-card-badge">
+                            <TrendingUp size={13} />
+                            {t(spotlightBadge)}
+                          </span>
+                        ) : null}
+                        <h3>{event.title}</h3>
+                        <p className="events-spotlight-card-desc">
+                          {truncateText(event.description, 118)}
+                        </p>
+                        <div className="events-spotlight-card-meta">
+                          <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--organizer">
+                            {event.organizer || t("Organizer")}
+                          </span>
+                          <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--date">
+                            {event.date_start
+                              ? new Date(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
+                              : t("TBD")}
+                          </span>
+                        </div>
+                        <div className="events-spotlight-tags">
+                          <span className="events-spotlight-tag events-spotlight-tag--location">
+                            {event.format === "online" ? t("Online") : event.city || t("TBD")}
+                          </span>
+                          <span className="events-spotlight-tag events-spotlight-tag--registered">
+                            {t("{{count}} registered", { count: event.registered_count || 0 })}
+                          </span>
+                          <span className="events-spotlight-tag events-spotlight-tag--deadline events-spotlight-tags-deadline">
+                            {event.registration_deadline
+                              ? t("Closes {{date}}", {
+                                  date: new Date(event.registration_deadline).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric" }).toUpperCase(),
+                                })
+                              : t("Open until start")}
+                          </span>
+                          {(event.tags || []).slice(0, 1).map((tag) => (
+                            <span key={tag} className="events-spotlight-tag events-spotlight-tag--topic">#{tag}</span>
+                          ))}
+                        </div>
+                      </button>
+                    </li>
                   );
                 })()
               ))}
-            </div>
+            </ul>
           ) : (
             <div className="events-empty">
               <p className="events-empty-title">{t("No events available yet")}</p>

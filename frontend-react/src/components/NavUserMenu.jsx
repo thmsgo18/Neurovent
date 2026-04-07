@@ -92,11 +92,7 @@ export default function NavUserMenu() {
             />
           ) : (
             <div
-              className="nav-user-avatar"
-              style={{
-                background: isCompany ? "var(--secondary)" : "var(--accent)",
-                color: "#08111f",
-              }}
+              className={`nav-user-avatar ${isCompany ? "nav-user-avatar--fallback-company" : "nav-user-avatar--fallback-user"}`}
             >
               {initials}
             </div>

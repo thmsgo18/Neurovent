@@ -3,6 +3,113 @@
 .profile-page {
   min-height: 100vh;
   background: var(--bg);
+  --profile-avatar-fill: var(--bg-deep);
+  --profile-avatar-border: var(--border-accent);
+  --profile-select-border: rgba(126, 229, 216, 0.16);
+  --profile-select-bg:
+    radial-gradient(circle at top right, rgba(126, 229, 216, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(17, 27, 43, 0.98), rgba(10, 15, 27, 0.99));
+  --profile-select-hover-border: rgba(126, 229, 216, 0.28);
+  --profile-select-hover-bg:
+    radial-gradient(circle at top right, rgba(126, 229, 216, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(19, 31, 49, 0.99), rgba(12, 18, 31, 0.99));
+  --profile-select-focus-border: rgba(126, 229, 216, 0.38);
+  --profile-select-focus-ring:
+    0 0 0 3px rgba(126, 229, 216, 0.12),
+    0 18px 34px rgba(0, 0, 0, 0.18);
+  --profile-select-chevron-bg: rgba(126, 229, 216, 0.1);
+  --profile-select-chevron-border: rgba(126, 229, 216, 0.16);
+  --profile-select-chevron-hover-bg: rgba(126, 229, 216, 0.14);
+  --profile-select-chevron-hover-border: rgba(126, 229, 216, 0.24);
+  --profile-overview-card-bg: var(--surface-subtle);
+  --profile-overview-card-hover-border: rgba(126, 229, 216, 0.28);
+  --profile-overview-card-hover-bg: linear-gradient(180deg, rgba(126, 229, 216, 0.08), rgba(255, 255, 255, 0.03));
+  --profile-overview-card-hover-shadow: 0 20px 34px rgba(0, 0, 0, 0.18);
+  --profile-overview-card-focus-border: rgba(126, 229, 216, 0.4);
+  --profile-overview-card-focus-ring: 0 0 0 3px rgba(126, 229, 216, 0.16);
+  --profile-link-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.03));
+  --profile-link-shimmer: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.24) 45%, transparent 100%);
+  --profile-link-hover-shadow: 0 22px 36px rgba(0, 0, 0, 0.24);
+  --profile-link-hover-color: var(--text);
+  --profile-link-hover-border: var(--status-accent-border);
+  --profile-link-hover-bg: var(--profile-link-bg);
+  --profile-badge-card-border: rgba(255, 255, 255, 0.14);
+  --profile-badge-card-bg:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(20, 28, 46, 0.96), rgba(11, 16, 30, 0.98));
+  --profile-badge-card-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --profile-badge-card-hover-shadow: 0 24px 42px rgba(0, 0, 0, 0.24);
+  --profile-badge-card-locked-bg:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.03), transparent 42%),
+    linear-gradient(180deg, rgba(16, 20, 30, 0.98), rgba(9, 12, 21, 0.99));
+  --profile-badge-card-locked-border: rgba(255, 255, 255, 0.1);
+  --profile-badge-card-near-border: rgba(255, 196, 84, 0.22);
+  --profile-badge-card-near-bg:
+    radial-gradient(circle at top right, rgba(255, 196, 84, 0.12), transparent 44%),
+    linear-gradient(180deg, rgba(29, 26, 22, 0.98), rgba(14, 14, 20, 0.99));
+  --profile-badge-orb-bg: rgba(255, 255, 255, 0.06);
+  --profile-badge-progress-bg: rgba(255, 255, 255, 0.08);
+  --profile-badge-progress-border: rgba(255, 255, 255, 0.12);
+  --profile-badge-progress-color: #edf2ff;
+  --profile-feedback-success-bg: var(--status-success-bg);
+  --profile-feedback-success-border: var(--status-success-border);
+  --profile-feedback-error-bg: var(--status-error-bg);
+  --profile-feedback-error-border: var(--status-error-border);
+  --profile-danger-border: var(--status-error-border);
+  --profile-danger-button-border: rgba(239, 68, 68, 0.4);
+  --profile-danger-button-bg: rgba(239, 68, 68, 0.06);
+  --profile-danger-button-bg-strong: rgba(239, 68, 68, 0.15);
+}
+
+:root[data-theme="light"] .profile-page {
+  --profile-select-border: rgba(22, 37, 58, 0.12);
+  --profile-select-bg:
+    radial-gradient(circle at top right, rgba(15, 28, 45, 0.05), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(244, 249, 253, 0.99));
+  --profile-select-hover-border: rgba(24, 191, 174, 0.22);
+  --profile-select-hover-bg:
+    radial-gradient(circle at top right, rgba(24, 191, 174, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(240, 247, 252, 0.99));
+  --profile-select-focus-border: rgba(24, 191, 174, 0.24);
+  --profile-select-focus-ring:
+    0 0 0 3px rgba(24, 191, 174, 0.14),
+    0 18px 34px rgba(15, 28, 45, 0.1);
+  --profile-select-chevron-bg: rgba(24, 191, 174, 0.08);
+  --profile-select-chevron-border: rgba(24, 191, 174, 0.16);
+  --profile-select-chevron-hover-bg: rgba(24, 191, 174, 0.12);
+  --profile-select-chevron-hover-border: rgba(24, 191, 174, 0.2);
+  --profile-overview-card-bg: rgba(15, 28, 45, 0.03);
+  --profile-overview-card-hover-border: rgba(24, 191, 174, 0.22);
+  --profile-overview-card-hover-bg: linear-gradient(180deg, rgba(24, 191, 174, 0.08), rgba(15, 28, 45, 0.03));
+  --profile-overview-card-hover-shadow: 0 18px 30px rgba(15, 28, 45, 0.1);
+  --profile-overview-card-focus-border: rgba(24, 191, 174, 0.24);
+  --profile-overview-card-focus-ring: 0 0 0 3px rgba(24, 191, 174, 0.12);
+  --profile-link-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 252, 0.98));
+  --profile-link-shimmer: linear-gradient(120deg, transparent 0%, rgba(15, 28, 45, 0.08) 45%, transparent 100%);
+  --profile-link-hover-shadow: 0 18px 30px rgba(15, 28, 45, 0.12);
+  --profile-badge-card-border: rgba(22, 37, 58, 0.1);
+  --profile-badge-card-bg:
+    radial-gradient(circle at top right, rgba(15, 28, 45, 0.05), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(244, 249, 253, 0.99));
+  --profile-badge-card-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 18px 34px rgba(15, 28, 45, 0.08);
+  --profile-badge-card-hover-shadow: 0 22px 40px rgba(15, 28, 45, 0.1);
+  --profile-badge-card-locked-bg:
+    radial-gradient(circle at top right, rgba(15, 28, 45, 0.03), transparent 42%),
+    linear-gradient(180deg, rgba(247, 250, 253, 0.98), rgba(239, 245, 250, 0.98));
+  --profile-badge-card-locked-border: rgba(22, 37, 58, 0.08);
+  --profile-badge-card-near-border: rgba(240, 174, 48, 0.22);
+  --profile-badge-card-near-bg:
+    radial-gradient(circle at top right, rgba(255, 196, 84, 0.16), transparent 44%),
+    linear-gradient(180deg, rgba(255, 250, 239, 0.98), rgba(252, 244, 225, 0.98));
+  --profile-badge-orb-bg: rgba(15, 28, 45, 0.06);
+  --profile-badge-progress-bg: rgba(15, 28, 45, 0.04);
+  --profile-badge-progress-border: rgba(22, 37, 58, 0.08);
+  --profile-badge-progress-color: #334961;
+  --profile-danger-button-border: rgba(220, 79, 95, 0.3);
+  --profile-danger-button-bg: rgba(220, 79, 95, 0.08);
+  --profile-danger-button-bg-strong: rgba(220, 79, 95, 0.16);
 }
 
 .profile-main {
@@ -61,7 +168,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  color: #000;
+  color: var(--profile-avatar-fill);
   flex-shrink: 0;
   font-family: var(--font-display);
 }
@@ -73,7 +180,7 @@
   background: var(--accent);
   font-size: 30px;
   box-shadow: 0 0 28px var(--accent-glow);
-  border: 1.5px solid rgba(0,240,200,0.4);
+  border: 1.5px solid var(--profile-avatar-border);
 }
 
 .profile-avatar-square {
@@ -83,7 +190,7 @@
   background: var(--accent);
   font-size: 28px;
   box-shadow: 0 0 28px var(--accent-glow);
-  border: 1.5px solid rgba(0,240,200,0.4);
+  border: 1.5px solid var(--profile-avatar-border);
 }
 
 .profile-name {
@@ -113,6 +220,10 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.profile-form-row--spaced {
+  margin-top: 20px;
+}
+
 .profile-type-switch {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -124,7 +235,7 @@
   min-height: 52px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-subtle);
   color: var(--text-muted);
   font-size: 0.98rem;
   font-weight: 700;
@@ -133,8 +244,8 @@
 }
 
 .profile-type-option--active {
-  border-color: rgba(0, 229, 255, 0.28);
-  background: rgba(0, 229, 255, 0.1);
+  border-color: var(--status-accent-border);
+  background: var(--status-accent-bg);
   color: var(--accent);
 }
 
@@ -158,10 +269,8 @@
   -moz-appearance: none;
   padding-right: 58px;
   border-radius: 18px;
-  border: 1px solid rgba(126, 229, 216, 0.16);
-  background:
-    radial-gradient(circle at top right, rgba(126, 229, 216, 0.12), transparent 42%),
-    linear-gradient(180deg, rgba(17, 27, 43, 0.98), rgba(10, 15, 27, 0.99));
+  border: 1px solid var(--profile-select-border);
+  background: var(--profile-select-bg);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 16px 30px rgba(0, 0, 0, 0.16);
@@ -169,17 +278,13 @@
 }
 
 .profile-domain-select:hover {
-  border-color: rgba(126, 229, 216, 0.28);
-  background:
-    radial-gradient(circle at top right, rgba(126, 229, 216, 0.16), transparent 42%),
-    linear-gradient(180deg, rgba(19, 31, 49, 0.99), rgba(12, 18, 31, 0.99));
+  border-color: var(--profile-select-hover-border);
+  background: var(--profile-select-hover-bg);
 }
 
 .profile-domain-select:focus {
-  border-color: rgba(126, 229, 216, 0.38);
-  box-shadow:
-    0 0 0 3px rgba(126, 229, 216, 0.12),
-    0 18px 34px rgba(0, 0, 0, 0.18);
+  border-color: var(--profile-select-focus-border);
+  box-shadow: var(--profile-select-focus-ring);
 }
 
 .profile-domain-select-chevron {
@@ -194,24 +299,24 @@
   align-items: center;
   justify-content: center;
   color: var(--accent);
-  background: rgba(126, 229, 216, 0.1);
-  border: 1px solid rgba(126, 229, 216, 0.16);
+  background: var(--profile-select-chevron-bg);
+  border: 1px solid var(--profile-select-chevron-border);
   pointer-events: none;
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
 .profile-domain-select-shell:hover .profile-domain-select-chevron {
   transform: translateY(-50%) scale(1.04);
-  background: rgba(126, 229, 216, 0.14);
-  border-color: rgba(126, 229, 216, 0.24);
+  background: var(--profile-select-chevron-hover-bg);
+  border-color: var(--profile-select-chevron-hover-border);
 }
 
 .profile-image-avatar {
   flex-shrink: 0;
   display: block;
   object-position: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 28px rgba(0, 229, 255, 0.12);
+  border: 1px solid var(--surface-outline);
+  box-shadow: 0 0 28px var(--accent-dim);
   box-sizing: border-box;
 }
 
@@ -234,7 +339,7 @@
 .profile-image-avatar--logo {
   object-fit: contain;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-soft);
 }
 
 /* Interest / domain tags */
@@ -254,6 +359,28 @@
   font-family: var(--font-mono);
   letter-spacing: 0.05em;
   transition: var(--transition);
+}
+
+.profile-tag-btn--selected {
+  border-color: var(--accent);
+  background: var(--status-accent-bg);
+  color: var(--accent);
+}
+
+.profile-section {
+  margin-bottom: 32px;
+}
+
+.profile-textarea {
+  resize: vertical;
+}
+
+.profile-textarea--sm {
+  min-height: 110px;
+}
+
+.profile-textarea--md {
+  min-height: 140px;
 }
 
 /* Section headings inside profile */
@@ -340,7 +467,7 @@
   padding: 20px 22px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--profile-overview-card-bg);
 }
 
 .profile-overview-item--interactive {
@@ -351,15 +478,15 @@
 }
 
 .profile-overview-item--interactive:hover {
-  border-color: rgba(126, 229, 216, 0.28);
-  background: linear-gradient(180deg, rgba(126, 229, 216, 0.08), rgba(255, 255, 255, 0.03));
-  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.18);
+  border-color: var(--profile-overview-card-hover-border);
+  background: var(--profile-overview-card-hover-bg);
+  box-shadow: var(--profile-overview-card-hover-shadow);
 }
 
 .profile-overview-item--interactive:focus-visible {
   outline: none;
-  border-color: rgba(126, 229, 216, 0.4);
-  box-shadow: 0 0 0 3px rgba(126, 229, 216, 0.16);
+  border-color: var(--profile-overview-card-focus-border);
+  box-shadow: var(--profile-overview-card-focus-ring);
 }
 
 .profile-overview-label {
@@ -400,8 +527,8 @@
   display: inline-flex;
   align-items: center;
   min-height: 40px;
-  border: 1px solid rgba(0, 229, 255, 0.18);
-  background: rgba(0, 229, 255, 0.07);
+  border: 1px solid var(--status-accent-border);
+  background: var(--status-accent-bg);
   color: var(--accent);
   cursor: default;
 }
@@ -417,7 +544,7 @@
   padding: 0 22px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.03));
+  background: var(--profile-link-bg);
   color: var(--text-secondary);
   text-decoration: none;
   display: inline-flex;
@@ -436,7 +563,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.24) 45%, transparent 100%);
+  background: var(--profile-link-shimmer);
   transform: translateX(-140%);
   opacity: 0;
   transition: transform 380ms ease, opacity 180ms ease;
@@ -453,9 +580,10 @@
 }
 
 .profile-overview-link:hover {
-  color: var(--text);
-  border-color: rgba(0, 229, 255, 0.28);
-  box-shadow: 0 22px 36px rgba(0, 0, 0, 0.24);
+  color: var(--profile-link-hover-color);
+  border-color: var(--profile-link-hover-border);
+  background: var(--profile-link-hover-bg);
+  box-shadow: var(--profile-link-hover-shadow);
 }
 
 .profile-overview-link:hover::after {
@@ -463,46 +591,46 @@
   opacity: 1;
 }
 
-.profile-overview-link--website:hover {
-  color: #b5fff3;
-  border-color: rgba(126, 229, 216, 0.42);
-  background: linear-gradient(135deg, rgba(50, 209, 184, 0.22), rgba(10, 14, 24, 0.98));
+.profile-overview-link--website {
+  --profile-link-hover-color: #b5fff3;
+  --profile-link-hover-border: rgba(126, 229, 216, 0.42);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(50, 209, 184, 0.22), rgba(10, 14, 24, 0.98));
 }
 
-.profile-overview-link--github:hover {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
-  background: linear-gradient(135deg, rgba(86, 92, 110, 0.28), rgba(10, 14, 24, 0.98));
+.profile-overview-link--github {
+  --profile-link-hover-color: #ffffff;
+  --profile-link-hover-border: rgba(255, 255, 255, 0.3);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(86, 92, 110, 0.28), rgba(10, 14, 24, 0.98));
 }
 
-.profile-overview-link--linkedin:hover {
-  color: #b5dcff;
-  border-color: rgba(109, 184, 255, 0.46);
-  background: linear-gradient(135deg, rgba(10, 102, 194, 0.3), rgba(10, 14, 24, 0.98));
+.profile-overview-link--linkedin {
+  --profile-link-hover-color: #b5dcff;
+  --profile-link-hover-border: rgba(109, 184, 255, 0.46);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(10, 102, 194, 0.3), rgba(10, 14, 24, 0.98));
 }
 
-.profile-overview-link--youtube:hover {
-  color: #ffd0d0;
-  border-color: rgba(255, 77, 77, 0.48);
-  background: linear-gradient(135deg, rgba(255, 59, 48, 0.32), rgba(10, 14, 24, 0.98));
+.profile-overview-link--youtube {
+  --profile-link-hover-color: #ffd0d0;
+  --profile-link-hover-border: rgba(255, 77, 77, 0.48);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(255, 59, 48, 0.32), rgba(10, 14, 24, 0.98));
 }
 
-.profile-overview-link--twitter:hover {
-  color: #eef3ff;
-  border-color: rgba(148, 163, 184, 0.36);
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.22), rgba(10, 14, 24, 0.98));
+.profile-overview-link--twitter {
+  --profile-link-hover-color: #eef3ff;
+  --profile-link-hover-border: rgba(148, 163, 184, 0.36);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(148, 163, 184, 0.22), rgba(10, 14, 24, 0.98));
 }
 
-.profile-overview-link--instagram:hover {
-  color: #ffd2ea;
-  border-color: rgba(255, 105, 180, 0.4);
-  background: linear-gradient(135deg, rgba(255, 105, 180, 0.24), rgba(255, 145, 77, 0.18), rgba(10, 14, 24, 0.98));
+.profile-overview-link--instagram {
+  --profile-link-hover-color: #ffd2ea;
+  --profile-link-hover-border: rgba(255, 105, 180, 0.4);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(255, 105, 180, 0.24), rgba(255, 145, 77, 0.18), rgba(10, 14, 24, 0.98));
 }
 
-.profile-overview-link--facebook:hover {
-  color: #c5d7ff;
-  border-color: rgba(59, 130, 246, 0.4);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.28), rgba(10, 14, 24, 0.98));
+.profile-overview-link--facebook {
+  --profile-link-hover-color: #c5d7ff;
+  --profile-link-hover-border: rgba(59, 130, 246, 0.4);
+  --profile-link-hover-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.28), rgba(10, 14, 24, 0.98));
 }
 
 .profile-badges-grid {
@@ -518,23 +646,11 @@
   gap: 14px;
   padding: 20px 18px 18px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.08), transparent 42%),
-    linear-gradient(180deg, rgba(20, 28, 46, 0.96), rgba(11, 16, 30, 0.98));
+  border: 1px solid var(--profile-badge-card-border);
+  background: var(--profile-badge-card-bg);
   overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--profile-badge-card-shadow);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 220ms ease, filter 180ms ease;
-}
-
-:root[data-theme="light"] .profile-badge-card {
-  border-color: rgba(22, 37, 58, 0.1);
-  background:
-    radial-gradient(circle at top right, rgba(15, 28, 45, 0.05), transparent 42%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(244, 249, 253, 0.99));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 18px 34px rgba(15, 28, 45, 0.08);
 }
 
 .profile-badge-card--earned {
@@ -545,34 +661,19 @@
 }
 
 .profile-badge-card--locked {
-  background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.03), transparent 42%),
-    linear-gradient(180deg, rgba(16, 20, 30, 0.98), rgba(9, 12, 21, 0.99));
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--profile-badge-card-locked-bg);
+  border-color: var(--profile-badge-card-locked-border);
   filter: saturate(0.75);
 }
 
 :root[data-theme="light"] .profile-badge-card--locked {
-  background:
-    radial-gradient(circle at top right, rgba(15, 28, 45, 0.03), transparent 42%),
-    linear-gradient(180deg, rgba(247, 250, 253, 0.98), rgba(239, 245, 250, 0.98));
-  border-color: rgba(22, 37, 58, 0.08);
   filter: none;
 }
 
 .profile-badge-card--near.profile-badge-card--locked {
   filter: none;
-  border-color: rgba(255, 196, 84, 0.22);
-  background:
-    radial-gradient(circle at top right, rgba(255, 196, 84, 0.12), transparent 44%),
-    linear-gradient(180deg, rgba(29, 26, 22, 0.98), rgba(14, 14, 20, 0.99));
-}
-
-:root[data-theme="light"] .profile-badge-card--near.profile-badge-card--locked {
-  border-color: rgba(240, 174, 48, 0.22);
-  background:
-    radial-gradient(circle at top right, rgba(255, 196, 84, 0.16), transparent 44%),
-    linear-gradient(180deg, rgba(255, 250, 239, 0.98), rgba(252, 244, 225, 0.98));
+  border-color: var(--profile-badge-card-near-border);
+  background: var(--profile-badge-card-near-bg);
 }
 
 .profile-badge-card::after {
@@ -582,7 +683,7 @@
   width: 160px;
   height: 160px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--profile-badge-orb-bg);
   filter: blur(12px);
   transform: translateY(10px);
   transition: transform 220ms ease, opacity 220ms ease;
@@ -607,47 +708,43 @@
 }
 
 .profile-badge-status--earned {
-  background: rgba(16, 185, 129, 0.18);
-  border: 1px solid rgba(16, 185, 129, 0.36);
+  background: var(--status-success-bg-strong);
+  border: 1px solid var(--status-success-border-strong);
   color: #c0ffe1;
 }
 
 :root[data-theme="light"] .profile-badge-status--earned {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.24);
+  background: var(--status-success-bg);
+  border-color: var(--status-success-border);
   color: #0d7a54;
 }
 
 .profile-badge-status--near {
-  background: rgba(255, 196, 84, 0.16);
-  border: 1px solid rgba(255, 196, 84, 0.34);
+  background: var(--status-secondary-bg);
+  border: 1px solid var(--status-secondary-border);
   color: #ffe4a0;
 }
 
 :root[data-theme="light"] .profile-badge-status--near {
-  background: rgba(255, 196, 84, 0.16);
-  border-color: rgba(240, 174, 48, 0.24);
+  background: var(--status-secondary-bg);
+  border-color: var(--status-secondary-border);
   color: #9a6500;
 }
 
 .profile-badge-status--locked {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--status-neutral-bg);
+  border: 1px solid var(--status-neutral-border);
   color: #ccd6ee;
 }
 
 :root[data-theme="light"] .profile-badge-status--locked {
-  background: rgba(15, 28, 45, 0.04);
-  border-color: rgba(22, 37, 58, 0.1);
+  background: var(--status-neutral-bg);
+  border-color: var(--status-neutral-border);
   color: #6d819a;
 }
 
 .profile-badge-card:hover {
-  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.24);
-}
-
-:root[data-theme="light"] .profile-badge-card:hover {
-  box-shadow: 0 22px 40px rgba(15, 28, 45, 0.1);
+  box-shadow: var(--profile-badge-card-hover-shadow);
 }
 
 .profile-badge-card:hover::after {
@@ -738,7 +835,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-soft-strong);
   color: var(--text);
   transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease;
 }
@@ -768,12 +865,12 @@
 }
 
 .profile-badge-card--locked .profile-badge-icon {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-soft);
   color: #a9b4cc;
 }
 
 .profile-badge-card--near.profile-badge-card--locked .profile-badge-icon {
-  background: rgba(255, 196, 84, 0.14);
+  background: var(--status-secondary-bg);
   color: #ffd777;
 }
 
@@ -826,41 +923,35 @@
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #edf2ff;
+  background: var(--profile-badge-progress-bg);
+  border: 1px solid var(--profile-badge-progress-border);
+  color: var(--profile-badge-progress-color);
   font-size: 0.88rem;
   font-weight: 800;
   letter-spacing: 0.05em;
 }
 
-:root[data-theme="light"] .profile-badge-progress {
-  background: rgba(15, 28, 45, 0.04);
-  border-color: rgba(22, 37, 58, 0.08);
-  color: #334961;
-}
-
 .profile-badge-card--near .profile-badge-progress {
-  background: rgba(255, 196, 84, 0.14);
-  border-color: rgba(255, 196, 84, 0.26);
+  background: var(--status-secondary-bg);
+  border-color: var(--status-secondary-border);
   color: #ffe39a;
 }
 
 :root[data-theme="light"] .profile-badge-card--near .profile-badge-progress {
-  background: rgba(255, 196, 84, 0.16);
-  border-color: rgba(240, 174, 48, 0.18);
+  background: var(--status-secondary-bg);
+  border-color: var(--status-secondary-border);
   color: #8f6200;
 }
 
 .profile-badge-card--locked .profile-badge-progress {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--status-neutral-bg);
+  border-color: var(--status-neutral-border);
   color: #c7d0e5;
 }
 
 :root[data-theme="light"] .profile-badge-card--locked .profile-badge-progress {
-  background: rgba(15, 28, 45, 0.03);
-  border-color: rgba(22, 37, 58, 0.06);
+  background: var(--status-neutral-bg);
+  border-color: var(--status-neutral-border);
   color: #6e8198;
 }
 
@@ -875,15 +966,19 @@
 }
 
 .profile-feedback--success {
-  background: rgba(0,255,149,0.08);
-  border: 1px solid rgba(0,255,149,0.2);
+  background: var(--profile-feedback-success-bg);
+  border: 1px solid var(--profile-feedback-success-border);
   color: var(--success);
 }
 
 .profile-feedback--error {
-  background: rgba(255,77,77,0.08);
-  border: 1px solid rgba(255,77,77,0.2);
+  background: var(--profile-feedback-error-bg);
+  border: 1px solid var(--profile-feedback-error-border);
   color: var(--error);
+}
+
+.profile-feedback--spaced {
+  margin-top: 20px;
 }
 
 .profile-danger-zone {
@@ -891,7 +986,11 @@
   margin-inline: auto;
   margin-top: 40px;
   padding-top: 32px;
-  border-top: 1px solid rgba(255,77,77,0.2);
+  border-top: 1px solid var(--profile-danger-border);
+}
+
+.profile-danger-zone--neutral {
+  border-top-color: var(--border);
 }
 
 .profile-danger-title {
@@ -899,6 +998,10 @@
   font-weight: 700;
   color: var(--error);
   margin-bottom: 8px;
+}
+
+.profile-danger-title--neutral {
+  color: var(--text);
 }
 
 .profile-danger-copy {
@@ -918,11 +1021,23 @@
 .profile-danger-btn {
   padding: 10px 20px;
   border-radius: 8px;
-  border: 1px solid rgba(255,77,77,0.4);
+  border: 1px solid var(--profile-danger-button-border);
   color: var(--error);
   font-size: 0.98rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.profile-danger-btn--idle {
+  background: var(--profile-danger-button-bg);
+}
+
+.profile-danger-btn--confirm {
+  background: var(--profile-danger-button-bg-strong);
+}
+
+.profile-danger-btn:disabled {
+  cursor: not-allowed;
 }
 
 .profile-cancel-btn {

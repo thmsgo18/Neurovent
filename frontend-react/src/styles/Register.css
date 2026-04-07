@@ -1,35 +1,7 @@
 /* ===== REGISTER PAGE ===== */
 
 .register-page {
-  --auth-header-height: calc(72px + env(safe-area-inset-top, 0px));
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: var(--bg-deep);
   height: 100dvh;
-  position: relative;
-  overflow: hidden;
-}
-
-.register-top-brand {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 120;
-  background: rgba(13, 21, 34, 0.98);
-  border-bottom: 1px solid var(--border);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-
-:root[data-theme="light"] .register-top-brand {
-  background: rgba(238, 244, 251, 0.98);
-}
-
-.register-top-brand__inner {
-  min-height: 72px;
-  padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 12px));
-  padding-bottom: 12px;
 }
 
 .register-top-brand__controls {
@@ -50,7 +22,7 @@
 .register-left {
   width: min(42%, 540px);
   min-width: 340px;
-  background: linear-gradient(180deg, rgba(12,16,32,0.96) 0%, rgba(5,8,16,0.98) 100%);
+  background: var(--auth-side-bg);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -60,29 +32,22 @@
   overflow: hidden;
 }
 
-:root[data-theme="light"] .register-left {
-  background: linear-gradient(180deg, rgba(246, 250, 254, 0.98) 0%, rgba(236, 244, 251, 0.99) 100%);
-  border-right-color: rgba(22, 37, 58, 0.1);
-}
-
 .register-left::before {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 420px 320px at 0% 30%, rgba(0,240,200,0.08) 0%, transparent 72%),
-    radial-gradient(ellipse 340px 260px at 85% 85%, rgba(255,200,80,0.05) 0%, transparent 75%);
-}
-
-:root[data-theme="light"] .register-left::before {
-  background:
-    radial-gradient(ellipse 420px 320px at 0% 30%, rgba(0, 240, 200, 0.08) 0%, transparent 72%),
-    radial-gradient(ellipse 340px 260px at 85% 85%, rgba(255, 200, 80, 0.08) 0%, transparent 75%);
+    radial-gradient(ellipse 420px 320px at 0% 30%, var(--auth-side-glow-primary) 0%, transparent 72%),
+    radial-gradient(ellipse 340px 260px at 85% 85%, var(--auth-side-glow-secondary) 0%, transparent 75%);
 }
 
 .register-brand {
   text-decoration: none;
+}
+
+.register-brand-mark {
+  color: var(--accent);
 }
 
 .register-brand--side {
@@ -219,6 +184,10 @@
   gap: 16px;
 }
 
+.register-section {
+  margin-bottom: 32px;
+}
+
 .register-error {
   display: flex;
   align-items: flex-start;
@@ -304,6 +273,20 @@
   position: relative;
 }
 
+.register-password-input {
+  padding-right: 48px;
+}
+
+.register-password-input--match {
+  border-color: var(--success);
+  box-shadow: 0 0 0 1px var(--success);
+}
+
+.register-password-input--error {
+  border-color: var(--error);
+  box-shadow: 0 0 0 1px var(--error);
+}
+
 .register-password-toggle {
   position: absolute;
   right: 14px;
@@ -329,6 +312,12 @@
 
 .register-match--ok { color: var(--success); }
 .register-match--error { color: var(--error); }
+
+.register-tag-btn--selected {
+  border-color: var(--accent);
+  background: rgba(0,229,255,0.1);
+  color: var(--accent);
+}
 
 .register-submit {
   width: 100%;

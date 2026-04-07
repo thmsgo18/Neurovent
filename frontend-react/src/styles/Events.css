@@ -1089,7 +1089,6 @@
 }
 
 .events-format-switch {
-  --format-index: 0;
   position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1125,8 +1124,24 @@
   box-shadow:
     0 10px 24px rgba(0, 240, 200, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  transform: translateX(calc(var(--format-index) * 100%));
+  transform: translateX(0);
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+}
+
+.events-format-switch--index-1 .events-format-switch__slider {
+  transform: translateX(100%);
+}
+
+.events-format-switch--index-2 .events-format-switch__slider {
+  transform: translateX(200%);
+}
+
+.events-format-switch--index-3 .events-format-switch__slider {
+  transform: translateX(300%);
+}
+
+.events-modal-btn {
+  width: 100%;
 }
 
 .events-format-switch__option {
@@ -1310,9 +1325,7 @@
 }
 
 .events-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .events-companies-section {

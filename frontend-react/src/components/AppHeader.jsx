@@ -3,12 +3,15 @@ import { Link } from "react-router-dom";
 import { Languages, LogIn, Moon, Settings2, Sun, UserPlus } from "lucide-react";
 import AppTopLinks from "./AppTopLinks";
 import NavUserMenu from "./NavUserMenu";
-import { isAuthed } from "../store/authStore";
+import { getRole, isAuthed } from "../store/authStore";
 import { usePreferences } from "../context/PreferencesContext";
 import "../styles/AppHeader.css";
 
 export default function AppHeader() {
   const authed = isAuthed();
+  const role = getRole();
+  const isAdmin = role === "ADMIN";
+  const isGuest = !authed;
   const [mobilePrefsOpen, setMobilePrefsOpen] = useState(false);
   const [mobileAuthOpen, setMobileAuthOpen] = useState(false);
   const mobilePrefsRef = useRef(null);
@@ -124,10 +127,10 @@ export default function AppHeader() {
   );
 
   return (
-    <header ref={headerRef} className="app-header">
+    <header ref={headerRef} className={`app-header${isAdmin ? " app-header--admin" : ""}${isGuest ? " app-header--guest" : ""}`}>
       <div className="app-header__inner">
         <Link to="/" className="app-header__brand">
-          Neuro<span style={{ color: "var(--accent)" }}>vent</span>
+          Neuro<span className="app-header__brand-mark">vent</span>
         </Link>
 
         <div className="app-header__nav">

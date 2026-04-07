@@ -218,6 +218,39 @@ cd frontend-react
 npm run build
 ```
 
+## Live Browser QA
+
+Playwright est configure a la racine pour faire de la QA interactive sans lancer manuellement Django + React a chaque fois.
+
+Preparation initiale :
+
+```bash
+npm install
+npm run qa:install
+```
+
+Commandes utiles :
+
+```bash
+# enregistre un parcours depuis le navigateur Playwright
+npm run qa:record
+
+# ouvre l'inspecteur Playwright sur le smoke test de base
+npm run qa:inspect
+
+# lance le smoke test en mode normal
+npm run qa:test
+
+# ouvre l'UI Playwright pour explorer les tests
+npm run qa:ui
+```
+
+Notes :
+- le lanceur reutilise les serveurs deja demarres si `http://127.0.0.1:8000` et `http://127.0.0.1:3000` repondent
+- sinon il demarre automatiquement `backend-django/.venv/bin/python manage.py runserver` et `npm start` dans `frontend-react`
+- pour enregistrer une page precise : `npm run qa:record -- http://127.0.0.1:3000/login`
+- le smoke test de depart verifie simplement que la home publique s'affiche correctement
+
 ## Endpoints importants
 
 ### Auth

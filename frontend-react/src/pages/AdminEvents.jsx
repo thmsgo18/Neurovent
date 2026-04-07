@@ -149,8 +149,8 @@ export default function AdminEvents() {
             </div>
 
             <div className="my-events-toolbar">
-              <div className="my-events-view-switch">
-                <span className="my-events-view-indicator" aria-hidden="true" style={{ transform: `translateX(${scope === "past" ? "100%" : "0%"})` }} />
+              <div className={`my-events-view-switch${scope === "past" ? " my-events-view-switch--history" : ""}`}>
+                <span className="my-events-view-indicator" aria-hidden="true" />
                 <button
                   type="button"
                   className={`my-events-view-btn${scope === "future" ? " my-events-view-btn--active" : ""}`}
@@ -200,69 +200,70 @@ export default function AdminEvents() {
             ) : visibleEvents.length === 0 ? (
               <div className="admin-empty">{t("No events match the current filters.")}</div>
             ) : (
-              <div className="admin-list">
+              <ul className="admin-list collection-list">
                 {visibleEvents.map((event) => (
-                  <div
-                    key={event.id}
-                    className="admin-card admin-card--interactive"
-                    onClick={() => navigate(`/events/${event.id}`)}
-                    onKeyDown={(clickEvent) => {
-                      if (clickEvent.key === "Enter" || clickEvent.key === " ") {
-                        clickEvent.preventDefault();
-                        navigate(`/events/${event.id}`);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="admin-card-top">
-                      <div className="admin-card-copy">
-                        <h3 className="admin-card-title">{event.title}</h3>
-                        <p className="admin-card-subtitle">{event.company_name || event.organizer || t("Unknown organization")}</p>
-                        <div className="admin-card-meta">
-                          <span className="admin-pill admin-pill--muted">
-                            {translateEventStatus(event.status_label || event.status, t)}
-                          </span>
-                          <span className="admin-pill admin-pill--muted">
-                            {translateEventFormat(event.format, t)}
-                          </span>
-                          <span className="admin-pill admin-pill--muted">
-                            {formatDate(event.date_start, locale, t)}
-                          </span>
-                          <span className="admin-pill admin-pill--muted">
-                            {event.unlimited_capacity
-                              ? t("{{count}} registered", { count: event.registered_count || 0 })
-                              : t("{{count}} / {{max}} registered", {
-                                  count: event.registered_count || 0,
-                                  max: event.max_participants || 0,
-                                })}
-                          </span>
+                  <li key={event.id} className="collection-list__item">
+                    <div
+                      className="admin-card admin-card--interactive"
+                      onClick={() => navigate(`/events/${event.id}`)}
+                      onKeyDown={(clickEvent) => {
+                        if (clickEvent.key === "Enter" || clickEvent.key === " ") {
+                          clickEvent.preventDefault();
+                          navigate(`/events/${event.id}`);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="admin-card-top">
+                        <div className="admin-card-copy">
+                          <h3 className="admin-card-title">{event.title}</h3>
+                          <p className="admin-card-subtitle">{event.company_name || event.organizer || t("Unknown organization")}</p>
+                          <div className="admin-card-meta">
+                            <span className="admin-pill admin-pill--muted">
+                              {translateEventStatus(event.status_label || event.status, t)}
+                            </span>
+                            <span className="admin-pill admin-pill--muted">
+                              {translateEventFormat(event.format, t)}
+                            </span>
+                            <span className="admin-pill admin-pill--muted">
+                              {formatDate(event.date_start, locale, t)}
+                            </span>
+                            <span className="admin-pill admin-pill--muted">
+                              {event.unlimited_capacity
+                                ? t("{{count}} registered", { count: event.registered_count || 0 })
+                                : t("{{count}} / {{max}} registered", {
+                                    count: event.registered_count || 0,
+                                    max: event.max_participants || 0,
+                                  })}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="admin-actions">
+                          <button
+                            type="button"
+                            className="admin-secondary-btn"
+                            onClick={(clickEvent) => {
+                              clickEvent.stopPropagation();
+                              navigate(`/events/${event.id}`);
+                            }}
+                          >
+                            {t("View Detail")}
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-danger-btn"
+                            onClick={(clickEvent) => handleDelete(clickEvent, event.id)}
+                          >
+                            {t("Delete")}
+                          </button>
                         </div>
                       </div>
-
-                      <div className="admin-actions">
-                        <button
-                          type="button"
-                          className="admin-secondary-btn"
-                          onClick={(clickEvent) => {
-                            clickEvent.stopPropagation();
-                            navigate(`/events/${event.id}`);
-                          }}
-                        >
-                          {t("View Detail")}
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-danger-btn"
-                          onClick={(clickEvent) => handleDelete(clickEvent, event.id)}
-                        >
-                          {t("Delete")}
-                        </button>
-                      </div>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
         </div>

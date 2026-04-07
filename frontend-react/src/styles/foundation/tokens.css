@@ -1,0 +1,261 @@
+/* ============================================================
+   FOUNDATION TOKENS
+   ============================================================ */
+
+:root {
+  /* Hauteur réelle du header, mise à jour par ResizeObserver dans AppHeader.jsx */
+  --header-height: 88px;
+
+  /* --- Color Palette --- */
+  --bg:            #0d1522;
+  --bg-2:          #152033;
+  --surface:       #182438;
+  --surface-high:  #1f2d44;
+  --surface-raised:#2b3d5a;
+
+  --border:        rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.3);
+  --border-accent: rgba(105, 234, 215, 0.34);
+
+  --accent:        #69ead7;
+  --accent-dim:    rgba(105, 234, 215, 0.2);
+  --accent-glow:   rgba(105, 234, 215, 0.3);
+
+  --secondary:     #ffd56b;
+  --secondary-dim: rgba(255, 213, 107, 0.18);
+  --secondary-glow:rgba(255, 213, 107, 0.28);
+
+  --success:       #10B981;
+  --success-dim:   rgba(16, 185, 129, 0.10);
+  --error:         #EF4444;
+  --error-dim:     rgba(239, 68, 68, 0.10);
+  --warning:       #ffc850;
+
+  --text:          #fbfcff;
+  --text-muted:    #c6d0e3;
+  --text-dim:      #a0aec8;
+  --text-soft:     #e5eaf5;
+  --grid-dot:      rgba(255,255,255,0.055);
+
+  /* --- Aliases --- */
+  --bg-deep:       #0d1522;
+  --bg-surface:    #182438;
+  --bg-card:       #1f2d44;
+  --accent-primary:#69ead7;
+  --text-primary:  #fbfcff;
+  --text-secondary:#c6d0e3;
+
+  /* --- Typography --- */
+  --font-display:  'Syne', sans-serif;
+  --font-main:     'DM Sans', sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+
+  /* --- Shared shells & overlays --- */
+  --header-bg: rgba(13, 21, 34, 0.94);
+  --header-bg-solid: #0d1522;
+  --header-panel-bg: rgba(17, 27, 42, 0.98);
+  --header-panel-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  --header-chip-bg: rgba(255, 255, 255, 0.05);
+  --header-chip-bg-strong: rgba(255, 255, 255, 0.09);
+  --header-chip-hover-bg: rgba(105, 234, 215, 0.12);
+  --header-chip-hover-border: rgba(105, 234, 215, 0.24);
+  --header-segment-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.035));
+  --header-segment-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.16);
+  --header-segment-active-bg: linear-gradient(135deg, rgba(105, 234, 215, 0.22), rgba(105, 234, 215, 0.12));
+  --header-segment-active-shadow:
+    0 0 0 1px rgba(105, 234, 215, 0.16),
+    0 10px 24px rgba(105, 234, 215, 0.16);
+  --auth-topbar-bg: rgba(13, 21, 34, 0.98);
+  --auth-side-bg: linear-gradient(180deg, rgba(12, 16, 32, 0.96) 0%, rgba(5, 8, 16, 0.98) 100%);
+  --auth-side-glow-primary: rgba(0, 240, 200, 0.08);
+  --auth-side-glow-secondary: rgba(255, 200, 80, 0.05);
+  --input-bg: rgba(18, 28, 44, 0.94);
+  --input-border-color: rgba(255, 255, 255, 0.16);
+  --input-text: var(--text);
+  --input-focus-bg: rgba(24, 37, 58, 0.98);
+  --input-focus-ring: 0 0 0 3px rgba(105, 234, 215, 0.16);
+  --input-shadow: none;
+  --input-placeholder: rgba(229, 234, 245, 0.72);
+  --input-icon-bg: rgba(255, 255, 255, 0.11);
+  --input-icon-border: rgba(255, 255, 255, 0.2);
+  --input-icon-color: var(--text-soft);
+  --input-icon-hover-bg: rgba(0, 229, 255, 0.08);
+  --input-icon-hover-border: rgba(0, 229, 255, 0.16);
+  --panel-elevated-bg: linear-gradient(180deg, rgba(31, 45, 68, 0.98), rgba(18, 28, 44, 0.98));
+  --panel-elevated-border: rgba(255, 255, 255, 0.18);
+  --panel-elevated-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+  --surface-subtle: rgba(255, 255, 255, 0.03);
+  --surface-soft: rgba(255, 255, 255, 0.04);
+  --surface-soft-strong: rgba(255, 255, 255, 0.06);
+  --surface-outline: rgba(255, 255, 255, 0.12);
+  --overlay-backdrop: rgba(0, 0, 0, 0.88);
+
+  /* --- Calendar & popovers --- */
+  --calendar-title: var(--text-primary);
+  --calendar-weekday: rgba(236, 241, 255, 0.74);
+  --calendar-day-hover-bg: rgba(255, 255, 255, 0.12);
+  --calendar-day-hover-border: rgba(255, 255, 255, 0.18);
+  --calendar-day-outside: rgba(236, 241, 255, 0.46);
+  --calendar-day-disabled: rgba(236, 241, 255, 0.24);
+  --calendar-day-today-border: rgba(255, 255, 255, 0.24);
+  --calendar-day-selected-bg: linear-gradient(180deg, rgba(119, 243, 221, 0.96), rgba(98, 227, 208, 0.96));
+  --calendar-day-selected-text: #08111e;
+  --calendar-day-selected-shadow: 0 10px 22px rgba(102, 233, 213, 0.24);
+
+  /* --- Status surfaces --- */
+  --status-accent-bg: rgba(0, 240, 200, 0.1);
+  --status-accent-border: rgba(0, 240, 200, 0.22);
+  --status-secondary-bg: rgba(255, 200, 80, 0.1);
+  --status-secondary-border: rgba(255, 200, 80, 0.22);
+  --status-warning-bg: rgba(255, 196, 0, 0.08);
+  --status-warning-border: rgba(245, 196, 0, 0.28);
+  --status-warning-strong: #f5c400;
+  --status-success-bg: rgba(16, 185, 129, 0.12);
+  --status-success-border: rgba(16, 185, 129, 0.3);
+  --status-success-bg-strong: rgba(16, 185, 129, 0.18);
+  --status-success-border-strong: rgba(16, 185, 129, 0.36);
+  --status-error-bg: rgba(239, 68, 68, 0.08);
+  --status-error-border: rgba(239, 68, 68, 0.2);
+  --status-error-bg-strong: rgba(239, 68, 68, 0.16);
+  --status-error-border-strong: rgba(239, 68, 68, 0.45);
+  --status-neutral-bg: rgba(255, 255, 255, 0.05);
+  --status-neutral-border: rgba(255, 255, 255, 0.14);
+
+  /* --- Responsive layout & type --- */
+  --page-gutter:    clamp(0.875rem, 0.72rem + 0.85vw, 1.75rem);
+  --page-gutter-lg: clamp(1rem, 0.85rem + 2vw, 3.75rem);
+  --content-max:    1160px;
+
+  --fs-xs:   clamp(0.775rem, 0.755rem + 0.07vw, 0.84rem);
+  --fs-sm:   clamp(0.9rem, 0.875rem + 0.1vw, 0.965rem);
+  --fs-base: clamp(0.96rem, 0.94rem + 0.14vw, 1.015rem);
+  --fs-lg:   clamp(1.06rem, 1.02rem + 0.22vw, 1.16rem);
+  --fs-xl:   clamp(1.2rem, 1.13rem + 0.36vw, 1.34rem);
+
+  /* --- Spacing & Shape --- */
+  --radius-s:  6px;
+  --radius-sm: 6px;
+  --radius-m:  16px;
+  --radius-md: 16px;
+  --radius-l:  24px;
+  --radius-lg: 24px;
+
+  /* --- Motion --- */
+  --transition:       all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:  all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --spring:           all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --theme-switch-duration: 520ms;
+  --theme-switch-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg:            #edf3fa;
+  --bg-2:          #dde7f3;
+  --surface:       #ffffff;
+  --surface-high:  #f1f6fc;
+  --surface-raised:#e1eaf5;
+
+  --border:        rgba(22, 37, 58, 0.16);
+  --border-strong: rgba(22, 37, 58, 0.28);
+  --border-accent: rgba(33, 168, 156, 0.34);
+
+  --accent:        #18bfae;
+  --accent-dim:    rgba(24, 191, 174, 0.14);
+  --accent-glow:   rgba(24, 191, 174, 0.2);
+
+  --secondary:     #d89c19;
+  --secondary-dim: rgba(216, 156, 25, 0.14);
+  --secondary-glow:rgba(216, 156, 25, 0.2);
+
+  --success:       #0f9f72;
+  --success-dim:   rgba(15, 159, 114, 0.12);
+  --error:         #dc4f5f;
+  --error-dim:     rgba(220, 79, 95, 0.12);
+  --warning:       #d89c19;
+
+  --text:          #0f1c2d;
+  --text-muted:    #31435a;
+  --text-dim:      #4f6481;
+  --text-soft:     #18273b;
+  --grid-dot:      rgba(15, 28, 45, 0.08);
+
+  --bg-deep:       #eef4fb;
+  --bg-surface:    #ffffff;
+  --bg-card:       #ffffff;
+  --accent-primary:#18bfae;
+  --text-primary:  #132033;
+  --text-secondary:#43536b;
+  --header-bg: rgba(238, 244, 251, 0.92);
+  --header-bg-solid: #eef4fb;
+  --header-panel-bg: rgba(252, 254, 255, 0.98);
+  --header-panel-shadow: 0 18px 34px rgba(15, 28, 45, 0.12);
+  --header-chip-bg: rgba(255, 255, 255, 0.88);
+  --header-chip-bg-strong: rgba(238, 244, 251, 0.9);
+  --header-chip-hover-bg: rgba(24, 191, 174, 0.12);
+  --header-chip-hover-border: rgba(24, 191, 174, 0.22);
+  --header-segment-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 252, 0.98));
+  --header-segment-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 24px rgba(15, 28, 45, 0.08);
+  --header-segment-active-bg: linear-gradient(135deg, rgba(24, 191, 174, 0.18), rgba(24, 191, 174, 0.1));
+  --header-segment-active-shadow:
+    0 0 0 1px rgba(24, 191, 174, 0.14),
+    0 10px 22px rgba(24, 191, 174, 0.12);
+  --auth-topbar-bg: rgba(238, 244, 251, 0.98);
+  --auth-side-bg: linear-gradient(180deg, rgba(246, 250, 254, 0.98) 0%, rgba(236, 244, 251, 0.99) 100%);
+  --auth-side-glow-primary: rgba(0, 240, 200, 0.08);
+  --auth-side-glow-secondary: rgba(255, 200, 80, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.98);
+  --input-border-color: rgba(22, 37, 58, 0.14);
+  --input-text: var(--text-primary);
+  --input-focus-bg: #ffffff;
+  --input-focus-ring:
+    0 0 0 3px rgba(24, 191, 174, 0.14),
+    0 14px 30px rgba(15, 28, 45, 0.08);
+  --input-shadow: 0 10px 24px rgba(15, 28, 45, 0.06);
+  --input-placeholder: rgba(79, 100, 129, 0.82);
+  --input-icon-bg: rgba(255, 255, 255, 0.96);
+  --input-icon-border: rgba(22, 37, 58, 0.12);
+  --input-icon-color: var(--text-dim);
+  --input-icon-hover-bg: rgba(24, 191, 174, 0.08);
+  --input-icon-hover-border: rgba(24, 191, 174, 0.16);
+  --panel-elevated-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(244, 248, 255, 0.98));
+  --panel-elevated-border: rgba(22, 37, 58, 0.12);
+  --panel-elevated-shadow: 0 26px 56px rgba(15, 28, 45, 0.14);
+  --surface-subtle: rgba(15, 28, 45, 0.03);
+  --surface-soft: rgba(15, 28, 45, 0.04);
+  --surface-soft-strong: rgba(15, 28, 45, 0.06);
+  --surface-outline: rgba(22, 37, 58, 0.12);
+  --overlay-backdrop: rgba(10, 16, 25, 0.72);
+  --calendar-title: var(--text-primary);
+  --calendar-weekday: rgba(79, 100, 129, 0.86);
+  --calendar-day-hover-bg: rgba(24, 191, 174, 0.08);
+  --calendar-day-hover-border: rgba(24, 191, 174, 0.16);
+  --calendar-day-outside: rgba(79, 100, 129, 0.44);
+  --calendar-day-disabled: rgba(79, 100, 129, 0.22);
+  --calendar-day-today-border: rgba(22, 37, 58, 0.16);
+  --calendar-day-selected-bg: linear-gradient(180deg, rgba(119, 243, 221, 0.96), rgba(98, 227, 208, 0.96));
+  --calendar-day-selected-text: #08111e;
+  --calendar-day-selected-shadow: 0 10px 22px rgba(24, 191, 174, 0.18);
+  --status-accent-bg: rgba(24, 191, 174, 0.1);
+  --status-accent-border: rgba(24, 191, 174, 0.2);
+  --status-secondary-bg: rgba(216, 156, 25, 0.12);
+  --status-secondary-border: rgba(216, 156, 25, 0.24);
+  --status-warning-bg: rgba(216, 156, 25, 0.12);
+  --status-warning-border: rgba(216, 156, 25, 0.28);
+  --status-warning-strong: #b98500;
+  --status-success-bg: rgba(15, 159, 114, 0.12);
+  --status-success-border: rgba(15, 159, 114, 0.24);
+  --status-success-bg-strong: rgba(15, 159, 114, 0.14);
+  --status-success-border-strong: rgba(15, 159, 114, 0.28);
+  --status-error-bg: rgba(220, 79, 95, 0.08);
+  --status-error-border: rgba(220, 79, 95, 0.18);
+  --status-error-bg-strong: rgba(220, 79, 95, 0.16);
+  --status-error-border-strong: rgba(220, 79, 95, 0.32);
+  --status-neutral-bg: rgba(15, 28, 45, 0.04);
+  --status-neutral-border: rgba(22, 37, 58, 0.1);
+  color-scheme: light;
+}

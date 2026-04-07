@@ -171,11 +171,11 @@ export default function AdminCompanies() {
                             ))}
                           </div>
                           {company.review_note ? (
-                            <p className="admin-card-subtitle" style={{ marginTop: "12px" }}>
+                            <p className="admin-card-subtitle admin-card-subtitle--spaced">
                               {t("Review reason: {{reason}}", { reason: company.review_note })}
                             </p>
                           ) : (
-                            <p className="admin-card-subtitle" style={{ marginTop: "12px" }}>
+                            <p className="admin-card-subtitle admin-card-subtitle--spaced">
                               {t("Review reason: automatic verification found missing or inconsistent company details.")}
                             </p>
                           )}

@@ -446,8 +446,7 @@ export default function EventsResults() {
                   </div>
 
                   <div
-                    className="events-format-switch"
-                    style={{ "--format-index": activeFormatIndex, "--format-count": FORMAT_OPTIONS.length }}
+                    className={`events-format-switch events-format-switch--index-${activeFormatIndex}`}
                   >
                     <span className="events-format-switch__slider" aria-hidden="true" />
                     {FORMAT_OPTIONS.map((option) => (
@@ -550,7 +549,7 @@ export default function EventsResults() {
                     </div>
                   ) : (
                     <>
-                      <div className="events-list">
+                      <ul className="events-list collection-list">
                         {events.map((event) => {
                           const isFull = event.unlimited_capacity ? false : (event.is_full || false);
                           const registrationOpen = event.registration_open !== false;
@@ -562,84 +561,85 @@ export default function EventsResults() {
                             );
 
                           return (
-                            <div
-                              key={event.id}
-                              onClick={() => navigate(`/events/${event.id}`, {
-                                state: {
-                                  fromResults: resultsReturnTarget,
-                                },
-                              })}
-                              className="event-card"
-                            >
-                              <div className="event-card-info">
-                                <h3 className="event-card-title">
-                                  {highlightMatches(event.title, searchTerms)}
-                                </h3>
-                                {event.organizer && (
-                                  <p className="event-card-organizer">
-                                    {highlightMatches(event.organizer, searchTerms)}
+                            <li key={event.id} className="collection-list__item">
+                              <div
+                                onClick={() => navigate(`/events/${event.id}`, {
+                                  state: {
+                                    fromResults: resultsReturnTarget,
+                                  },
+                                })}
+                                className="event-card"
+                              >
+                                <div className="event-card-info">
+                                  <h3 className="event-card-title">
+                                    {highlightMatches(event.title, searchTerms)}
+                                  </h3>
+                                  {event.organizer && (
+                                    <p className="event-card-organizer">
+                                      {highlightMatches(event.organizer, searchTerms)}
+                                    </p>
+                                  )}
+                                  <p className="event-card-description">
+                                    {(() => {
+                                      const descriptionSnippet = buildDescriptionSnippet(event.description, searchTerms);
+                                      if (!descriptionSnippet) {
+                                        return t("No description available yet.");
+                                      }
+                                      return highlightMatches(descriptionSnippet, searchTerms);
+                                    })()}
                                   </p>
-                                )}
-                                <p className="event-card-description">
-                                  {(() => {
-                                    const descriptionSnippet = buildDescriptionSnippet(event.description, searchTerms);
-                                    if (!descriptionSnippet) {
-                                      return t("No description available yet.");
-                                    }
-                                    return highlightMatches(descriptionSnippet, searchTerms);
-                                  })()}
-                                </p>
-                                <div className="event-card-meta">
-                                  <span className="event-card-meta-item">
-                                    <span className="event-card-tag">•</span>
-                                    {event.format === "online"
-                                      ? t("Online Session")
-                                      : event.city
-                                        ? `${event.city}, ${event.country}`
-                                        : t("TBD")}
-                                  </span>
-                                  <span className="event-card-meta-item">
-                                    {formatDate(event.date_start)
-                                      ? formatDate(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
-                                          month: "short",
-                                          day: "numeric",
-                                          year: "numeric",
-                                        }).toUpperCase()
-                                      : t("TBD")}
-                                  </span>
-                                  {(event.tags || []).slice(0, 2).map((tag) => (
-                                    <span key={tag} className="event-card-tag">
-                                      #{tag}
+                                  <div className="event-card-meta">
+                                    <span className="event-card-meta-item">
+                                      <span className="event-card-tag">•</span>
+                                      {event.format === "online"
+                                        ? t("Online Session")
+                                        : event.city
+                                          ? `${event.city}, ${event.country}`
+                                          : t("TBD")}
                                     </span>
-                                  ))}
+                                    <span className="event-card-meta-item">
+                                      {formatDate(event.date_start)
+                                        ? formatDate(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                            year: "numeric",
+                                          }).toUpperCase()
+                                        : t("TBD")}
+                                    </span>
+                                    {(event.tags || []).slice(0, 2).map((tag) => (
+                                      <span key={tag} className="event-card-tag">
+                                        #{tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="event-card-right">
+                                  <span className={`event-card-status ${getPrimaryStatusDisplay(event, t).className}`}>
+                                    {getPrimaryStatusDisplay(event, t).label}
+                                  </span>
+                                  <span className={`event-card-spots ${isFull ? "event-card-spots--full" : "event-card-spots--open"}`}>
+                                    {event.unlimited_capacity ? t("Unlimited") : isFull ? t("Full") : t("{{count}} left", { count: spotsLeft })}
+                                  </span>
+
+                                  {!companyUser && (
+                                    <button
+                                      className={getRegistrationClassName(event.id)}
+                                      onClick={(e) => {
+                                        if (!registeredEvents.has(event.id)) handleRegister(e, event.id);
+                                        else e.stopPropagation();
+                                      }}
+                                      disabled={event.status === "past" || !registrationOpen || (isFull && event.validation === "manual")}
+                                    >
+                                      {getRegistrationLabel(event, isFull, registrationOpen)}
+                                    </button>
+                                  )}
                                 </div>
                               </div>
-
-                              <div className="event-card-right">
-                                <span className={`event-card-status ${getPrimaryStatusDisplay(event, t).className}`}>
-                                  {getPrimaryStatusDisplay(event, t).label}
-                                </span>
-                                <span className={`event-card-spots ${isFull ? "event-card-spots--full" : "event-card-spots--open"}`}>
-                                  {event.unlimited_capacity ? t("Unlimited") : isFull ? t("Full") : t("{{count}} left", { count: spotsLeft })}
-                                </span>
-
-                                {!companyUser && (
-                                  <button
-                                    className={getRegistrationClassName(event.id)}
-                                    onClick={(e) => {
-                                      if (!registeredEvents.has(event.id)) handleRegister(e, event.id);
-                                      else e.stopPropagation();
-                                    }}
-                                    disabled={event.status === "past" || !registrationOpen || (isFull && event.validation === "manual")}
-                                  >
-                                    {getRegistrationLabel(event, isFull, registrationOpen)}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
+                            </li>
                           );
                         })}
-                      </div>
+                      </ul>
 
                       {totalPages > 1 && (
                         <div className="events-pagination">
@@ -682,10 +682,10 @@ export default function EventsResults() {
               {t("You must be logged in to register for scientific events.")}
             </p>
             <div className="events-modal-actions">
-              <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => navigate("/login")}>
+              <button className="btn btn-primary events-modal-btn" onClick={() => navigate("/login")}>
                 {t("Sign In to Account")}
               </button>
-              <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => navigate("/register")}>
+              <button className="btn btn-secondary events-modal-btn" onClick={() => navigate("/register")}>
                 {t("Create New Identity")}
               </button>
             </div>

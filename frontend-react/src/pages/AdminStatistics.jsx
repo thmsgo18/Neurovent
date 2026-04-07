@@ -134,17 +134,19 @@ export default function AdminStatistics() {
             <div className="admin-section-head">
               <h2 className="admin-section-title">{t("Top Events by Confirmed Registrations")}</h2>
             </div>
-            <div className="admin-top-list">
+            <ul className="admin-top-list collection-list collection-list--compact">
               {(events.top_5_popular || []).map((item) => (
-                <div key={item.id} className="admin-top-item">
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span> {translateEventFormat(item.format, t)} · {translateEventStatus(item.status, t)}</span>
+                <li key={item.id} className="collection-list__item">
+                  <div className="admin-top-item">
+                    <div>
+                      <strong>{item.title}</strong>
+                      <span> {translateEventFormat(item.format, t)} · {translateEventStatus(item.status, t)}</span>
+                    </div>
+                    <span>{t("{{count}} confirmed", { count: item.confirmed_count })}</span>
                   </div>
-                  <span>{t("{{count}} confirmed", { count: item.confirmed_count })}</span>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         </div>
       </div>
