@@ -444,8 +444,8 @@
 @media (max-width: 640px) {
   .register-right,
   .register-left {
-    padding-left: var(--page-gutter);
-    padding-right: var(--page-gutter);
+    padding-left: max(var(--page-gutter), 16px);
+    padding-right: max(var(--page-gutter), 16px);
   }
 
   .register-right {
@@ -460,8 +460,7 @@
   .register-form-wrap {
     max-width: none;
     margin: 0 auto;
-    padding-top: 20px;
-    padding-bottom: 24px;
+    padding: 20px 4px 24px;
   }
 
   .register-form-row {
