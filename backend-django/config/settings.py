@@ -1,9 +1,11 @@
 from pathlib import Path
 from datetime import timedelta
+import logging
 from decouple import config
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-wi)u4idasouy08dmw=+u7i*3%bg^o3ihyncq4s@b^6tkj(zzra')
 
@@ -212,15 +214,28 @@ MEDIA_ROOT = BASE_DIR / 'media'
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=15, cast=int)
+EMAIL_FAIL_SILENTLY = config('EMAIL_FAIL_SILENTLY', default=False, cast=bool)
 
 if EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     DEFAULT_FROM_EMAIL = f"Neurovent <{EMAIL_HOST_USER}>"
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'Neurovent <noreply@localhost>'
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+if any([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]) and not all([EMAIL_HOST, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD]):
+    logger.warning(
+        "Email configuration is incomplete. Django will not use SMTP until EMAIL_HOST, EMAIL_HOST_USER and EMAIL_HOST_PASSWORD are all set."
+    )
+
+if EMAIL_BACKEND == 'django.core.mail.backends.console.EmailBackend':
+    logger.warning("Django email backend is set to console. Emails are printed locally and not actually sent.")
 
 # URL du frontend — utilisée dans les liens de reset envoyés par email
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')

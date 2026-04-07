@@ -49,10 +49,22 @@ Exemple minimal :
 ```env
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
+EMAIL_USE_TLS=True
 EMAIL_HOST_USER=neurovent.noreply@gmail.com
 EMAIL_HOST_PASSWORD=xxxxxxxxxxxxxxxx
-FRONTEND_URL=http://localhost:3000
+EMAIL_FAIL_SILENTLY=False
+FRONTEND_URL=http://localhost:5173
 ```
+
+Pour un envoi reel avec Gmail :
+- utilisez un mot de passe d'application Google, pas votre mot de passe principal
+- copiez [backend-django/.env.example](/Users/thomas/Documents/Université/Master/IAD/S2/Prog%20Web/Projet/backend-django/.env.example) vers `backend-django/.env`
+- laissez `EMAIL_FAIL_SILENTLY=False` pour voir immediatement si un envoi a echoue
+
+Comportement actuel :
+- si la config SMTP est complete, Django envoie via SMTP
+- si elle est absente, Django affiche les emails dans le terminal et ne les envoie pas reellement
+- si SMTP echoue, l'erreur est maintenant journalisee et remontee quand `EMAIL_FAIL_SILENTLY=False`
 
 Variables utiles en prod :
 

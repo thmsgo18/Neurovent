@@ -26,9 +26,13 @@ Fonctions disponibles :
   - send_company_verification_result(company)
 """
 
+import logging
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────
@@ -62,7 +66,16 @@ def _send(subject, text_message, recipient_email, html_message=None):
             msg.attach_alternative(html_message, "text/html")
         msg.send()
     except Exception:
-        pass  # Équivalent à fail_silently=True
+        logger.exception(
+            "Email delivery failed",
+            extra={
+                "recipient_email": recipient_email,
+                "email_subject": subject,
+                "email_backend": settings.EMAIL_BACKEND,
+            },
+        )
+        if not getattr(settings, 'EMAIL_FAIL_SILENTLY', False):
+            raise
 
 
 def _event_detail_items(event, force_full_details=False):
