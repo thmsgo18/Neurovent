@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, ChevronDown, Sparkles, TrendingUp } from "lucide-react";
 import "../styles/Events.css";
@@ -36,12 +36,6 @@ function buildResultsSearch({ query, format, tagIds = [] }) {
   tagIds.forEach((tagId) => params.append("tag", String(tagId)));
   const queryString = params.toString();
   return `/events/results${queryString ? `?${queryString}` : ""}`;
-}
-
-function truncateText(value, limit) {
-  if (!value) return "No description available yet.";
-  if (value.length <= limit) return value;
-  return `${value.slice(0, limit).trim()}...`;
 }
 
 function getDeadlineSoonLabel(value, t) {
@@ -110,6 +104,102 @@ function getSpotlightBadge(event, index, sortedEvents) {
     return "Unlimited capacity";
   }
   return null;
+}
+
+function SpotlightEventCard({ event, index, sortedEvents, t, locale, onOpen }) {
+  const descRef = useRef(null);
+  const [descLines, setDescLines] = useState(3);
+  const primaryStatus = getPrimaryStatusDisplay(event, t);
+  const spotlightBadge = getSpotlightBadge(event, index, sortedEvents);
+
+  useEffect(() => {
+    if (!event.description || typeof window === "undefined") return undefined;
+    const element = descRef.current;
+    if (!element) return undefined;
+
+    const updateDescLines = () => {
+      const styles = window.getComputedStyle(element);
+      const fontSize = Number.parseFloat(styles.fontSize) || 14;
+      const lineHeight = Number.parseFloat(styles.lineHeight) || fontSize * 1.7;
+      const availableHeight = element.clientHeight;
+      const nextLines = Math.max(0, Math.floor((availableHeight + 1) / lineHeight));
+      setDescLines((current) => (current === nextLines ? current : nextLines));
+    };
+
+    updateDescLines();
+
+    const resizeObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(updateDescLines);
+    });
+
+    resizeObserver.observe(element);
+    if (element.parentElement) resizeObserver.observe(element.parentElement);
+
+    return () => resizeObserver.disconnect();
+  }, [event.description]);
+
+  return (
+    <li className="card-grid-list__item">
+      <button
+        type="button"
+        className="events-spotlight-card"
+        onClick={onOpen}
+      >
+        <div className="events-spotlight-card-statuses">
+          <span className={`events-spotlight-card-status ${primaryStatus.className}`}>
+            {primaryStatus.label}
+          </span>
+        </div>
+        {spotlightBadge ? (
+          <span className="events-spotlight-card-badge">
+            <TrendingUp size={13} />
+            {t(spotlightBadge)}
+          </span>
+        ) : null}
+        <h3>{event.title}</h3>
+        <div className="events-spotlight-card-meta">
+          <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--organizer">
+            {event.organizer || t("Organizer")}
+          </span>
+          <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--date">
+            {event.date_start
+              ? new Date(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
+              : t("TBD")}
+          </span>
+        </div>
+        {event.description ? (
+          <p
+            ref={descRef}
+            className={`events-spotlight-card-desc${descLines <= 0 ? " events-spotlight-card-desc--hidden" : ""}`}
+            style={{
+              WebkitLineClamp: Math.max(1, descLines),
+              "--events-spotlight-desc-lines": Math.max(1, descLines),
+            }}
+          >
+            {event.description}
+          </p>
+        ) : null}
+        <div className="events-spotlight-tags">
+          <span className="events-spotlight-tag events-spotlight-tag--location">
+            {event.format === "online" ? t("Online") : event.city || t("TBD")}
+          </span>
+          <span className="events-spotlight-tag events-spotlight-tag--registered">
+            {t("{{count}} registered", { count: event.registered_count || 0 })}
+          </span>
+          <span className="events-spotlight-tag events-spotlight-tag--deadline events-spotlight-tags-deadline">
+            {event.registration_deadline
+              ? t("Closes {{date}}", {
+                  date: new Date(event.registration_deadline).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric" }).toUpperCase(),
+                })
+              : t("Open until start")}
+          </span>
+          {(event.tags || []).slice(0, 1).map((tag) => (
+            <span key={tag} className="events-spotlight-tag events-spotlight-tag--topic">#{tag}</span>
+          ))}
+        </div>
+      </button>
+    </li>
+  );
 }
 
 export default function Events() {
@@ -372,64 +462,15 @@ export default function Events() {
           ) : spotlightEvents.length > 0 ? (
             <ul className={`events-spotlight-cards card-grid-list${isSpotlightTransitioning ? " events-spotlight-cards--transitioning" : ""}`}>
               {spotlightEvents.map((event, index) => (
-                (() => {
-                  const primaryStatus = getPrimaryStatusDisplay(event, t);
-                  const spotlightBadge = getSpotlightBadge(event, index, popularEvents);
-
-                  return (
-                    <li key={`${event.id}-${index}`} className="card-grid-list__item">
-                      <button
-                        type="button"
-                        className="events-spotlight-card"
-                        onClick={() => navigate(`/events/${event.id}`)}
-                      >
-                        <div className="events-spotlight-card-statuses">
-                          <span className={`events-spotlight-card-status ${primaryStatus.className}`}>
-                            {primaryStatus.label}
-                          </span>
-                        </div>
-                        {spotlightBadge ? (
-                          <span className="events-spotlight-card-badge">
-                            <TrendingUp size={13} />
-                            {t(spotlightBadge)}
-                          </span>
-                        ) : null}
-                        <h3>{event.title}</h3>
-                        <p className="events-spotlight-card-desc">
-                          {truncateText(event.description, 118)}
-                        </p>
-                        <div className="events-spotlight-card-meta">
-                          <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--organizer">
-                            {event.organizer || t("Organizer")}
-                          </span>
-                          <span className="events-spotlight-card-meta-item events-spotlight-card-meta-item--date">
-                            {event.date_start
-                              ? new Date(event.date_start).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric", year: "numeric" }).toUpperCase()
-                              : t("TBD")}
-                          </span>
-                        </div>
-                        <div className="events-spotlight-tags">
-                          <span className="events-spotlight-tag events-spotlight-tag--location">
-                            {event.format === "online" ? t("Online") : event.city || t("TBD")}
-                          </span>
-                          <span className="events-spotlight-tag events-spotlight-tag--registered">
-                            {t("{{count}} registered", { count: event.registered_count || 0 })}
-                          </span>
-                          <span className="events-spotlight-tag events-spotlight-tag--deadline events-spotlight-tags-deadline">
-                            {event.registration_deadline
-                              ? t("Closes {{date}}", {
-                                  date: new Date(event.registration_deadline).toLocaleDateString(locale === "fr" ? "fr-FR" : "en-US", { month: "short", day: "numeric" }).toUpperCase(),
-                                })
-                              : t("Open until start")}
-                          </span>
-                          {(event.tags || []).slice(0, 1).map((tag) => (
-                            <span key={tag} className="events-spotlight-tag events-spotlight-tag--topic">#{tag}</span>
-                          ))}
-                        </div>
-                      </button>
-                    </li>
-                  );
-                })()
+                <SpotlightEventCard
+                  key={`${event.id}-${index}`}
+                  event={event}
+                  index={index}
+                  sortedEvents={popularEvents}
+                  t={t}
+                  locale={locale}
+                  onOpen={() => navigate(`/events/${event.id}`)}
+                />
               ))}
             </ul>
           ) : (
