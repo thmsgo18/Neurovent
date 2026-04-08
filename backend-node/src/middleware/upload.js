@@ -1,63 +1,65 @@
+'use strict';
+
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const MEDIA_ROOT = path.join(__dirname, '..', '..', 'media');
+// Crée les dossiers media si nécessaires
+const MEDIA_ROOT = path.join(__dirname, '../../media');
+['logos', 'banners', 'verification_docs'].forEach(dir => {
+  const fullPath = path.join(MEDIA_ROOT, dir);
+  if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
+});
 
-function storageFor(folder) {
-  const dest = path.join(MEDIA_ROOT, folder);
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-
+function createStorage(subfolder) {
   return multer.diskStorage({
-    destination: (req, file, cb) => cb(null, dest),
+    destination: (req, file, cb) => {
+      cb(null, path.join(MEDIA_ROOT, subfolder));
+    },
     filename: (req, file, cb) => {
-      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname).toLowerCase();
-      cb(null, folder + '-' + unique + ext);
+      const ext = path.extname(file.originalname);
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      cb(null, `${unique}${ext}`);
     },
   });
 }
 
-function fileFilter(req, file, cb) {
+function imageFilter(req, file, cb) {
   const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
   const ext = path.extname(file.originalname).toLowerCase();
   if (allowed.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Format de fichier non supporté. Utilisez JPG, PNG, GIF ou WebP.'));
+    cb(new Error('Seules les images sont acceptées (jpg, png, gif, webp).'));
   }
 }
 
-// Upload logo company → media/logos/
+function documentFilter(req, file, cb) {
+  const allowed = ['.pdf', '.jpg', '.jpeg', '.png'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowed.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Seuls les fichiers PDF et images sont acceptés.'));
+  }
+}
+
 const uploadLogo = multer({
-  storage: storageFor('logos'),
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo
+  storage: createStorage('logos'),
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
 }).single('company_logo');
 
-// Upload bannière event → media/banners/
 const uploadBanner = multer({
-  storage: storageFor('banners'),
-  fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo
+  storage: createStorage('banners'),
+  fileFilter: imageFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 }).single('banner');
 
-/**
- * Middleware combiné pour les routes company profile.
- * Gère les erreurs multer proprement (retourne 400 au lieu de 500).
- */
-function handleLogoUpload(req, res, next) {
-  uploadLogo(req, res, (err) => {
-    if (err) return res.status(400).json({ error: err.message });
-    next();
-  });
-}
+const uploadDocument = multer({
+  storage: createStorage('verification_docs'),
+  fileFilter: documentFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+}).single('verification_document');
 
-function handleBannerUpload(req, res, next) {
-  uploadBanner(req, res, (err) => {
-    if (err) return res.status(400).json({ error: err.message });
-    next();
-  });
-}
-
-module.exports = { handleLogoUpload, handleBannerUpload };
+module.exports = { uploadLogo, uploadBanner, uploadDocument };
