@@ -209,8 +209,8 @@ Credentials mock :
 
 | Identifiant | Mot de passe | Role |
 |------------|--------------|------|
-| `researcher@test.com` | `researcher123` | PARTICIPANT |
-| `admin` | `admin123` | COMPANY |
+| `participant@test.com` | `participant123` | PARTICIPANT |
+| `company-test` | `company123` | COMPANY |
 
 ## Problemes frequents
 

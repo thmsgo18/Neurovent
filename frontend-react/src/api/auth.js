@@ -5,17 +5,17 @@ const USE_MOCK = false;
 // ---- MOCK CREDENTIALS ----
 const MOCK_CREDENTIALS = [
   {
-    email: "researcher@test.com",
+    email: "participant@test.com",
     identifier: null,
-    password: "researcher123",
+    password: "participant123",
     role: "PARTICIPANT",
-    access: "mock_access_researcher_abc123",
-    refresh: "mock_refresh_researcher",
+    access: "mock_access_participant_abc123",
+    refresh: "mock_refresh_participant",
   },
   {
     email: null,
-    identifier: "admin",
-    password: "admin123",
+    identifier: "company-test",
+    password: "company123",
     role: "COMPANY",
     access: "mock_access_company_xyz456",
     refresh: "mock_refresh_company",

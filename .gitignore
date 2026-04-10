@@ -103,6 +103,11 @@ temp/
 *.pid.lock
 
 # -----------------------------
+# Dev tooling (local only)
+# -----------------------------
+stagewise.json
+
+# -----------------------------
 # Uploads utilisateurs (logos, images)
 # -----------------------------
 backend-django/logos/
