@@ -279,6 +279,6 @@ python manage.py test users events
 
 | Name | GitHub | Role |
 |------|--------|------|
-| Thomas Gourgues | [thmsgo18](https://github.com/thmsgo18) | Backend Django |
+| Thomas Gourmelen | [thmsgo18](https://github.com/thmsgo18) | Backend Django |
 | Noureddine Mohammedi | [Mr-Noredine](https://github.com/Mr-Noredine) | Frontend React |
 | Azouaou Zouaoui | [Azouaou1](https://github.com/Azouaou1) | Backend Node / Express |
