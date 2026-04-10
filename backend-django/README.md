@@ -2,22 +2,13 @@
 
 API REST principale du projet Neurovent.
 
-Elle gere :
-- authentification JWT
-- profils participant / organization / admin
-- events
-- registrations
-- moderation admin
-- statistiques organization et admin
-- emails systeme
-
 ## Stack
 
 - Django 6
 - Django REST Framework
-- djangorestframework-simplejwt
+- djangorestframework-simplejwt + token blacklist
 - django-filter
-- drf-spectacular
+- drf-spectacular (Swagger / ReDoc)
 - django-cors-headers
 - Pillow
 - python-decouple
@@ -35,16 +26,17 @@ python manage.py runserver
 ```
 
 URLs locales :
-- API : [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- Django admin : [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
-- Swagger : [http://127.0.0.1:8000/api/docs/](http://127.0.0.1:8000/api/docs/)
-- ReDoc : [http://127.0.0.1:8000/api/redoc/](http://127.0.0.1:8000/api/redoc/)
+
+| URL | Description |
+|-----|-------------|
+| http://127.0.0.1:8000 | API REST |
+| http://127.0.0.1:8000/admin/ | Interface Django admin |
+| http://127.0.0.1:8000/api/docs/ | Swagger UI |
+| http://127.0.0.1:8000/api/redoc/ | ReDoc |
 
 ## Configuration `.env`
 
-Creer un fichier `.env` dans `backend-django/`.
-
-Exemple minimal :
+Creer un fichier `.env` dans `backend-django/`. Copier `.env.example` comme base.
 
 ```env
 EMAIL_HOST=smtp.gmail.com
@@ -53,226 +45,192 @@ EMAIL_USE_TLS=True
 EMAIL_HOST_USER=neurovent.noreply@gmail.com
 EMAIL_HOST_PASSWORD=xxxxxxxxxxxxxxxx
 EMAIL_FAIL_SILENTLY=False
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3000
 ```
 
-Pour un envoi reel avec Gmail :
-- utilisez un mot de passe d'application Google, pas votre mot de passe principal
-- copiez [backend-django/.env.example](/Users/thomas/Documents/Université/Master/IAD/S2/Prog%20Web/Projet/backend-django/.env.example) vers `backend-django/.env`
-- laissez `EMAIL_FAIL_SILENTLY=False` pour voir immediatement si un envoi a echoue
-
-Comportement actuel :
-- si la config SMTP est complete, Django envoie via SMTP
-- si elle est absente, Django affiche les emails dans le terminal et ne les envoie pas reellement
-- si SMTP echoue, l'erreur est maintenant journalisee et remontee quand `EMAIL_FAIL_SILENTLY=False`
-
-Variables utiles en prod :
+Variables supplementaires pour la prod :
 
 ```env
 SECRET_KEY=change-me
 DEBUG=False
-ALLOWED_HOSTS=localhost,127.0.0.1,ton-domaine.fr
+ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
-## Applications Django
+Comportement email :
+- config SMTP presente → envoi reel via SMTP
+- config absente → affichage dans le terminal uniquement
+- `EMAIL_FAIL_SILENTLY=False` → erreur remontee immediatement si envoi echoue
 
-```text
+## Structure des applications
+
+```
 backend-django/
-├── config/              # settings.py, urls.py
+├── config/              # settings.py, urls.py principal
 ├── users/               # auth, profils, moderation admin, verification organization
-├── events/              # CRUD events, filtres, stats, exports, vues admin
-├── registrations/       # registration lifecycle, waitlist, moderation, CSV
+├── events/              # CRUD events, filtres, stats, exports CSV, vues admin
+├── registrations/       # cycle de vie registration, waitlist, moderation
 ├── tags/                # topics et taxonomie
-├── emails.py            # envoi d'emails
-├── scripts/             # scripts utilitaires
-└── media/               # uploads locaux
+├── emails.py            # envoi d'emails systeme
+├── scripts/             # reset_and_seed_demo.py
+└── media/               # uploads locaux (avatars, logos, documents)
 ```
 
 ## Modele metier
 
-### Users
+### Roles utilisateur
 
-Un seul `CustomUser` avec trois roles :
-- `PARTICIPANT`
-- `COMPANY`
-- `ADMIN`
+Un seul modele `CustomUser` avec trois roles : `PARTICIPANT`, `COMPANY`, `ADMIN`.
 
-Champs importants ajoutes au fil du projet :
+### Event
 
-#### Participant
-- `participant_profile_type`
-- `school_name`
-- `study_level`
-- `professional_company_name`
-- `job_title`
-- `job_started_at`
-- `participant_avatar_url`
-- `participant_bio`
-- `favorite_domain`
-- `personal_website_url`
-- `github_url`
-- `participant_linkedin_url`
-
-#### Organization
-- `company_identifier`
-- `recovery_email`
-- `company_logo` / `company_logo_url`
-- `company_description`
-- `website_url`
-- `youtube_url`
-- `linkedin_url`
-- `twitter_url`
-- `instagram_url`
-- `facebook_url`
-- `siret`
-- `legal_representative`
-- `verification_status`
-- `verification_document`
-- `review_note`
-- `verified_at`
-
-### Events
-
-L'entite `Event` gere notamment :
 - `status` : `DRAFT`, `PUBLISHED`, `CANCELLED`
 - `format` : `ONSITE`, `ONLINE`, `HYBRID`
-- `registration_mode` : `AUTO`, `VALIDATION`
+- `registration_mode` : `AUTO` (confirmation immediate) ou `VALIDATION` (review manuelle)
+- `capacity` / `unlimited_capacity`
 - `registration_deadline`
 - `allow_registration_during_event`
-- `capacity`
-- `unlimited_capacity`
-- `view_count`
+- Visibilite de l'adresse : `address_visibility`, `address_reveal_date`
+- Visibilite du lien online : `online_visibility`, `online_reveal_date`
 
-Visibilite publique :
-- adresse onsite :
-  - `address_visibility`
-  - `address_reveal_date`
-- lien online :
-  - `online_visibility`
-  - `online_reveal_date`
+### Registration
 
-Suivi notifications :
-- `reminder_7d_sent_at`
-- `reminder_1d_sent_at`
-- `reminder_3h_sent_at`
-- `address_reveal_email_sent_at`
-- `online_reveal_email_sent_at`
-- `almost_full_notified_at`
-- `full_notified_at`
-- `organizer_digest_sent_at`
+Statuts : `PENDING`, `CONFIRMED`, `REJECTED`, `CANCELLED`, `WAITLIST`
 
-### Registrations
+Le backend gere automatiquement :
+- auto-confirmation selon le `registration_mode`
+- promotion depuis la waitlist quand une place se libere
+- envoi d'emails a chaque changement de statut
 
-Statuts :
-- `PENDING`
-- `CONFIRMED`
-- `REJECTED`
-- `CANCELLED`
-- `WAITLIST`
+## Endpoints — ce que le frontend consomme
 
-Le backend gere :
-- auto-confirmation
-- validation manuelle
-- promotion automatique depuis la waitlist
-- suppression par l'organization avec email
+### Auth
 
-## Fonctionnalites backend importantes
+| Methode | URL | Description |
+|---------|-----|-------------|
+| POST | `/api/auth/register/participant/` | Inscription participant |
+| POST | `/api/auth/register/company/` | Inscription organization |
+| POST | `/api/auth/login/participant/` | Login par email + password |
+| POST | `/api/auth/login/company/` | Login par company_identifier + password |
+| POST | `/api/auth/token/refresh/` | Renouvellement du access token |
+| POST | `/api/auth/logout/` | Blacklist du refresh token |
+| GET | `/api/auth/me/` | Profil de l'utilisateur connecte |
+| PATCH | `/api/auth/me/` | Mise a jour du profil |
+| DELETE | `/api/auth/me/` | Suppression du compte (RGPD) |
+| PATCH | `/api/auth/me/password/` | Changement de mot de passe |
+| POST | `/api/auth/password-reset/` | Envoi email de reset |
+| POST | `/api/auth/password-reset/confirm/` | Confirmation reset avec uid + token |
+| GET | `/api/auth/participants/<id>/` | Profil public d'un participant |
 
-### Authentification
-- login participant par email
-- login organization par `company_identifier`
-- JWT access + refresh
-- logout avec blacklist
+### Organizations (public)
 
-### Verification organization
-- verification auto via SIRET / SIRENE
-- review manuelle
-- upload de document justificatif
-
-### Recherche events
-- filtres par format, tags, ville, pays, ordering
-- recherche texte flexible
-- filtre organization
-- filtre `upcoming_only`
-- endpoint admin dedie
-
-### Recherche organizations
-- profil public organization
-- recherche publique d'organizations
-- liste admin organizations avec recherche sur les champs du profil
-
-### Statistiques
-
-#### Organization
-- `GET /api/events/dashboard-stats/`
-- exports CSV :
-  - `export-summary`
-  - `export-performance`
-
-#### Admin
-- `GET /api/auth/admin/stats/`
-- `GET /api/auth/admin/users/`
-- `GET /api/auth/admin/companies/`
-- `GET /api/events/admin/`
-
-## Endpoints principaux
-
-### Auth et profil
-
-- `POST /api/auth/register/participant/`
-- `POST /api/auth/register/company/`
-- `POST /api/auth/login/participant/`
-- `POST /api/auth/login/company/`
-- `POST /api/auth/token/refresh/`
-- `POST /api/auth/logout/`
-- `GET /api/auth/me/`
-- `PATCH /api/auth/me/`
-- `DELETE /api/auth/me/`
-- `PATCH /api/auth/me/password/`
-- `POST /api/auth/password-reset/`
-- `POST /api/auth/password-reset/confirm/`
-
-### Admin users / organizations
-
-- `GET /api/auth/admin/users/`
-- `GET /api/auth/admin/users/<id>/`
-- `PATCH /api/auth/admin/users/<id>/suspend/`
-- `PATCH /api/auth/admin/users/<id>/activate/`
-- `DELETE /api/auth/admin/users/<id>/delete/`
-- `GET /api/auth/admin/companies/`
-- `GET /api/auth/admin/companies/pending/`
-- `PATCH /api/auth/admin/companies/<id>/verify/`
-- `GET /api/auth/admin/stats/`
+| Methode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/companies/` | Liste publique des organizations |
+| GET | `/api/companies/<id>/` | Profil public d'une organization |
 
 ### Events
 
-- `GET /api/events/`
-- `GET /api/events/<id>/`
-- `POST /api/events/create/`
-- `PATCH /api/events/<id>/update/`
-- `DELETE /api/events/<id>/delete/`
-- `GET /api/events/my-events/`
-- `GET /api/events/<id>/stats/`
-- `GET /api/events/dashboard-stats/`
-- `GET /api/events/dashboard-stats/export-summary/`
-- `GET /api/events/dashboard-stats/export-performance/`
-- `GET /api/events/admin/`
-- `GET /api/events/admin/<id>/`
-- `DELETE /api/events/admin/<id>/delete/`
+| Methode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/events/` | Liste publique (filtrable) |
+| GET | `/api/events/<id>/` | Detail d'un event |
+| POST | `/api/events/create/` | Creer un event (COMPANY) |
+| PATCH | `/api/events/<id>/update/` | Modifier un event (COMPANY) |
+| DELETE | `/api/events/<id>/delete/` | Supprimer un event (COMPANY) |
+| GET | `/api/events/my-events/` | Events de l'organization connectee |
+| GET | `/api/events/<id>/stats/` | Stats d'un event (COMPANY) |
+| GET | `/api/events/dashboard-stats/` | Stats globales organization |
+| GET | `/api/events/dashboard-stats/export-summary/` | Export CSV summary |
+| GET | `/api/events/dashboard-stats/export-performance/` | Export CSV performance |
 
 ### Registrations
 
-- `POST /api/registrations/create/`
-- `GET /api/registrations/my/`
-- `PATCH /api/registrations/<id>/cancel/`
-- `GET /api/registrations/event/<event_id>/`
-- `PATCH /api/registrations/<id>/status/`
-- `DELETE /api/registrations/<id>/remove/`
-- `GET /api/registrations/event/<event_id>/export/`
+| Methode | URL | Description |
+|---------|-----|-------------|
+| POST | `/api/registrations/create/` | S'inscrire a un event |
+| GET | `/api/registrations/my/` | Registrations de l'utilisateur connecte |
+| PATCH | `/api/registrations/<id>/cancel/` | Annuler sa registration |
+| GET | `/api/registrations/event/<event_id>/` | Liste des registrations d'un event (COMPANY) |
+| PATCH | `/api/registrations/<id>/status/` | Changer le statut (COMPANY) |
+| DELETE | `/api/registrations/<id>/remove/` | Supprimer une registration (COMPANY) |
+| GET | `/api/registrations/event/<event_id>/export/` | Export CSV des registrations |
+
+### Admin
+
+| Methode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/auth/admin/users/` | Liste des participants |
+| GET | `/api/auth/admin/users/<id>/` | Detail participant |
+| PATCH | `/api/auth/admin/users/<id>/suspend/` | Suspendre un compte |
+| PATCH | `/api/auth/admin/users/<id>/activate/` | Reactiver un compte |
+| DELETE | `/api/auth/admin/users/<id>/delete/` | Supprimer un compte |
+| GET | `/api/auth/admin/companies/` | Liste des organizations |
+| GET | `/api/auth/admin/companies/pending/` | Organizations en attente de verification |
+| PATCH | `/api/auth/admin/companies/<id>/verify/` | Verifier / refuser une organization |
+| GET | `/api/auth/admin/stats/` | Statistiques globales de la plateforme |
+| GET | `/api/events/admin/` | Tous les events (admin) |
+| DELETE | `/api/events/admin/<id>/delete/` | Supprimer un event (admin) |
+
+### Tags
+
+| Methode | URL | Description |
+|---------|-----|-------------|
+| GET | `/api/tags/` | Liste des topics disponibles |
+
+## Format des reponses
+
+### Login participant
+
+```json
+POST /api/auth/login/participant/
+→ {
+    "access": "eyJ...",
+    "refresh": "eyJ...",
+    "role": "PARTICIPANT"
+  }
+```
+
+### Login company
+
+```json
+POST /api/auth/login/company/
+→ {
+    "access": "eyJ...",
+    "refresh": "eyJ...",
+    "role": "COMPANY"
+  }
+```
+
+Le payload JWT contient : `role`, `email` ou `company_identifier`, `first_name`, `last_name`.
+
+### Erreurs
+
+Format uniforme :
+
+```json
+{ "detail": "message d'erreur" }
+```
+
+Erreurs de validation DRF :
+
+```json
+{ "field_name": ["message"] }
+```
+
+## Headers attendus par le backend
+
+```
+Content-Type:  application/json
+Authorization: Bearer <access_token>   ← pour les endpoints proteges
+```
+
+Les endpoints publics (`GET /api/events/`, `GET /api/companies/`, etc.) ne necessitent pas de token.
+
+## CORS
+
+Le frontend tourne sur `http://localhost:3000`. Le backend accepte les requetes cross-origin depuis cette origine en dev.
 
 ## Script de demo
-
-Un script de reset / seed est disponible :
 
 ```bash
 cd backend-django
@@ -280,49 +238,43 @@ source .venv/bin/activate
 python scripts/reset_and_seed_demo.py
 ```
 
-Il recree :
-- 20 participants
-- 20 organizations
-- 1 admin
-- plusieurs events
-- plusieurs registrations
+Genere : 20 participants, 20 organizations, 1 admin, plusieurs events et registrations.
+
+Comptes de demo :
+
+| Role | Identifiant | Mot de passe |
+|------|-------------|--------------|
+| Participant | `amelie.rousseau@participants.neurovent.demo` | `Participant2026!` |
+| Organization | `atlas-neuro-labs` | `Company2026!` |
+| Admin | `admin@neurovent.demo` | `Admin2026!` |
 
 ## Migrations
 
-Toujours faire apres un pull :
+Toujours executer apres un pull :
 
 ```bash
-cd backend-django
-source .venv/bin/activate
 python manage.py migrate
 ```
 
-Important :
-- les migrations `events` couvrent maintenant aussi les champs de notification email
-- si une vue plante sur un champ inexistant, verifier d'abord que `migrate` a bien ete lance
+Si une vue plante sur un champ inexistant → verifier que `migrate` a bien ete lance.
 
 ## Tests
-
-Suite actuelle :
 
 ```bash
 python manage.py test users events registrations tags
 ```
 
-Les verifications les plus utiles apres une grosse modif :
+Verification rapide apres une grosse modif :
 
 ```bash
 python manage.py test users events
 ```
 
-Etat actuel :
-- `79` tests sur `users` et `events`
-- tests complementaires sur `registrations` et `tags`
+79 tests actifs sur `users` et `events`, tests complementaires sur `registrations` et `tags`.
 
-## Bonnes pratiques projet
+## Points importants
 
-- ne jamais supposer qu'une base locale est a jour sans `migrate`
-- les endpoints publics `events` ne doivent pas envoyer d'Authorization si inutile
-- la recherche admin renvoie un objet `{ count, results }` meme sans pagination visible
-- les suppressions admin sont des suppressions metier / anonymisations selon les cas
-- l'admin produit et l'admin Django pointent sur le meme role `ADMIN`
+- Les suppressions admin sont des suppressions metier ou des anonymisations selon le cas, pas des `DELETE` SQL directs
+- L'admin produit (role `ADMIN`) et l'interface Django admin (`/admin/`) pointent sur le meme compte
+- La recherche admin renvoie toujours `{ count, results }` meme sans pagination visible cote front
+- Les endpoints publics `events` et `companies` ne doivent pas envoyer de token Authorization

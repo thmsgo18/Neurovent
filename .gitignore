@@ -81,6 +81,9 @@ build/
 .nuxt/
 coverage/
 *.tsbuildinfo
+playwright-report/
+test-results/
+blob-report/
 
 # -----------------------------
 # Tooling / Package managers
