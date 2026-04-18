@@ -39,6 +39,12 @@ The project was built as a Web Programming course assignment for the M1 IAD-VMI 
 
 ---
 
+## Video Demo
+
+[![Watch the demo](./demo.gif)](https://www.youtube.com/watch?v=5FllG0otlDQ)
+
+---
+
 ## Architecture Overview
 
 ```

@@ -39,6 +39,12 @@ Le projet a été réalisé dans le cadre du cours de Programmation Web du M1 IA
 
 ---
 
+## Vidéo de démonstration
+
+[![Voir la démo](./demo.gif)](https://www.youtube.com/watch?v=5FllG0otlDQ)
+
+---
+
 ## Vue d'ensemble de l'architecture
 
 ```
