@@ -207,18 +207,6 @@ npm run qa:inspect     # Inspect recorded tests
 
 ---
 
-### Demo Accounts
-
-After running the seed script, the following accounts are available:
-
-| Role | Login | Password |
-|---|---|---|
-| Participant | `amelie.rousseau@participants.neurovent.demo` | `Participant2026!` |
-| Organization | `atlas-neuro-labs` | `Company2026!` |
-| Admin | `admin@neurovent.demo` | `Admin2026!` |
-
----
-
 ## API Reference
 
 The full API is self-documented. With the Django backend running, open:

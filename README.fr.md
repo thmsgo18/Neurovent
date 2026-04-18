@@ -207,18 +207,6 @@ npm run qa:inspect     # Inspecter les tests enregistrés
 
 ---
 
-### Comptes de démonstration
-
-Après l'exécution du script de seed, les comptes suivants sont disponibles :
-
-| Rôle | Identifiant | Mot de passe |
-|---|---|---|
-| Participant | `amelie.rousseau@participants.neurovent.demo` | `Participant2026!` |
-| Organisation | `atlas-neuro-labs` | `Company2026!` |
-| Administrateur | `admin@neurovent.demo` | `Admin2026!` |
-
----
-
 ## Référence API
 
 L'API complète est auto-documentée. Avec le backend Django en cours d'exécution, ouvrez :
