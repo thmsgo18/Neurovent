@@ -1,284 +1,447 @@
+<div align="center">
+
+[🇬🇧 English](./README.md) · [🇫🇷 Français](./README.fr.md)
+
 # Neurovent
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
-![Django](https://img.shields.io/badge/Django-092E20?style=flat&logo=django&logoColor=white)
-![DRF](https://img.shields.io/badge/Django_REST_Framework-ff1709?style=flat&logo=django&logoColor=white)
-![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)
-![React Router](https://img.shields.io/badge/React_Router-CA4245?style=flat&logo=react-router&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?style=flat&logo=express&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-07405E?style=flat&logo=sqlite&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat&logo=vercel&logoColor=white)
-![Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white)
+**The event management platform for scientific and tech communities.**
 
-> Web Programming course — Master 1 IAD-VMI, Universite Paris Cite, 2025-2026
-
----
-
-Neurovent is a full-stack web platform for managing scientific and tech events — conferences, workshops, seminars. It covers the complete lifecycle of an event, from creation and publication to registration management, waitlist handling, and participant communication, with tailored experiences for participants, organizations, and administrators.
+[![Django](https://img.shields.io/badge/Django-6.0-0C4B33?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![DRF](https://img.shields.io/badge/DRF-3.16-A30000?style=for-the-badge&logo=django&logoColor=white)](https://www.django-rest-framework.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Express](https://img.shields.io/badge/Express-4-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![Sequelize](https://img.shields.io/badge/Sequelize-6-52B0E7?style=for-the-badge&logo=sequelize&logoColor=white)](https://sequelize.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Latest-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E-45ba4b?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
+[![Vercel](https://img.shields.io/badge/Vercel-Frontend-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+[![Render](https://img.shields.io/badge/Render-Backend-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/)
 
 ---
 
-## Live
+🌐 **[Live Demo](https://neurovent-web.vercel.app)** · 📖 **[API Docs](https://neurovent-api.onrender.com/api/docs/)** · 📄 **[Project Report](./Project_Report_EventHub_Neurovent_Prog_web.pdf)**
 
-| Version | URL |
-|---------|-----|
-| Django backend | https://neurovent-web.vercel.app |
-| Node.js backend | https://neuro-vent-mu.vercel.app |
+</div>
 
 ---
 
-## Project Structure
+## What is Neurovent?
+
+Organizing scientific events — conferences, workshops, seminars — is far more complex than it looks. Researchers and institutions need to announce events, manage registrations with capacity limits, handle waitlists, validate participants, and communicate clearly at every step. Most general-purpose event tools are either too simple or too heavyweight for the specific needs of academic and scientific communities.
+
+**Neurovent** is a purpose-built platform that covers the full event lifecycle:
+
+- **Organizations** create and manage events, control registration modes, review participants, and export data.
+- **Participants** browse events, register with a single click, track their registration status, and join waitlists automatically when capacity is reached.
+- **Administrators** oversee the entire platform: verify organizations, moderate content, manage users, and monitor statistics.
+
+The project was built as a Web Programming course assignment for the M1 IAD-VMI program at Université Paris Cité (2025–2026). It intentionally implements the same REST API **twice** — once in Django/DRF and once in Express.js/Sequelize — to compare the two ecosystems side by side.
+
+---
+
+## Architecture Overview
 
 ```
-Projet/
-├── backend-django/      # Main REST API — Django + DRF + JWT
-├── frontend-react/      # Single Page Application — React
-├── backend-node/        # Alternative backend — Express (comparison exercise)
-├── docs/                # Reports and deliverables
-└── README.md
+┌─────────────────────────────────────────────────────────┐
+│                    User Browser                         │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTPS
+┌────────────────────────▼────────────────────────────────┐
+│              React 19 SPA  (Vercel)                     │
+│  • Role-based routing  • JWT auth  • i18n (FR/EN)       │
+└────────────────────────┬────────────────────────────────┘
+                         │ REST API calls
+          ┌──────────────┴──────────────┐
+          │                             │
+┌─────────▼──────────┐       ┌──────────▼───────────────┐
+│  Django + DRF      │       │  Express.js + Sequelize  │
+│  (Primary API)     │       │  (Parallel implementation│
+│  Render — Python   │       │   for comparison)        │
+└─────────┬──────────┘       └──────────────────────────┘
+          │
+┌─────────▼──────────┐
+│  PostgreSQL        │
+│  (Render — EU)     │
+└────────────────────┘
 ```
+
+The frontend is a single-page application that targets the Django backend in production. The Node.js backend exposes an identical API and is provided as a comparison reference.
 
 ---
 
 ## Tech Stack
 
-### Backend — Django
-
+### Frontend
 | Technology | Role |
-|------------|------|
+|---|---|
+| React 19 | UI framework |
+| React Router v6 | Client-side routing & route guards |
+| Lucide React / React Icons | Icon libraries |
+| CSS (native) | Styling — no framework |
+| Playwright | End-to-end tests |
+
+### Backend — Django (Primary)
+| Technology | Role |
+|---|---|
 | Django 6 | Web framework |
-| Django REST Framework | REST API layer |
-| SimpleJWT + token blacklist | Authentication and session management |
+| Django REST Framework | REST API |
+| SimpleJWT + token blacklist | JWT auth & secure logout |
 | django-filter | Query filtering |
-| drf-spectacular | Auto-generated Swagger / ReDoc documentation |
+| drf-spectacular | Auto-generated Swagger/ReDoc docs |
 | django-cors-headers | CORS handling |
-| Pillow | Image processing (avatars, logos, banners) |
-| python-decouple | Environment variable management |
-| SQLite | Database (development) |
+| Pillow | Image processing |
+| WhiteNoise | Static file serving |
+| Gunicorn | WSGI server |
+| PostgreSQL / SQLite | Database (prod / dev) |
 
-### Frontend — React
-
+### Backend — Node.js (Alternative)
 | Technology | Role |
-|------------|------|
-| React 18 | UI framework |
-| React Router DOM v6 | Client-side routing and route protection |
-| CSS (native) | Styling |
-| lucide-react | Icon library |
-| react-icons | Additional icons |
-| JWT (localStorage) | Authentication token storage |
-
----
-
-## Prerequisites
-
-**Backend:** Python 3.11+, pip
-
-**Frontend:** Node.js v18+, npm v9+
-
-```bash
-python3 --version
-node --version
-npm --version
-```
+|---|---|
+| Express.js 4 | HTTP framework |
+| Sequelize 6 | ORM |
+| jsonwebtoken | JWT |
+| bcryptjs | Password hashing |
+| Nodemailer | Email sending |
+| Multer | File uploads |
+| SQLite | Database (dev) |
 
 ---
 
 ## Getting Started
 
-The project has two independent parts that run simultaneously. Open two terminal windows.
+### Prerequisites
 
-### 1. Backend — Django
+- Python 3.11+
+- Node.js 18+
+- npm 9+
+
+---
+
+### 1. Clone the repository
 
 ```bash
-# Navigate to the backend directory
+git clone https://github.com/thmsgo18/Neurovent.git
+cd Neurovent
+```
+
+---
+
+### 2. Django Backend (Primary)
+
+```bash
 cd backend-django
 
 # Create and activate a virtual environment
 python3 -m venv .venv
 source .venv/bin/activate        # macOS / Linux
-.venv\Scripts\activate           # Windows
+# .venv\Scripts\activate         # Windows
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Apply database migrations
+# Run database migrations
 python manage.py migrate
+
+# (Optional) Seed the database with demo data
+python scripts/reset_and_seed_demo.py
 
 # Start the development server
 python manage.py runserver
 ```
 
-The API is now running at **http://127.0.0.1:8000**
+The API is now available at:
 
 | URL | Description |
-|-----|-------------|
-| http://127.0.0.1:8000/api/ | REST API root |
-| http://127.0.0.1:8000/admin/ | Django admin panel |
-| http://127.0.0.1:8000/api/docs/ | Swagger UI — interactive API docs |
-| http://127.0.0.1:8000/api/redoc/ | ReDoc — full API reference |
+|---|---|
+| `http://127.0.0.1:8000/api/` | REST API root |
+| `http://127.0.0.1:8000/api/docs/` | Swagger UI |
+| `http://127.0.0.1:8000/api/redoc/` | ReDoc |
+| `http://127.0.0.1:8000/admin/` | Django Admin |
 
-**Environment variables (optional)**
+---
 
-Create a `.env` file inside `backend-django/` based on `.env.example`:
-
-```env
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
-EMAIL_FAIL_SILENTLY=False
-FRONTEND_URL=http://localhost:3000
-```
-
-Without this file, Django prints outgoing emails to the terminal instead of sending them — which works fine for development.
-
-### 2. Frontend — React
-
-Open a second terminal:
+### 3. React Frontend
 
 ```bash
-# Navigate to the frontend directory
 cd frontend-react
 
 # Install dependencies
 npm install
 
-# Create the environment file
+# Create a local environment file
 echo "REACT_APP_API_BASE=http://localhost:8000" > .env
 
 # Start the development server
 npm start
 ```
 
-The app is now running at **http://localhost:3000**
-
-Make sure the Django backend is already running before starting the frontend, otherwise API calls will fail.
+The app opens at `http://localhost:3000`.
 
 ---
 
-## Demo Database
-
-A seed script populates the database with a complete and realistic dataset — participants, organizations, events, and registrations in various states.
+### 4. Node.js Backend (Optional)
 
 ```bash
-cd backend-django
-source .venv/bin/activate
-python scripts/reset_and_seed_demo.py
+cd backend-node
+
+npm install
+
+# Configure environment variables
+cp .env.example .env   # then edit .env with your settings
+
+npm run dev            # starts on port 8001
 ```
 
-This wipes the current database and recreates it with:
+---
 
-- 20 participant accounts with enriched profiles
-- 20 organization accounts in various verification states
-- 1 admin account
-- Multiple events across different formats, statuses, and registration modes
-- Registrations in all statuses (confirmed, pending, waitlist, cancelled)
+### 5. End-to-End Tests
 
-**Demo accounts:**
+```bash
+# From the root of the repository
+npm run qa:install     # Install Playwright + Chromium (first time only)
+npm run qa:test        # Run all E2E tests
+npm run qa:ui          # Open the Playwright test UI
+npm run qa:record      # Record new interactions
+npm run qa:inspect     # Inspect recorded tests
+```
+
+---
+
+### Demo Accounts
+
+After running the seed script, the following accounts are available:
 
 | Role | Login | Password |
-|------|-------|----------|
+|---|---|---|
 | Participant | `amelie.rousseau@participants.neurovent.demo` | `Participant2026!` |
 | Organization | `atlas-neuro-labs` | `Company2026!` |
 | Admin | `admin@neurovent.demo` | `Admin2026!` |
 
 ---
 
-## User Roles
+## API Reference
 
-### Participant
-Browse and search for public events and organization profiles, register for events, track registration history, and maintain an enriched public profile with bio, links, a favorite domain, and progression badges.
+The full API is self-documented. With the Django backend running, open:
 
-### Organization
-Create and manage events with automatic or manual registration review. Access a dashboard with global statistics, per-event attendance data, waitlist promotion, and CSV exports. Maintain a public profile with logo, description, domains, and social links.
+- **Swagger UI:** `http://localhost:8000/api/docs/`
+- **ReDoc:** `http://localhost:8000/api/redoc/`
 
-### Admin
-Dedicated front-end moderation panel to manage participant and organization accounts (suspend, activate, delete), verify or reject organizations based on uploaded documents, remove events, and monitor platform-wide statistics.
+### Key endpoint groups
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/auth/register/participant/` | Register as a participant |
+| `POST /api/auth/register/company/` | Register as an organization |
+| `POST /api/auth/login/participant/` | Log in (participant) |
+| `POST /api/auth/login/company/` | Log in (organization) |
+| `GET /api/events/` | Browse events (filterable, paginated) |
+| `POST /api/events/create/` | Create an event *(COMPANY)* |
+| `POST /api/registrations/create/` | Register for an event *(PARTICIPANT)* |
+| `GET /api/events/dashboard-stats/` | Organization dashboard *(COMPANY)* |
+| `GET /api/admin/users/` | User management *(ADMIN)* |
 
 ---
 
-## Running Tests
+## Deployment Pipeline
 
-```bash
-cd backend-django
-source .venv/bin/activate
+The project uses a **zero-config continuous deployment** model: every push to `main` automatically triggers a new deployment on both platforms.
 
-# Full test suite
-python manage.py test users events registrations tags
-
-# Quick check after a significant change
-python manage.py test users events
+```
+git push origin main
+       │
+       ├──► Vercel detects change in frontend-react/
+       │     Build:  npm run build
+       │     Serve:  static CDN (global edge network)
+       │     URL:    https://neurovent-web.vercel.app
+       │
+       └──► Render detects change in backend-django/
+             Build:  pip install -r requirements.txt
+                     python manage.py collectstatic --noinput
+                     python manage.py migrate
+             Start:  gunicorn config.wsgi:application
+             URL:    https://neurovent-api.onrender.com
 ```
 
----
+### Environment Variables
 
-## Key API Endpoints
+#### Frontend (Vercel)
+| Variable | Value |
+|---|---|
+| `REACT_APP_API_BASE` | `https://neurovent-api.onrender.com` |
 
-### Authentication
+#### Backend (Render)
+| Variable | Description |
+|---|---|
+| `SECRET_KEY` | Django secret key |
+| `DEBUG` | `False` in production |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `FRONTEND_URL` | Frontend URL (for email links) |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins |
+| `ALLOWED_HOSTS` | Comma-separated allowed hostnames |
+| `EMAIL_HOST` | SMTP host *(optional)* |
+| `EMAIL_HOST_USER` | SMTP user *(optional)* |
+| `EMAIL_HOST_PASSWORD` | SMTP password *(optional)* |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register/participant/` | Register as a participant |
-| POST | `/api/auth/register/company/` | Register as an organization |
-| POST | `/api/auth/login/participant/` | Login with email + password |
-| POST | `/api/auth/login/company/` | Login with identifier + password |
-| POST | `/api/auth/logout/` | Invalidate the refresh token |
-| GET / PATCH | `/api/auth/me/` | Get or update the current user profile |
-| DELETE | `/api/auth/me/` | Delete account |
-| PATCH | `/api/auth/me/password/` | Change password |
-| POST | `/api/auth/password-reset/` | Request a password reset email |
-| POST | `/api/auth/password-reset/confirm/` | Confirm reset with uid and token |
-| POST | `/api/auth/token/refresh/` | Refresh the access token |
-
-### Events
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/events/` | List public events (supports filters) |
-| GET | `/api/events/<id>/` | Event detail |
-| POST | `/api/events/create/` | Create an event (organization) |
-| PATCH | `/api/events/<id>/update/` | Update an event (organization) |
-| DELETE | `/api/events/<id>/delete/` | Delete an event (organization) |
-| GET | `/api/events/my-events/` | Events of the connected organization |
-| GET | `/api/events/dashboard-stats/` | Organization dashboard statistics |
-| GET | `/api/events/dashboard-stats/export-summary/` | Export summary CSV |
-| GET | `/api/events/dashboard-stats/export-performance/` | Export performance CSV |
-
-### Registrations
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/registrations/create/` | Register for an event |
-| GET | `/api/registrations/my/` | Current user's registrations |
-| PATCH | `/api/registrations/<id>/cancel/` | Cancel a registration |
-| GET | `/api/registrations/event/<id>/` | All registrations for an event (organization) |
-| PATCH | `/api/registrations/<id>/status/` | Approve, reject, or waitlist a registration |
-| GET | `/api/registrations/event/<id>/export/` | Export registrations as CSV |
-
-### Organizations (public)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/companies/` | Public list of organizations |
-| GET | `/api/companies/<id>/` | Public organization profile |
+> If `EMAIL_HOST` is not set, email content is printed to the terminal instead of being sent — useful for local development.
 
 ---
 
-## Notes
+## Features & Roles
 
-- Always run `python manage.py migrate` after pulling changes that include new migrations.
-- The Django admin panel (`/admin/`) and the front-end admin panel share the same `ADMIN` role.
-- Public endpoints (`/api/events/`, `/api/companies/`) do not require authentication.
+> For a comprehensive description of all features and design decisions, see the 📄 [Project Report](./Project_Report_EventHub_Neurovent_Prog_web.pdf).
+
+---
+
+### Participant
+
+Participants are individuals (researchers, students, professionals) who discover and attend events.
+
+**Account & profile**
+- Register with email and password
+- Upload a profile picture, fill in a bio and contact details
+- Change password or reset it by email
+- Delete account (GDPR-compliant)
+
+**Event discovery**
+- Browse all published events with pagination
+- Filter by format (conference, workshop, seminar…), topic tags, date range, city, or country
+- Full-text search across event titles and descriptions
+- View detailed event page: description, organizer, location, capacity, remaining spots
+
+**Registrations**
+- Register for an event in one click
+- Track registration status in real time: `Pending` · `Confirmed` · `Rejected` · `Cancelled` · `Waitlisted`
+- Cancel a registration at any time
+- Join the waitlist automatically when an event is full — get promoted and notified by email when a spot opens
+
+---
+
+### Organization
+
+Organizations are institutions (labs, companies, associations) that create and manage events.
+
+**Account & verification**
+- Register with a unique identifier and SIRET number
+- Account activation is subject to admin verification
+- Upload a logo, add a description and contact information
+
+**Event management**
+- Create events with: title, description, format, topic tags, date & time, location, capacity, banner image
+- Choose a registration mode:
+  - **Direct** — registrations are confirmed immediately
+  - **Validation** — each registration must be manually approved or rejected
+- Edit or cancel an event at any time (all registered participants are notified by email)
+- Unpublish an event to hide it from the public listing
+
+**Participant management**
+- View all registrations for each event
+- Approve or reject pending registrations (in Validation mode)
+- Manually remove a participant from an event
+- Export the full participant list as a **CSV file**
+
+**Dashboard & statistics**
+- Global dashboard: total events, total registrations, fill rates
+- Per-event stats: confirmed / pending / rejected / waitlist counts
+- Export a performance summary CSV across all events
+
+---
+
+### Administrator
+
+Admins have full oversight of the platform.
+
+**User management**
+- View all registered users (participants and organizations)
+- Activate or deactivate any account
+- Delete accounts if necessary
+
+**Organization verification**
+- Review organization registration requests
+- Approve or reject based on provided SIRET and supporting documents
+- Rejected organizations receive an explanatory email
+
+**Platform oversight**
+- Monitor global platform statistics
+- Access the Django Admin panel for low-level data management
+
+---
+
+### Cross-cutting features
+
+**Email notifications**
+Every key event in the lifecycle triggers an automatic email:
+registration confirmed / rejected, event cancelled, waitlist promotion, password reset, organization verification result.
+
+**Registration lifecycle**
+
+```
+        ┌─────────────────────────┐
+        │     Event full?         │
+        │   YES → WAITLISTED      │
+        │    NO ↓                 │
+        │  Direct mode?           │
+        │   YES → CONFIRMED       │
+        │    NO → PENDING         │
+        │         │               │
+        │    Organization         │
+        │    reviews              │
+        │    ├─ Approve → CONFIRMED│
+        │    └─ Reject  → REJECTED│
+        └─────────────────────────┘
+Cancellation at any step → CANCELLED
+Waitlisted → CONFIRMED if a spot opens
+```
+
+**Bilingual interface**
+The frontend ships with full **French / English** support via a built-in i18n system. Users switch language at any time without page reload.
+
+---
+
+## Project Structure
+
+```
+Neurovent/
+├── backend-django/          # Primary REST API (Python / Django)
+│   ├── config/              # Settings, URLs, WSGI
+│   ├── users/               # Auth, profiles, admin tools
+│   ├── events/              # Event CRUD, stats, CSV export
+│   ├── registrations/       # Registration lifecycle & waitlist
+│   ├── tags/                # Topic taxonomy
+│   ├── scripts/             # Demo data seeder
+│   └── templates/emails/    # Transactional email templates
+│
+├── backend-node/            # Alternative REST API (Node.js / Express)
+│   ├── src/
+│   │   ├── models/          # Sequelize models
+│   │   ├── controllers/     # Business logic
+│   │   ├── routes/          # Express routers
+│   │   ├── middleware/       # Auth, permissions, file upload
+│   │   └── services/        # Email, SIRENE, token blacklist
+│   └── server.js
+│
+├── frontend-react/          # React 19 SPA
+│   ├── src/
+│   │   ├── api/             # API clients
+│   │   ├── components/      # Reusable UI components
+│   │   ├── pages/           # Route pages
+│   │   ├── store/           # Auth state (JWT + role)
+│   │   ├── i18n/            # FR / EN translations
+│   │   └── App.js           # Route definitions
+│   └── public/
+│
+├── playwright-tests/        # E2E test suite
+├── playwright.config.cjs    # Playwright configuration
+└── scripts/                 # Test runner helpers
+```
 
 ---
 
 ## Authors
 
-| Name | GitHub | Role |
-|------|--------|------|
-| Thomas Gourmelen | [thmsgo18](https://github.com/thmsgo18) | Backend Django |
-| Noureddine Mohammedi | [Mr-Noredine](https://github.com/Mr-Noredine) | Frontend React |
-| Azouaou Zouaoui | [Azouaou1](https://github.com/Azouaou1) | Backend Node / Express |
+| | Name | GitHub |
+|---|---|---|
+| | Thomas Gourmelen | [@thmsgo18](https://github.com/thmsgo18) |
+| | Noureddine Mohammedi | [@Mr-Noredine](https://github.com/Mr-Noredine) |
+| | Azouaou Zouaoui | [@Azouaou1](https://github.com/Azouaou1) |
+
+M1 IAD · Université Paris Cité · Web Programming 2025–2026
