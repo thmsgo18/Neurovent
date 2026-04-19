@@ -19,7 +19,7 @@
 
 ---
 
-🌐 **[Live Demo](https://neurovent-web.vercel.app)** · 📖 **[API Docs](https://neurovent-api.onrender.com/api/docs/)** · 📄 **[Project Report](./Project_Report_EventHub_Neurovent_Prog_web.pdf)**
+🌐 **[Live Demo](https://neurovent-web.vercel.app)** · 📖 **[API Docs](https://neurovent-api.onrender.com/api/docs/)** · 📄 **[Project Report](./Project_Report_compressed.pdf)**
 
 </div>
 
@@ -282,7 +282,7 @@ git push origin main
 
 ## Features & Roles
 
-> For a comprehensive description of all features and design decisions, see the 📄 [Project Report](./Project_Report_EventHub_Neurovent_Prog_web.pdf).
+> For a comprehensive description of all features and design decisions, see the 📄 [Project Report](./Project_Report_compressed.pdf).
 
 ---
 
