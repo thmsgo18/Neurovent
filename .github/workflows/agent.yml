@@ -1,6 +1,6 @@
 name: Repovate
 
-# Phase 1 minimal test: manual trigger only, one vulnerability at a time.
+# Phase 2: manual trigger only, one vulnerability at a time.
 # Calls the reusable workflow in https://github.com/thmsgo18/Repovate.
 
 on:
@@ -22,6 +22,10 @@ on:
         description: "Reference URL"
         required: false
         default: ""
+      manifest_dir:
+        description: "Directory containing the manifest to patch (monorepo support)"
+        required: false
+        default: "."
 
 permissions:
   contents: write
@@ -37,5 +41,6 @@ jobs:
       advisory_id: ${{ inputs.advisory_id }}
       advisory_summary: ${{ inputs.advisory_summary }}
       advisory_url: ${{ inputs.advisory_url }}
+      manifest_dir: ${{ inputs.manifest_dir }}
     secrets:
       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
