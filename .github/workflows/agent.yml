@@ -1,0 +1,41 @@
+name: Repovate
+
+# Phase 1 minimal test: manual trigger only, one vulnerability at a time.
+# Calls the reusable workflow in https://github.com/thmsgo18/Repovate.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: "Vulnerable package name"
+        required: true
+      current_version:
+        description: "Version currently in use"
+        required: true
+      advisory_id:
+        description: "Advisory ID (e.g. GHSA-... or CVE-...)"
+        required: true
+      advisory_summary:
+        description: "Short summary of the vulnerability"
+        required: true
+      advisory_url:
+        description: "Reference URL"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  remediate:
+    uses: thmsgo18/Repovate/.github/workflows/remediate.yml@main
+    with:
+      package_name: ${{ inputs.package_name }}
+      current_version: ${{ inputs.current_version }}
+      advisory_id: ${{ inputs.advisory_id }}
+      advisory_summary: ${{ inputs.advisory_summary }}
+      advisory_url: ${{ inputs.advisory_url }}
+    secrets:
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
