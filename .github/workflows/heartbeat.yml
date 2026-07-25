@@ -1,0 +1,17 @@
+name: Repovate Heartbeat
+
+# Keeps this repo's scheduled workflows alive (GitHub auto-disables them
+# after 60 days with no activity). Independent from the main Repovate
+# workflow on purpose — see thmsgo18/Repovate's heartbeat.yml.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  heartbeat:
+    uses: thmsgo18/Repovate/.github/workflows/heartbeat.yml@main
